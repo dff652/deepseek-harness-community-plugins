@@ -293,6 +293,30 @@ publication authorization.
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
 | Clean profile | Disposable web/headless install once, start, remove, no leftover child PASS |
 
+### Independent AgentMemory re-review (2026-08-18)
+
+The post-fix review returned PASS without further package or verifier changes:
+
+- Node 22.19 and Node 24.19 each passed 50/50 portable tests;
+- repository boundary, exact five-file package, reproducible pack,
+  activation, lifecycle and clean Web/headless profile gates passed;
+- project-scoped recall now fails closed when the schema omits `project`, and
+  ignored-project, cross-project, forbidden-ID and metadata-only keyword
+  canaries are rejected;
+- a read-only check through the reviewed AgentMemory 0.9.28 adapter confirmed
+  eight tools, `diagnosis.fail = 0`, explicit project forwarding, existing
+  canary recall, `truncated: false` and clean child termination; and
+- no tag, GitHub Release, npm publication, marketplace submission or live
+  public-package deployment was performed.
+
+The recorded real 3/3 gate is a write-producing acceptance test. It saves
+three expected observations in `dsh-public-bundle-canary` and one isolation
+decoy in `dsh-public-bundle-other`. Because the accepted eight-tool surface
+does not include deletion, that gate must use a disposable AgentMemory store.
+Independent routine rechecks should recall reviewed existing canaries and
+must not recreate the write-producing fixture against a personal or
+production store.
+
 This record does not authorize push, tag, GitHub Release, npm publication,
 marketplace submission or live-profile installation. Live private observation
 IDs were not copied into this repository. Automatic session capture is not
