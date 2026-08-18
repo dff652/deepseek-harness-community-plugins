@@ -8,10 +8,11 @@ candidates. Passing one gate does not authorize the next state transition.
 The repository is a clean-history Public GitHub source repository. It was
 created from reviewed source files without copying, cloning, forking or
 mirroring an earlier Git database. Its root commit uses a GitHub noreply
-identity, `main` is synchronized with `origin/main`, and Node 22.19/24.19 CI
-passes. An unauthenticated API and fresh-clone audit confirms the public
-boundary. It has no tag, GitHub Release, npm package, marketplace entry or
-live deployment.
+identity, and Node 22.19/24.19 CI passes. An unauthenticated API and fresh-clone
+audit confirms the public boundary. AI Asset Hub `0.1.1` is tagged and has a
+reviewed GitHub Release. The local Agent Mail source candidate is not yet on
+`origin/main`. No package is published to npm, listed in the marketplace, or
+deployed live by this repository.
 
 The first package is a configuration-only bridge to an independently
 installed AI Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through
@@ -157,6 +158,9 @@ that may contain user data.
 | MCP / zero-write | Exact eight tools; all calls and seven-tree zero-write PASS |
 | Activation | Unset, blank and relative command cases PASS |
 | Lifecycle | Missing executable, duplicate namespace, reconnect and cleanup PASS |
+| Release tag | `dsh-ai-asset-hub-v0.1.1`, annotated tag resolving to `d51dae188555ea671464711a80b7ef20a07f769a` |
+| GitHub Release | Published 2026-08-18 with `.tgz` and `SHA256SUMS` |
+| Downloaded-asset acceptance | Digest check, disposable install/start, eight real calls, seven-tree zero-write, cleanup and removal PASS |
 
 The lifecycle runner uses a unique per-run copy of the reviewed provider
 binary. Reusing one shared executable path across concurrent verifier runs is
@@ -174,7 +178,7 @@ accepted run.
 7. Add the `dsh-plugin` topic only after public-readiness review. **Complete.**
 8. Wait until the repository naturally satisfies the marketplace age and
    meaningful-commit requirements.
-9. Obtain separate authorization for tag and GitHub Release creation.
+9. Obtain separate authorization for tag and GitHub Release creation. **Complete for AIAH `0.1.1`.**
 10. Submit the marketplace entry separately.
 11. Treat npm publication and live deployment as independent future choices.
 

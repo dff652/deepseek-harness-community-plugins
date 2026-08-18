@@ -11,14 +11,15 @@ requires owner authorization.
 
 | Bundle | Implementation | Public source | GitHub Release | npm | Marketplace | Live use |
 |---|---|---|---|---|---|---|
-| `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Release-ready; not released | Not published | Not eligible yet | Separate decision |
+| `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Not eligible yet | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Private candidate validated | Public source candidate; not pushed | None | Not published | Not submitted | Not installed by this project |
 | `@dff652/dsh-agentmemory@0.1.0` | Private integration active | Not exported | None | Not published | Not submitted | Active private deployment |
 
 ## AI Asset Hub
 
-The AI Asset Hub bundle has passed the gates required to create a reviewed
-GitHub Release:
+The AI Asset Hub bundle has passed its release gates and was published as the
+reviewed GitHub Release
+[`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1):
 
 - clean public history with GitHub noreply commit identities;
 - Node 22.19 and Node 24.19 CI;
@@ -32,10 +33,13 @@ GitHub Release:
 - exact tarball installation, single config entry, removal and rollback SOP;
 - unauthenticated public API, clone and source-boundary audit.
 
-`release-ready` does not mean `released`. The package still has no tag or
-GitHub Release. A release must be packed again from the exact tagged commit,
-match the five-file allowlist, attach the reviewed `.tgz` and `SHA256SUMS`, and
-pass a clean-profile installation from the uploaded asset.
+The annotated tag resolves to public commit `d51dae1`. Two packs from that
+exact commit were byte-identical. The Release contains the reviewed `.tgz` and
+`SHA256SUMS`; downloading the uploaded asset reproduced the recorded digest.
+The downloaded artifact installed exactly once in a disposable DSH profile,
+started the reviewed `aiah mcp` child, passed all eight real read-only calls
+and seven-tree zero-write verification, removed cleanly, and left no provider
+process behind.
 
 npm publication remains an independent product and account decision. The
 marketplace gate is also still pending: the repository must naturally reach

@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <img alt="AIAH candidate 0.1.1" src="https://img.shields.io/badge/AIAH-candidate%200.1.1-38bdf8">
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <img alt="Agent Mail candidate 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-candidate%200.1.0-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
@@ -15,9 +15,11 @@ bundling provider code, data, credentials, or machine-specific paths. Each
 package is a small configuration bundle with its own version and allowlist.
 
 > [!IMPORTANT]
-> `@dff652/dsh-ai-asset-hub@0.1.1` and `@dff652/dsh-agent-mail@0.1.0` are
-> public source candidates. Neither package is tagged, released, published to
-> npm, listed in a marketplace, or deployed to a live profile.
+> `@dff652/dsh-ai-asset-hub@0.1.1` has a reviewed GitHub Release with an exact
+> tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` remains a local
+> public-source candidate until its separately authorized push and release.
+> Neither package is published to npm, listed in a marketplace, or deployed
+> to a live profile by this repository.
 
 ## What you get
 
@@ -155,7 +157,8 @@ CI runs the portable contract on Node 22.19 and 24.19.
 | --- | --- |
 | Clean repository and origin | AIAH source is on origin; Agent Mail source is local until a separate push |
 | Public repository and `dsh-plugin` topic | Complete |
-| Reviewed GitHub Release tarball | Not released |
+| AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
+| Agent Mail GitHub Release | Not released; local source candidate only |
 | npm publication | Not published |
 | Marketplace listing | Not submitted |
 | Model-visible L5 acceptance | Not claimed |
