@@ -6,10 +6,12 @@ the next state transition.
 
 ## Current state
 
-The repository is a local staging tree with no commits and no remote. It was
+The repository is a clean-history Private GitHub staging repository. It was
 created from reviewed source files without copying, cloning, forking or
-mirroring an earlier Git database. It is not public and has no tag, GitHub
-Release, npm package, marketplace entry or live deployment.
+mirroring an earlier Git database. Its root commit uses a GitHub noreply
+identity, `main` is synchronized with `origin/main`, and Node 22.19/24.19 CI
+passes. It is not public and has no tag, GitHub Release, npm package,
+marketplace entry or live deployment.
 
 The bundle is a configuration-only bridge to an independently installed AI
 Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through the exact
@@ -93,10 +95,12 @@ that may contain user data.
 
 | Item | Recorded value |
 |---|---|
-| Repository | Local clean staging; no commit and no remote |
+| Repository | Private clean-history staging; `main` synchronized with origin |
+| Root commit | `7411d8c96cb69e45457ef98fe743389e4511a982` |
+| Initial CI | `public-staging-ci` run `32105034328`, Node 22.19/24.19 PASS |
 | Git identity | GitHub noreply configured locally |
 | Node / npm | `v24.19.0` / `11.17.0` |
-| Portable tests | 12/12 on Node `v24.19.0`; 12/12 on Node `v22.19.0` |
+| Portable tests | 13/13 on Node `v24.19.0`; 13/13 on Node `v22.19.0` |
 | Repository boundary | PASS, including secret/path/binary negative canaries |
 | DSH | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` |
@@ -104,10 +108,11 @@ that may contain user data.
 | AIAH self-report | `0.1.11`, commit `54a77e8a344618f7aa7fc69ba55caffaba985371` |
 | AIAH SHA-256 | `6836c21f5fe129d2a36ddaa6635b6b9e08bcd442576eabb9de5e93b11ba92ed8` |
 | Plugin tarball | `dff652-dsh-ai-asset-hub-0.1.1.tgz` |
-| Tarball SHA-256 | `d988b5e07ca63324b2ee9cc205cf8d21f98490a84389f6264adcc0bc59f6ccba` |
-| Decompressed tar SHA-256 | `71ecdaab3304807891da3900db28acd3f0af3d622606b7314f136ebf69275d50` |
+| Tarball SHA-256 | `8a6409cbe69b97269dc7a959e6ddc8ea9814bd86c132939488f9a1b840de7314` |
+| Decompressed tar SHA-256 | `15cbdf2b0935973ae305d42f17473ebecd3b2dc0c4676921b54de04b774c90b8` |
 | Reproducible pack | Two clean packs were byte-identical |
 | Packed files | Exact five-file allowlist, including `LICENSE` |
+| Exact tarball profile | Disposable install, one config entry and removal PASS |
 | MCP / zero-write | Exact eight tools; all calls and seven-tree zero-write PASS |
 | Activation | Unset, blank and relative command cases PASS |
 | Lifecycle | Missing executable, duplicate namespace, reconnect and cleanup PASS |
@@ -119,10 +124,10 @@ accepted run.
 
 ## Controlled transition sequence
 
-1. Complete local source, package and runtime verification.
-2. Obtain separate authorization for the initial local commit.
-3. Create a new GitHub repository as Private only after owner approval.
-4. Push and require Node 22.19 and Node 24.19 CI to pass.
+1. Complete local source, package and runtime verification. **Complete.**
+2. Obtain separate authorization for the initial local commit. **Complete.**
+3. Create a new GitHub repository as Private only after owner approval. **Complete.**
+4. Push and require Node 22.19 and Node 24.19 CI to pass. **Complete.**
 5. Recheck the complete remote history and candidate tarball.
 6. Obtain separate authorization before changing visibility to Public.
 7. Add the `dsh-plugin` topic only after public-readiness review.

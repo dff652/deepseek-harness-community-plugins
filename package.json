@@ -3,6 +3,15 @@
   "version": "0.1.1",
   "private": true,
   "description": "Clean staging monorepo for reviewed community DeepSeek Harness bundles",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dff652/deepseek-harness-community-plugins.git"
+  },
+  "homepage": "https://github.com/dff652/deepseek-harness-community-plugins#readme",
+  "bugs": {
+    "url": "https://github.com/dff652/deepseek-harness-community-plugins/issues"
+  },
   "type": "module",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"

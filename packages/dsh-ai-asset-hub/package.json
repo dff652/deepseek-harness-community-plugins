@@ -2,6 +2,21 @@
   "name": "@dff652/dsh-ai-asset-hub",
   "version": "0.1.1",
   "description": "Configuration-only DeepSeek Harness bundle for an existing AI Asset Hub MCP server",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "mcp",
+    "ai-asset-hub"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dff652/deepseek-harness-community-plugins.git",
+    "directory": "packages/dsh-ai-asset-hub"
+  },
+  "homepage": "https://github.com/dff652/deepseek-harness-community-plugins/tree/main/packages/dsh-ai-asset-hub#readme",
+  "bugs": {
+    "url": "https://github.com/dff652/deepseek-harness-community-plugins/issues"
+  },
   "type": "module",
   "main": "index.js",
   "engines": {

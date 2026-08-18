@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img alt="CI pending first authorized push" src="https://img.shields.io/badge/CI-local%20candidate-64748b">
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <img alt="AIAH candidate 0.1.1" src="https://img.shields.io/badge/AIAH-candidate%200.1.1-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
@@ -11,13 +11,14 @@
 
 Expose AI Asset Hub's reviewed, read-only MCP tools inside DeepSeek Harness
 without bundling provider code, data, credentials, or machine-specific paths.
-The first package in this public monorepo is a small configuration bundle with
+The first package in this planned public monorepo is a small configuration bundle with
 a deliberately narrow contract.
 
 > [!IMPORTANT]
-> `@dff652/dsh-ai-asset-hub@0.1.1` is a local clean-history candidate. It is
-> not yet pushed, public, tagged, released, published to npm, listed in a
-> marketplace, or deployed to a live profile.
+> `@dff652/dsh-ai-asset-hub@0.1.1` is a pushed clean-history candidate in a
+> Private public-readiness repository. Portable CI and the recorded runtime
+> gates pass. It is not yet public, tagged, released, published to npm, listed
+> in a marketplace, or deployed to a live profile.
 
 ## What you get
 
@@ -39,7 +40,7 @@ that exact tarball into a disposable DSH profile:
 ```bash
 npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts
 sha256sum dff652-dsh-ai-asset-hub-0.1.1.tgz
-dsh plugin --profile <profile> add ./dff652-dsh-ai-asset-hub-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.1.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -114,6 +115,11 @@ npm run verify:aiah -- \
 The verifier checks initialization, the exact eight-tool surface, a version
 canary, safe calls, and optional zero-write snapshots.
 
+For installation, upgrade, removal and rollback procedures, see the
+[consumer operations guide](./docs/install-upgrade-rollback.md). Release tags
+are package-specific in this monorepo; the first planned tag is
+`dsh-ai-asset-hub-v0.1.1`.
+
 ## Reviewed compatibility
 
 | Component | Reviewed value |
@@ -132,8 +138,8 @@ official AIAH `v0.1.11` Linux AMD64 asset.
 
 | Transition | State |
 | --- | --- |
-| Clean local repository | In progress; no remote |
-| Public repository and `dsh-plugin` topic | Not created |
+| Clean repository and Private origin | Complete; `main` pushed and CI passed |
+| Public repository and `dsh-plugin` topic | Pending owner-controlled transition |
 | Reviewed GitHub Release tarball | Not released |
 | npm publication | Not published |
 | Marketplace listing | Not submitted |

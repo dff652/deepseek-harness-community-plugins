@@ -17,6 +17,22 @@ the only argument.
 Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
+```bash
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.1.tgz
+dsh --profile <profile> --dump-config
+```
+
+Remove the bundle without deleting the separately managed provider or its
+data:
+
+```bash
+dsh plugin --profile <profile> remove @dff652/dsh-ai-asset-hub
+dsh --profile <profile> --dump-config
+```
+
+Keep the prior reviewed tarball and digest before an upgrade so the same
+commands can restore it if acceptance fails.
+
 ### Configuration-only activation check
 
 From a repository checkout, the package-specific DSH negative activation check

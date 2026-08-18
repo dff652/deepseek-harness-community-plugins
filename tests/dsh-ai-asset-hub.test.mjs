@@ -28,6 +28,16 @@ test('manifest pins the rc.6 MCP client as a peer and exposes only reviewed file
   assert.equal(manifest.name, '@dff652/dsh-ai-asset-hub');
   assert.equal(manifest.version, '0.1.1');
   assert.equal(manifest.private, undefined);
+  assert.equal(manifest.license, 'MIT');
+  assert.equal(
+    manifest.repository.url,
+    'git+https://github.com/dff652/deepseek-harness-community-plugins.git',
+  );
+  assert.equal(manifest.repository.directory, 'packages/dsh-ai-asset-hub');
+  assert.equal(
+    manifest.homepage,
+    'https://github.com/dff652/deepseek-harness-community-plugins/tree/main/packages/dsh-ai-asset-hub#readme',
+  );
   assert.equal(manifest.engines.node, '^22.19.0 || >=24.0.0');
   assert.equal(manifest.dependencies, undefined);
   assert.deepEqual(manifest.peerDependencies, {
@@ -132,5 +142,22 @@ test('npm pack dry-run ships only the declared allowlist', async () => {
     assert.deepEqual(files, ['LICENSE', 'README.md', 'cordis.patch.yml', 'index.js', 'package.json']);
   } finally {
     await rm(cache, { recursive: true, force: true });
+  }
+});
+
+test('consumer tarball install instructions use the DSH workspace root', async () => {
+  const documents = [
+    path.join(root, 'README.md'),
+    path.join(root, 'docs', 'install-upgrade-rollback.md'),
+    path.join(packageDir, 'README.md'),
+  ];
+
+  for (const file of documents) {
+    const text = await readFile(file, 'utf8');
+    const addCommands = text.split(/\r?\n/).filter((line) => /dsh plugin .* add /.test(line));
+    assert.ok(addCommands.length > 0, `${path.relative(root, file)} has no install command`);
+    for (const command of addCommands) {
+      assert.match(command, / add -w /, `${path.relative(root, file)}: ${command}`);
+    }
   }
 });
