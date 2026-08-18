@@ -1,0 +1,10 @@
+This package is a configuration-only DeepSeek Harness bundle.
+
+It depends on @deepseek-ai/dsh-mcp-client@0.1.0-rc.6, distributed under the
+MIT License from https://github.com/deepseek-ai/deepseek-harness. The
+dependency is installed separately by the package manager and is not copied
+into this bundle tarball.
+
+The Agent Mail provider executable is independently licensed and distributed
+by its own project. This bundle does not ship provider source, binaries,
+identities, homes, messages or tokens.

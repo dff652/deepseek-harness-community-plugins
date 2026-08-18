@@ -1,0 +1,41 @@
+{
+  "name": "@dff652/dsh-agent-mail",
+  "version": "0.1.0",
+  "description": "Configuration-only DeepSeek Harness bundle for an existing Agent Mail MCP server",
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "mcp",
+    "agent-mail"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dff652/deepseek-harness-community-plugins.git",
+    "directory": "packages/dsh-agent-mail"
+  },
+  "homepage": "https://github.com/dff652/deepseek-harness-community-plugins/tree/main/packages/dsh-agent-mail#readme",
+  "bugs": {
+    "url": "https://github.com/dff652/deepseek-harness-community-plugins/issues"
+  },
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-mcp-client": "0.1.0-rc.6"
+  }
+}

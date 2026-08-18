@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "serverName": "agent-mail",
+  "commandArgs": [],
+  "autoWake": false,
+  "harnessIdentityForbidden": ["human@local"],
+  "tools": [
+    "comm_send",
+    "comm_inbox",
+    "comm_claim",
+    "comm_ack",
+    "comm_list_agents",
+    "comm_approve",
+    "comm_reject",
+    "comm_approvals",
+    "comm_tail",
+    "comm_events",
+    "comm_diagnose"
+  ],
+  "humanOnlyTools": ["comm_approve", "comm_reject"],
+  "discoveryNote": "alpha.4 advertises comm_approve and comm_reject to every identity; non-human execution is rejected with exit_code 6. This bundle documents that mismatch instead of hiding the tools or running Harness as human@local."
+}

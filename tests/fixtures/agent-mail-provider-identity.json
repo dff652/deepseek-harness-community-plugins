@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "selectedCandidate": "reviewed-source-alpha.4",
+  "package": "agent-mail",
+  "versionLabel": "1.0.0-alpha.4",
+  "reviewedSource": {
+    "branch": "main",
+    "head": "ca6601c95eeda2d5d558cca37179be1412b75a8d"
+  },
+  "dsh101TarballSha256": "925bf5b2371f3a33252af53293a086ce986d1f2558077fb2b6162a726a29d19b",
+  "mcpEntrySha256": "c0feeff292ee3b4bba65878174714e24a0dc5b5e53982293eb412da256df999e",
+  "mcpClient": "0.1.0-rc.6",
+  "dsh": "0.1.0-rc.6",
+  "identityNote": "The accepted provider is the TypeScript alpha.4 package built from the reviewed public main commit. A host PATH agent-mail whose distribution is not 1.0.0-alpha.4 is not a valid fixture. Automatic wake is not part of this candidate."
+}

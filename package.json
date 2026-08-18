@@ -24,7 +24,12 @@
     "test": "node --test tests/*.test.mjs",
     "test:activation:aiah": "node tests/dsh-ai-asset-hub-activation.acceptance.mjs",
     "test:lifecycle:aiah": "node tests/dsh-ai-asset-hub-lifecycle.acceptance.mjs",
+    "test:activation:agent-mail": "node tests/dsh-agent-mail-activation.acceptance.mjs",
+    "test:lifecycle:agent-mail": "node tests/dsh-agent-mail-lifecycle.acceptance.mjs",
+    "test:coexistence": "node tests/dsh-agent-mail-coexistence.acceptance.mjs",
     "verify:aiah": "node scripts/verify-aiah-mcp.mjs",
-    "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts"
+    "verify:agent-mail": "node scripts/verify-agent-mail-mcp.mjs",
+    "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts",
+    "pack:agent-mail": "npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts"
   }
 }

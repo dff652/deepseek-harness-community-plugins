@@ -29,5 +29,7 @@ jobs:
         run: npm test
       - name: Check public repository boundary
         run: npm run check:repo
-      - name: Inspect exact package allowlist
-        run: npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
+      - name: Inspect exact package allowlists
+        run: |
+          npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
+          npm pack --workspace @dff652/dsh-agent-mail --dry-run --ignore-scripts

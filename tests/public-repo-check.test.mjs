@@ -99,6 +99,20 @@ test('public boundary scanner rejects credential and cross-platform path canarie
   }
 });
 
+test('public boundary scanner rejects a private Agent Mail data path without echoing it', async () => {
+  const fixture = await makeFixture();
+  const marker = [String.fromCharCode(46), 'agent', '-', 'mail'].join('');
+  try {
+    await writeFile(path.join(fixture, 'mail-home.txt'), `${marker}/\n`, 'utf8');
+    const result = await runScanner(fixture);
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /mail-home\.txt: private Agent Mail data path/);
+    assert.doesNotMatch(result.stderr, new RegExp(`${marker.replaceAll('.', '\\.')}`));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('public boundary scanner rejects binary package artifacts', async () => {
   const cases = [
     ['nul-binary.tgz', Buffer.from([0x1f, 0x8b, 0x00, 0x01])],

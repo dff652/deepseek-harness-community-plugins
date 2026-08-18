@@ -1,0 +1,25 @@
+# Machine paths, identities, homes and remote endpoints belong to the
+# deployment, not this bundle. Activation throws unless command, home and
+# identity are present and valid, so the provider cannot fall back to a
+# default user directory. DSH_AGENT_MAIL_ID must be a distinct non-human
+# identity; human@local is refused. Remote Hub tokens stay in the provider
+# token-file, not in this YAML. This bundle does not start a wake runner.
+- insert:
+    - id: mcp-agent-mail
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: agent-mail
+        transport: stdio
+        command: !!js (function () { var command = String(process.env.DSH_AGENT_MAIL_COMMAND || '').trim(); if (!command) throw new Error('DSH_AGENT_MAIL_COMMAND is required'); if (command.charAt(0) !== '/') throw new Error('DSH_AGENT_MAIL_COMMAND must be an absolute path'); return command; })()
+        args: []
+        env:
+          AGENT_MAIL_HOME: !!js (function () { var home = String(process.env.DSH_AGENT_MAIL_HOME || '').trim(); if (!home) throw new Error('DSH_AGENT_MAIL_HOME is required'); if (home.charAt(0) !== '/') throw new Error('DSH_AGENT_MAIL_HOME must be an absolute path'); return home; })()
+          AGENT_MAIL_ID: !!js (function () { var id = String(process.env.DSH_AGENT_MAIL_ID || '').trim(); if (!id) throw new Error('DSH_AGENT_MAIL_ID is required'); if (id === 'human@local') throw new Error('Harness identity must not be human@local'); return id; })()
+          AGENT_MAIL_HUB_URL: !!js process.env.DSH_AGENT_MAIL_HUB_URL || ''
+        toolCallTimeoutMs: 60000
+        failOnStartupError: true
+        reconnect:
+          enabled: true
+          initialDelayMs: 500
+          maxDelayMs: 30000
+          maxAttempts: 10

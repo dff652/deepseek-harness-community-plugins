@@ -1,8 +1,7 @@
 # Public release readiness
 
-This document defines the gates for the clean-history
-`@dff652/dsh-ai-asset-hub@0.1.1` candidate. Passing one gate does not authorize
-the next state transition.
+This document defines the gates for the independently versioned public bundle
+candidates. Passing one gate does not authorize the next state transition.
 
 ## Current state
 
@@ -14,11 +13,14 @@ passes. An unauthenticated API and fresh-clone audit confirms the public
 boundary. It has no tag, GitHub Release, npm package, marketplace entry or
 live deployment.
 
-The bundle is a configuration-only bridge to an independently installed AI
-Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through the exact
-`@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer and exposes the reviewed eight
-read-only tools. Provider code, binaries, credentials, homes and runtime data
-remain outside the package.
+The first package is a configuration-only bridge to an independently
+installed AI Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through
+the exact `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer and exposes the
+reviewed eight read-only tools. The second package is a configuration-only
+bridge to an independently installed Agent Mail `agent-mail-mcp` executable
+and exposes the reviewed eleven-tool surface with non-human approval denial.
+Provider code, binaries, credentials, homes and runtime data remain outside
+both packages.
 
 ## Required source and history gates
 
@@ -37,7 +39,7 @@ remain outside the package.
 
 ## Package gate
 
-The package allowlist is exactly:
+The AIAH package allowlist is exactly:
 
 ```text
 package.json
@@ -47,10 +49,21 @@ README.md
 LICENSE
 ```
 
-The child package must declare `dsh.bundle.patch`, remain publishable, and keep
+The Agent Mail package allowlist is exactly:
+
+```text
+package.json
+index.js
+cordis.patch.yml
+README.md
+LICENSE
+NOTICE
+```
+
+Each child package must declare `dsh.bundle.patch`, remain publishable, and keep
 official `@deepseek-ai/*` modules as exact peer dependencies. A candidate
 tarball is accepted only when two clean packs produce the same SHA-256 and the
-unpacked file set matches the allowlist.
+unpacked file set matches that package's allowlist.
 
 ## Runtime gate
 
@@ -72,6 +85,29 @@ Run all acceptance work in disposable homes and profiles:
 
 L5 model-visible tool selection is a separate gate and is not claimed by this
 candidate.
+
+## Agent Mail runtime gate
+
+Use the reviewed Agent Mail `1.0.0-alpha.4` TypeScript package after checking
+the provider tarball SHA-256. Never substitute a host `PATH` Python
+`agent-mail` or an unpinned source tree.
+
+Run all acceptance work in disposable homes and profiles:
+
+1. MCP initialize returns server `agent-mail` version `1.0.0-alpha.4`.
+2. `tools/list` returns exactly the eleven reviewed tools.
+3. send/inbox/claim/done/ack completes on a disposable store.
+4. A non-human identity is denied on `comm_approve` and `comm_reject` with
+   exit code 6. The two tools remain advertised.
+5. Unset, blank and relative command **and home** fail closed.
+6. `human@local` is refused as the Harness identity.
+7. Duplicate `serverName: agent-mail` fails closed.
+8. Provider crash reconnects without duplicate registration.
+9. DSH stop removes the provider child.
+10. Exact tarball install appears once in `--dump-config`; removal deletes it.
+11. The bundle can share a disposable profile with AIAH; remove AIAH first.
+
+Automatic wake, session injection and live Hub token-file use are not claimed.
 
 ## Evidence to record after verification
 
@@ -142,9 +178,40 @@ accepted run.
 10. Submit the marketplace entry separately.
 11. Treat npm publication and live deployment as independent future choices.
 
-## Future Agent Mail scope
+## Local Agent Mail candidate
 
-Agent Mail is not included as a placeholder. It may enter as an independent
-workspace only after its identity, approval, reconnect, cleanup, artifact and
-license gates pass. Automatic wake or session injection must not be claimed
-without client-visible evidence.
+`@dff652/dsh-agent-mail@0.1.0` is an independent workspace in this public
+monorepo. The private-integration digest is not reused. Dual-pack SHA-256
+values below are source-candidate evidence only and are not a publication
+authorization.
+
+### Agent Mail source-candidate record (2026-08-18)
+
+| Item | Recorded value |
+|---|---|
+| Package | `@dff652/dsh-agent-mail@0.1.0` public source candidate |
+| Node / npm | `v24.19.0` / `11.17.0` and `v22.19.0` |
+| Portable tests | 22/22 on Node `v24.19.0`; 22/22 on Node `v22.19.0` |
+| Repository boundary | PASS, including Agent Mail data-path negative canary |
+| DSH | `0.1.0-rc.6` |
+| MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer |
+| Provider | `agent-mail@1.0.0-alpha.4` commit `ca6601c95eeda2d5d558cca37179be1412b75a8d` |
+| Provider tarball SHA-256 | `925bf5b2371f3a33252af53293a086ce986d1f2558077fb2b6162a726a29d19b` |
+| Plugin tarball | `dff652-dsh-agent-mail-0.1.0.tgz` |
+| Tarball SHA-256 | `d571c170e1b156407d88ef5f9f0cdb688aaffc522fdf68b11798f4066b71869f` |
+| Decompressed tar SHA-256 | `3e4439ae2309979a0ea7fbe5fed298b67cbc0858631c9540d56ab41e36778b3d` |
+| Reproducible pack | Two clean packs were byte-identical |
+| Packed files | Exact six-file allowlist, including `LICENSE` and `NOTICE` |
+| MCP / canary | Exact 11 tools; send/inbox/claim/done/ack PASS |
+| Approval denial | Non-human `comm_approve` / `comm_reject` exit code 6 PASS |
+| Activation | Unset/blank/relative command and home, plus `human@local`, PASS |
+| Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
+| Coexistence | Shared disposable profile with AIAH; remove AIAH then Agent Mail PASS |
+
+This record does not authorize push, tag, GitHub Release, npm publication,
+marketplace submission or live-profile installation.
+
+AgentMemory remains excluded from this public candidate. Its private
+integration status and public-export blockers are tracked in the
+[project status matrix](project-status.md); a working private deployment is
+not evidence that a self-contained public package exists.
