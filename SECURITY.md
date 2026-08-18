@@ -10,9 +10,9 @@ construction, an unintended package file, a missing fail-closed check or a
 secret accidentally committed to this repository. Do not include credentials,
 private messages or user data in a report.
 
-When this repository is public, use a private GitHub Security Advisory or
-contact the repository owner through GitHub. Until then, do not open a public
-issue containing sensitive details.
+Use a private GitHub Security Advisory or contact the repository owner through
+GitHub. Do not open a public issue containing credentials, exploit details or
+other sensitive information.
 
 Provider vulnerabilities belong in the provider's own security process. A
 market listing is not an endorsement or an official security audit.

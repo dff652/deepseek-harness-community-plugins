@@ -6,12 +6,13 @@ the next state transition.
 
 ## Current state
 
-The repository is a clean-history Private GitHub staging repository. It was
+The repository is a clean-history Public GitHub source repository. It was
 created from reviewed source files without copying, cloning, forking or
 mirroring an earlier Git database. Its root commit uses a GitHub noreply
 identity, `main` is synchronized with `origin/main`, and Node 22.19/24.19 CI
-passes. It is not public and has no tag, GitHub Release, npm package,
-marketplace entry or live deployment.
+passes. An unauthenticated API and fresh-clone audit confirms the public
+boundary. It has no tag, GitHub Release, npm package, marketplace entry or
+live deployment.
 
 The bundle is a configuration-only bridge to an independently installed AI
 Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through the exact
@@ -95,9 +96,13 @@ that may contain user data.
 
 | Item | Recorded value |
 |---|---|
-| Repository | Private clean-history staging; `main` synchronized with origin |
+| Repository | Public clean-history source; `main` synchronized with origin |
 | Root commit | `7411d8c96cb69e45457ef98fe743389e4511a982` |
 | Initial CI | `public-staging-ci` run `32105034328`, Node 22.19/24.19 PASS |
+| P0 closeout commit | `5a7c09c147126f6fd04bd70e9a338c418b9a10a1` |
+| P0 closeout CI | `public-staging-ci` run `32106962601`, Node 22.19/24.19 PASS |
+| Public audit | Unauthenticated API, shallow clone, boundary scan and Node 24 13/13 PASS |
+| Public metadata | `dsh-plugin`, `deepseek-harness`, `mcp`, `ai-asset-hub` topics |
 | Git identity | GitHub noreply configured locally |
 | Node / npm | `v24.19.0` / `11.17.0` |
 | Portable tests | 13/13 on Node `v24.19.0`; 13/13 on Node `v22.19.0` |
@@ -128,9 +133,9 @@ accepted run.
 2. Obtain separate authorization for the initial local commit. **Complete.**
 3. Create a new GitHub repository as Private only after owner approval. **Complete.**
 4. Push and require Node 22.19 and Node 24.19 CI to pass. **Complete.**
-5. Recheck the complete remote history and candidate tarball.
-6. Obtain separate authorization before changing visibility to Public.
-7. Add the `dsh-plugin` topic only after public-readiness review.
+5. Recheck the complete remote history and candidate tarball. **Complete.**
+6. Obtain separate authorization before changing visibility to Public. **Complete.**
+7. Add the `dsh-plugin` topic only after public-readiness review. **Complete.**
 8. Wait until the repository naturally satisfies the marketplace age and
    meaningful-commit requirements.
 9. Obtain separate authorization for tag and GitHub Release creation.

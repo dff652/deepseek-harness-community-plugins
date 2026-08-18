@@ -11,14 +11,14 @@
 
 Expose AI Asset Hub's reviewed, read-only MCP tools inside DeepSeek Harness
 without bundling provider code, data, credentials, or machine-specific paths.
-The first package in this planned public monorepo is a small configuration bundle with
+The first package in this public monorepo is a small configuration bundle with
 a deliberately narrow contract.
 
 > [!IMPORTANT]
-> `@dff652/dsh-ai-asset-hub@0.1.1` is a pushed clean-history candidate in a
-> Private public-readiness repository. Portable CI and the recorded runtime
-> gates pass. It is not yet public, tagged, released, published to npm, listed
-> in a marketplace, or deployed to a live profile.
+> `@dff652/dsh-ai-asset-hub@0.1.1` is a public clean-history source candidate.
+> Portable CI, the recorded runtime gates and an unauthenticated fresh-clone
+> audit pass. It is not yet tagged, released, published to npm, listed in a
+> marketplace, or deployed to a live profile.
 
 ## What you get
 
@@ -138,8 +138,8 @@ official AIAH `v0.1.11` Linux AMD64 asset.
 
 | Transition | State |
 | --- | --- |
-| Clean repository and Private origin | Complete; `main` pushed and CI passed |
-| Public repository and `dsh-plugin` topic | Pending owner-controlled transition |
+| Clean repository and origin | Complete; `main` synchronized and CI passed |
+| Public repository and `dsh-plugin` topic | Complete |
 | Reviewed GitHub Release tarball | Not released |
 | npm publication | Not published |
 | Marketplace listing | Not submitted |
