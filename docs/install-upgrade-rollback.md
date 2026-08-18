@@ -98,8 +98,18 @@ dsh --profile <profile> --dump-config
 The composed config must contain the bundle exactly once, with `serverName:
 agentmemory` and the environment-backed command validation expression.
 Confirm the exact eight-tool namespace. A conforming adapter must reject
-`memory_save` without an explicit project. Automatic session capture is not
-part of this bundle.
+`memory_save` without an explicit project and must not write. Automatic
+session capture is not part of this bundle.
+
+From a repository checkout, the disposable-profile install check is:
+
+```bash
+node tests/dsh-agentmemory-clean-profile.acceptance.mjs
+```
+
+It packs the exact candidate, installs it once into disposable `web` and
+`headless` profiles, starts the child, removes the bundle, and confirms no
+provider process remains. It never touches a live profile.
 
 ```bash
 dsh plugin --profile <profile> remove @dff652/dsh-agentmemory

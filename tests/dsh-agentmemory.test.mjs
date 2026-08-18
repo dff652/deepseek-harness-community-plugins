@@ -210,6 +210,10 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
     path.join(root, 'tests', 'dsh-agentmemory-activation.acceptance.mjs'),
     'utf8',
   );
+  const cleanProfile = await readFile(
+    path.join(root, 'tests', 'dsh-agentmemory-clean-profile.acceptance.mjs'),
+    'utf8',
+  );
   const verifier = await readFile(verifierPath, 'utf8');
   const helper = await readFile(path.join(root, 'scripts', 'lib', 'agentmemory-host.mjs'), 'utf8');
   const fake = await readFile(path.join(root, 'scripts', 'lib', 'agentmemory-fake-stdio.mjs'), 'utf8');
@@ -218,6 +222,9 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
   assert.match(lifecycle, /reconnected agentmemory mcp child/);
   assert.match(lifecycle, /provider cleanup/);
   assert.match(activation, /relative-agentmemory/);
+  assert.match(cleanProfile, /dump-config/);
+  assert.match(cleanProfile, /@dff652\/dsh-agentmemory/);
+  assert.match(verifier, /observation\.content, observation\.text/);
   assert.match(helper, /shell: false|writeFakeAdapterCommand/);
   assert.match(verifier, /memory_diagnose/);
   assert.match(verifier, /memory_recall/);
@@ -228,6 +235,7 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
   for (const [name, body] of [
     ['lifecycle', lifecycle],
     ['activation', activation],
+    ['cleanProfile', cleanProfile],
     ['verifier', verifier],
     ['helper', helper],
     ['fake', fake],
@@ -256,6 +264,77 @@ test('recall benchmark contains only synthetic non-secret expectations', async (
   assert.doesNotMatch(serialized, /\/home\//);
   assert.doesNotMatch(serialized, /deepseek-harness-plugins/);
   assert.doesNotMatch(serialized, /Bearer|credential|access[_-]?token/i);
+});
+
+test('recall benchmark ignores expected IDs and keywords outside results', async () => {
+  const cases = [
+    {
+      name: 'non-results-decoy',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    debug: 'DURABLE_MARKER',
+    expectedObservationId: 'mem_expected',
+    hits: [{ observation: { id: 'mem_expected', content: 'DURABLE_MARKER' } }],
+    observation: { id: 'mem_expected', content: 'DURABLE_MARKER' },
+    results: [
+      {
+        observation: {
+          id: 'mem_other',
+          type: 'decision',
+          content: 'unrelated text',
+          decoy: 'DURABLE_MARKER mem_expected',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /expected observation mem_expected in top-5/);
+    assert.doesNotMatch(result.stderr, /Unhandled 'error' event/);
+  });
+});
+
+test('recall benchmark rejects keywords stuffed only in non-content observation fields', async () => {
+  const cases = [
+    {
+      name: 'decoy-field',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          content: 'unrelated text',
+          decoy: 'DURABLE_MARKER',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /missed expected values in the matched observation/);
+  });
 });
 
 test('recall benchmark rejects a cross-observation false PASS', async () => {
@@ -406,6 +485,14 @@ test('conforming adapter rejects save without project and isolates recall by pro
   const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-agentmemory-isolation.'));
   try {
     const store = path.join(work, 'store.json');
+    await seedStore(store, [
+      {
+        id: 'mem_fixture_seed',
+        project: 'keep',
+        content: 'preexisting seed',
+      },
+    ]);
+    const before = await readFile(store, 'utf8');
     const command = await writeFakeAdapterCommand(work, store);
     const { client, tools } = await startFakeSession(command);
     try {
@@ -416,6 +503,7 @@ test('conforming adapter rejects save without project and isolates recall by pro
       });
       assert.equal(denied.isError, true);
       assert.match(denied.content[0].text, /explicit stable project/);
+      assert.equal(await readFile(store, 'utf8'), before);
 
       const saved = await client.request('tools/call', {
         name: 'memory_save',

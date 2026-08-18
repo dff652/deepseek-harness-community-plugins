@@ -68,6 +68,9 @@ tool-result or full-session capture remains disabled and is not claimed.
 The accepted business surface is recall plus explicit-project save and
 cross-session recall. The discovered eight-tool list is frozen as the MCP
 contract; the other tools are not all claimed as semantically accepted.
+Verifier ranking looks only at `results`; IDs or keywords in sibling decoy
+fields are not a PASS. A missing `project` on `memory_save` must leave the
+store unchanged.
 
 Push, tag, GitHub Release, npm, marketplace listing and live-profile
 installation of the public package remain separate owner-authorized

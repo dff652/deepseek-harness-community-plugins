@@ -28,6 +28,7 @@
     "test:lifecycle:agent-mail": "node tests/dsh-agent-mail-lifecycle.acceptance.mjs",
     "test:activation:agentmemory": "node tests/dsh-agentmemory-activation.acceptance.mjs",
     "test:lifecycle:agentmemory": "node tests/dsh-agentmemory-lifecycle.acceptance.mjs",
+    "test:clean-profile:agentmemory": "node tests/dsh-agentmemory-clean-profile.acceptance.mjs",
     "test:coexistence": "node tests/dsh-agent-mail-coexistence.acceptance.mjs",
     "verify:aiah": "node scripts/verify-aiah-mcp.mjs",
     "verify:agent-mail": "node scripts/verify-agent-mail-mcp.mjs",

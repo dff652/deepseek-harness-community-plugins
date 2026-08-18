@@ -137,13 +137,16 @@ Run all acceptance work in disposable homes and profiles:
 4. `memory_save` without an explicit project fails closed and does not write.
 5. Recall with an explicit project returns the expected fixture or canary at
    rank 1 with `truncated: false`.
-6. A second process against the same disposable store recalls the same
+6. Expected observation IDs and keywords count only inside `results`. Decoy
+   fields outside that array must not produce a PASS.
+7. A second process against the same disposable store recalls the same
    marker. This is cross-session evidence, not automatic capture.
-7. Unset, blank and relative commands fail closed.
-8. Duplicate `serverName: agentmemory` fails closed.
-9. Provider crash reconnects without duplicate registration.
-10. DSH stop removes the provider child.
-11. Exact tarball install appears once in `--dump-config`; removal deletes it.
+8. Unset, blank and relative commands fail closed.
+9. Duplicate `serverName: agentmemory` fails closed.
+10. Provider crash reconnects without duplicate registration.
+11. DSH stop removes the provider child.
+12. Exact tarball install appears once in disposable `web` and `headless`
+    profiles; removal deletes both rows and leaves no provider child.
 
 Automatic session capture is not claimed. Live private observation IDs are
 not stored in this repository.
@@ -269,20 +272,22 @@ publication authorization.
 | Package | `@dff652/dsh-agentmemory@0.1.0` public source candidate |
 | Adapter decision | Option A: user-supplied reviewed stdio adapter |
 | Node / npm | `v24.19.0` / `11.17.0` and `v22.19.0` |
-| Portable tests | 43/43 on Node `v24.19.0`; 43/43 on Node `v22.19.0` |
+| Portable tests | 45/45 on Node `v24.19.0`; 45/45 on Node `v22.19.0` |
 | Repository boundary | PASS, including AgentMemory secret/path negative canaries |
 | DSH | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer |
 | Reviewed server | AgentMemory `0.9.28` through a host stdio adapter |
 | Plugin tarball | `dff652-dsh-agentmemory-0.1.0.tgz` |
-| Tarball SHA-256 | `b1202a3a07475458eb8c7935dd7aea6ec4830ebd695becbed6f82db4ef3649b5` |
-| Decompressed tar SHA-256 | `d4fc3304a29253c4f8566769e5b6bd78f996c92653d0191570e56618791ca5ef` |
+| Tarball SHA-256 | `18987c3e94b8f0997fb482d7f311578f1b491f2c00ed2ad8808c5db03aea4992` |
+| Decompressed tar SHA-256 | `64c0eaee841ca1a10274ac453991907819889ca874dc918361882bf4f5b06c33` |
 | Reproducible pack | Two clean packs with `SOURCE_DATE_EPOCH=1704067200` were byte-identical |
 | Packed files | Exact five-file allowlist, including `LICENSE` |
-| MCP / canary | Exact 8 tools; diagnose `fail=0`; save without project rejected |
+| MCP / canary | Exact 8 tools; diagnose `fail=0`; save without project rejected with zero write |
 | Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; project isolation PASS |
+| Decoy recall | Expected ID/keywords outside `results` do not PASS |
 | Activation | Unset/blank/relative command PASS |
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
+| Clean profile | Disposable web/headless install once, start, remove, no leftover child PASS |
 
 This record does not authorize push, tag, GitHub Release, npm publication,
 marketplace submission or live-profile installation. Live private observation

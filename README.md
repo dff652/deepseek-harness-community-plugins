@@ -143,6 +143,7 @@ npm run test:activation:agent-mail
 npm run test:lifecycle:agent-mail
 npm run test:activation:agentmemory
 npm run test:lifecycle:agentmemory
+npm run test:clean-profile:agentmemory
 npm run test:coexistence
 ```
 

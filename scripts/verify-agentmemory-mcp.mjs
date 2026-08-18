@@ -108,22 +108,12 @@ function textFromResult(result) {
 }
 
 function observationText(observation) {
-  const values = [];
-  const visit = (value) => {
-    if (typeof value === 'string') {
-      values.push(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) visit(item);
-      return;
-    }
-    if (value && typeof value === 'object') {
-      for (const item of Object.values(value)) visit(item);
-    }
-  };
-  visit(observation);
-  return values.join('\n');
+  if (!observation || typeof observation !== 'object' || Array.isArray(observation)) {
+    return '';
+  }
+  return [observation.content, observation.text]
+    .filter((value) => typeof value === 'string')
+    .join('\n');
 }
 
 function summarizeStderr(stderr) {

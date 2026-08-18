@@ -66,6 +66,12 @@ The check covers unset, blank and relative `DSH_AGENTMEMORY_COMMAND` values.
 It is kept outside `npm test` because CI environments without DSH must not
 silently skip real activation acceptance.
 
+Disposable-profile install and removal:
+
+```bash
+node tests/dsh-agentmemory-clean-profile.acceptance.mjs
+```
+
 ## Expected model-visible names
 
 ```text
