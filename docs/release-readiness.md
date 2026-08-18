@@ -10,9 +10,10 @@ created from reviewed source files without copying, cloning, forking or
 mirroring an earlier Git database. Its root commit uses a GitHub noreply
 identity, and Node 22.19/24.19 CI passes. An unauthenticated API and fresh-clone
 audit confirms the public boundary. AI Asset Hub `0.1.1` is tagged and has a
-reviewed GitHub Release. The local Agent Mail source candidate is not yet on
-`origin/main`. No package is published to npm, listed in the marketplace, or
-deployed live by this repository.
+reviewed GitHub Release. Agent Mail source is on `origin/main` but is not
+released. The AgentMemory source candidate is local until a separate push. No
+package is published to npm, listed in the marketplace, or deployed live by
+this repository.
 
 The first package is a configuration-only bridge to an independently
 installed AI Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through
@@ -20,8 +21,10 @@ the exact `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer and exposes the
 reviewed eight read-only tools. The second package is a configuration-only
 bridge to an independently installed Agent Mail `agent-mail-mcp` executable
 and exposes the reviewed eleven-tool surface with non-human approval denial.
-Provider code, binaries, credentials, homes and runtime data remain outside
-both packages.
+The third package is a configuration-only bridge to a deployment-owned
+AgentMemory stdio adapter and exposes the reviewed eight-tool surface. Users
+supply that adapter; this repository does not ship one. Provider code,
+binaries, credentials, homes and runtime data remain outside the packages.
 
 ## Required source and history gates
 
@@ -59,6 +62,16 @@ cordis.patch.yml
 README.md
 LICENSE
 NOTICE
+```
+
+The AgentMemory package allowlist is exactly:
+
+```text
+package.json
+index.js
+cordis.patch.yml
+README.md
+LICENSE
 ```
 
 Each child package must declare `dsh.bundle.patch`, remain publishable, and keep
@@ -109,6 +122,31 @@ Run all acceptance work in disposable homes and profiles:
 11. The bundle can share a disposable profile with AIAH; remove AIAH first.
 
 Automatic wake, session injection and live Hub token-file use are not claimed.
+
+## AgentMemory runtime gate
+
+Use a reviewed host stdio adapter after checking its local digest. Never
+copy a private adapter into this repository or resolve a command through
+host `PATH`.
+
+Run all acceptance work in disposable homes and profiles:
+
+1. MCP initialize succeeds against the supplied adapter.
+2. `tools/list` returns exactly the eight reviewed tools.
+3. `memory_diagnose` reports `fail: 0`. Warnings remain visible.
+4. `memory_save` without an explicit project fails closed and does not write.
+5. Recall with an explicit project returns the expected fixture or canary at
+   rank 1 with `truncated: false`.
+6. A second process against the same disposable store recalls the same
+   marker. This is cross-session evidence, not automatic capture.
+7. Unset, blank and relative commands fail closed.
+8. Duplicate `serverName: agentmemory` fails closed.
+9. Provider crash reconnects without duplicate registration.
+10. DSH stop removes the provider child.
+11. Exact tarball install appears once in `--dump-config`; removal deletes it.
+
+Automatic session capture is not claimed. Live private observation IDs are
+not stored in this repository.
 
 ## Evidence to record after verification
 
@@ -212,10 +250,41 @@ authorization.
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
 | Coexistence | Shared disposable profile with AIAH; remove AIAH then Agent Mail PASS |
 
-This record does not authorize push, tag, GitHub Release, npm publication,
+This record does not authorize tag, GitHub Release, npm publication,
 marketplace submission or live-profile installation.
 
-AgentMemory remains excluded from this public candidate. Its private
-integration status and public-export blockers are tracked in the
-[project status matrix](project-status.md); a working private deployment is
-not evidence that a self-contained public package exists.
+## Local AgentMemory candidate
+
+`@dff652/dsh-agentmemory@0.1.0` is an independent workspace in this public
+monorepo. The private-integration digest is not reused. The adapter decision
+is option A and is recorded in
+[agentmemory-adapter-decision.md](agentmemory-adapter-decision.md). Dual-pack
+SHA-256 values below are source-candidate evidence only and are not a
+publication authorization.
+
+### AgentMemory source-candidate record (2026-08-18)
+
+| Item | Recorded value |
+|---|---|
+| Package | `@dff652/dsh-agentmemory@0.1.0` public source candidate |
+| Adapter decision | Option A: user-supplied reviewed stdio adapter |
+| Node / npm | `v24.19.0` / `11.17.0` and `v22.19.0` |
+| Portable tests | 43/43 on Node `v24.19.0`; 43/43 on Node `v22.19.0` |
+| Repository boundary | PASS, including AgentMemory secret/path negative canaries |
+| DSH | `0.1.0-rc.6` |
+| MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer |
+| Reviewed server | AgentMemory `0.9.28` through a host stdio adapter |
+| Plugin tarball | `dff652-dsh-agentmemory-0.1.0.tgz` |
+| Tarball SHA-256 | `b1202a3a07475458eb8c7935dd7aea6ec4830ebd695becbed6f82db4ef3649b5` |
+| Decompressed tar SHA-256 | `d4fc3304a29253c4f8566769e5b6bd78f996c92653d0191570e56618791ca5ef` |
+| Reproducible pack | Two clean packs with `SOURCE_DATE_EPOCH=1704067200` were byte-identical |
+| Packed files | Exact five-file allowlist, including `LICENSE` |
+| MCP / canary | Exact 8 tools; diagnose `fail=0`; save without project rejected |
+| Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; project isolation PASS |
+| Activation | Unset/blank/relative command PASS |
+| Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
+
+This record does not authorize push, tag, GitHub Release, npm publication,
+marketplace submission or live-profile installation. Live private observation
+IDs were not copied into this repository. Automatic session capture is not
+claimed.

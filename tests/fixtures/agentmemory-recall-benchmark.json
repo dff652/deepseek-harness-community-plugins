@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "description": "Synthetic ranking cases for a conforming stdio adapter. Identifiers are fixture-only and are not live observation IDs.",
+  "cases": [
+    {
+      "name": "rank-one-marker",
+      "query": "PUBLIC_AM_RANK_MARKER",
+      "project": "public-agentmemory-canary",
+      "expectedObservationId": "mem_fixture_rank_one",
+      "expects": ["PUBLIC_AM_RANK_MARKER"]
+    },
+    {
+      "name": "project-scoped-marker",
+      "query": "PUBLIC_AM_PROJECT_MARKER",
+      "project": "public-agentmemory-canary",
+      "expectedObservationId": "mem_fixture_project_scope",
+      "expects": ["PUBLIC_AM_PROJECT_MARKER", "explicit project scope"]
+    },
+    {
+      "name": "cross-session-marker",
+      "query": "PUBLIC_AM_CROSS_SESSION_MARKER",
+      "project": "public-agentmemory-canary",
+      "expectedObservationId": "mem_fixture_cross_session",
+      "expects": ["PUBLIC_AM_CROSS_SESSION_MARKER"]
+    }
+  ]
+}

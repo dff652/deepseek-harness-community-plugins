@@ -1,0 +1,20 @@
+# Machine paths, AgentMemory URLs and credentials belong to the deployment,
+# not this bundle. Activation rejects an unset, blank or relative command
+# before the MCP client can resolve PATH. The reviewed adapter must require an
+# explicit project on memory_save; this bundle does not infer one from cwd.
+# Automatic session capture is not started here.
+- insert:
+    - id: mcp-agentmemory
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: agentmemory
+        transport: stdio
+        command: !!js (function () { var command = String(process.env.DSH_AGENTMEMORY_COMMAND || '').trim(); if (!command) throw new Error('DSH_AGENTMEMORY_COMMAND is required'); if (command.charAt(0) !== '/') throw new Error('DSH_AGENTMEMORY_COMMAND must be an absolute path'); return command; })()
+        args: []
+        toolCallTimeoutMs: 15000
+        failOnStartupError: true
+        reconnect:
+          enabled: true
+          initialDelayMs: 500
+          maxDelayMs: 30000
+          maxAttempts: 10

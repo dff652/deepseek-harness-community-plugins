@@ -12,8 +12,8 @@ requires owner authorization.
 | Bundle | Implementation | Public source | GitHub Release | npm | Marketplace | Live use |
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Not eligible yet | Separate decision |
-| `@dff652/dsh-agent-mail@0.1.0` | Private candidate validated | Public source candidate; not pushed | None | Not published | Not submitted | Not installed by this project |
-| `@dff652/dsh-agentmemory@0.1.0` | Private integration active | Not exported | None | Not published | Not submitted | Active private deployment |
+| `@dff652/dsh-agent-mail@0.1.0` | Private candidate validated | Public source on origin; not released | None | Not published | Not submitted | Not installed by this project |
+| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public candidate implemented | Public source candidate; not pushed | None | Not published | Not submitted | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
 
@@ -49,42 +49,29 @@ profile deployment are separate acceptance gates and are not claimed here.
 
 ## AgentMemory
 
-AgentMemory currently has a working private integration, not a public package.
-The private `@dff652/dsh-agentmemory@0.1.0` bundle is installed in a shared DSH
-Web profile and starts a deployment-owned stdio adapter. Current read-only
-verification confirms:
+The architecture decision is option A: users supply a reviewed stdio adapter.
+This repository does not copy the private adapter and does not publish a
+portable one. The decision record is
+[agentmemory-adapter-decision.md](agentmemory-adapter-decision.md).
 
-- AgentMemory server `0.9.28` initializes successfully;
-- the exact eight-tool contract is visible;
-- the focused contract/verifier suite passes 11/11;
-- the three-case recall benchmark passes 3/3, with every expected observation
-  at rank 1 and no truncated result;
-- diagnosis reports `fail=0`; three warnings and one fixable data-governance
-  finding remain visible instead of being hidden;
-- the provider process exits cleanly after the verifier.
+A public configuration-only workspace now exists at
+`packages/dsh-agentmemory`. It is rewritten for this repository: exact peer
+dependency, package-local MIT `LICENSE`, fail-closed absolute command checks,
+and no private Git history, adapter source, host paths, tokens or observation
+IDs.
 
-The accepted business surface is narrower than the discovered tool list.
-Recall and explicit-project save/cross-session recall have real evidence.
-Automatic prompt, tool-result or full-session capture remains disabled, and
-the other discovered tools are not all claimed as semantically accepted.
+The private `@dff652/dsh-agentmemory@0.1.0` digest is not the public artifact.
+A working private deployment is evidence for the provider and adapter
+contract, not authorization to ship that private bundle. Automatic prompt,
+tool-result or full-session capture remains disabled and is not claimed.
 
-AgentMemory is not ready for public export because the current private bundle:
+The accepted business surface is recall plus explicit-project save and
+cross-session recall. The discovered eight-tool list is frozen as the MCP
+contract; the other tools are not all claimed as semantically accepted.
 
-- is explicitly marked `private`;
-- carries the official DSH MCP client as a runtime dependency rather than the
-  public repository's exact peer-dependency convention;
-- does not ship a package-local license file in its current allowlist;
-- depends on a deployment-owned adapter whose portable public command contract
-  is not yet documented or distributed;
-- has not passed clean-history export, public boundary scanning, reproducible
-  public packing or exact-tarball clean-profile acceptance in this repository.
-
-Before public export, decide whether users will supply their own reviewed
-stdio adapter or whether a separately maintained public adapter is required.
-Then create a fresh package workspace without copying private Git history or
-deployment evidence, include its license and consumer runbook, use an exact
-official peer dependency, and repeat contract, recall/save isolation,
-fail-closed, reconnect, cleanup and clean-profile gates.
+Push, tag, GitHub Release, npm, marketplace listing and live-profile
+installation of the public package remain separate owner-authorized
+transitions.
 
 ## Agent Mail
 
@@ -96,9 +83,9 @@ and no private Git history, provider source or host-specific fixture paths.
 The private `@dff652/dsh-agent-mail@0.1.0` digest is not the public artifact.
 Local Node 22/24 portable checks, dual pack, eleven-tool canary, approval
 denial, fail-closed activation, reconnect, cleanup, clean-profile
-install/remove and AIAH coexistence passed. Push, tag, GitHub Release, npm,
-marketplace listing and live-profile installation remain separate
-owner-authorized transitions.
+install/remove and AIAH coexistence passed. The public source is on
+`origin/main`. Tag, GitHub Release, npm, marketplace listing and live-profile
+installation remain separate owner-authorized transitions.
 
 Native automatic wake and session injection are not part of the
 configuration-only candidate. The provider `MIGRATION-REPORT.md` is stale

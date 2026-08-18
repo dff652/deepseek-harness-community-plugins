@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "serverName": "agentmemory",
+  "reviewedServerVersion": "0.9.28",
+  "adapterOwnership": "deployment",
+  "automaticSessionCapture": false,
+  "mcpClient": "0.1.0-rc.6",
+  "identityNote": "The public bundle starts a reviewed host stdio adapter. It does not ship AgentMemory, copy a private adapter, or enable automatic session capture."
+}

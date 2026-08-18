@@ -81,12 +81,47 @@ dsh plugin --profile <profile> remove @dff652/dsh-agent-mail
 dsh --profile <profile> --dump-config
 ```
 
+## AgentMemory
+
+Set `DSH_AGENTMEMORY_COMMAND` in the DSH service environment to the reviewed
+stdio adapter's absolute path. Do not rely on `PATH`. This repository does
+not ship the adapter; the adapter owns the AgentMemory URL, secret file and
+explicit-project save policy. See the
+[adapter decision](./agentmemory-adapter-decision.md).
+
+```bash
+sha256sum dff652-dsh-agentmemory-0.1.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
+dsh --profile <profile> --dump-config
+```
+
+The composed config must contain the bundle exactly once, with `serverName:
+agentmemory` and the environment-backed command validation expression.
+Confirm the exact eight-tool namespace. A conforming adapter must reject
+`memory_save` without an explicit project. Automatic session capture is not
+part of this bundle.
+
+```bash
+dsh plugin --profile <profile> remove @dff652/dsh-agentmemory
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-<new-version>.tgz
+dsh --profile <profile> --dump-config
+```
+
+```bash
+dsh plugin --profile <profile> remove @dff652/dsh-agentmemory
+dsh --profile <profile> --dump-config
+```
+
+Removing the bundle does not delete AgentMemory observations. Deleting
+long-lived memories is a separate data-governance operation on the
+AgentMemory service.
+
 ## Coexistence
 
-The two bundles may share one disposable profile when their namespaces,
-provider commands and Agent Mail identity remain distinct. Remove AIAH first,
-then Agent Mail, and confirm that both config rows and both provider children
-are gone.
+The bundles may share one disposable profile when their namespaces and
+provider commands remain distinct. Agent Mail also needs a distinct
+non-human identity. Remove AIAH first, then Agent Mail, then AgentMemory,
+and confirm that the config rows and provider children are gone.
 
 The provider executables and their data are deployment-owned and are not
 deleted by removing these bundles. Do not delete provider state as part of
@@ -99,6 +134,7 @@ This is a multi-package repository. Tags are package-specific:
 ```text
 dsh-ai-asset-hub-v0.1.1
 dsh-agent-mail-v0.1.0
+dsh-agentmemory-v0.1.0
 ```
 
 A release must attach the exact reviewed `.tgz` and `SHA256SUMS`. npm

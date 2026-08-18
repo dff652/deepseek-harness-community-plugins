@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "serverName": "agentmemory",
+  "commandArgs": [],
+  "automaticSessionCapture": false,
+  "requireExplicitProjectOnSave": true,
+  "tools": [
+    "memory_consolidate",
+    "memory_diagnose",
+    "memory_lesson_save",
+    "memory_recall",
+    "memory_reflect",
+    "memory_save",
+    "memory_sessions",
+    "memory_smart_search"
+  ],
+  "acceptedBusinessSurface": [
+    "memory_recall",
+    "memory_save"
+  ]
+}

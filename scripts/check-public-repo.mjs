@@ -20,6 +20,11 @@ const privateBoundaryRules = [
     /(?:^|[^\d])(?:10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2})(?:[^\d]|$)/,
   ],
   ['private Agent Mail data path', /\.agent-mail(?:\/|\\|\b)/i],
+  ['private AgentMemory data path', /\.agentmemory(?:\/|\\|\b)/i],
+  [
+    'assigned AgentMemory secret',
+    /AGENTMEMORY_SECRET\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/,
+  ],
   ['PEM private material', /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/],
   ['bearer credential', /Bearer\s+[A-Za-z0-9._~+/=-]{12,}/i],
   [

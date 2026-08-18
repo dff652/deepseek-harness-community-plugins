@@ -6,6 +6,7 @@
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <img alt="Agent Mail candidate 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-candidate%200.1.0-38bdf8">
+  <img alt="AgentMemory candidate 0.1.0" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.0-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
 </p>
@@ -16,10 +17,11 @@ package is a small configuration bundle with its own version and allowlist.
 
 > [!IMPORTANT]
 > `@dff652/dsh-ai-asset-hub@0.1.1` has a reviewed GitHub Release with an exact
-> tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` remains a local
-> public-source candidate until its separately authorized push and release.
-> Neither package is published to npm, listed in a marketplace, or deployed
-> to a live profile by this repository.
+> tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` is on `origin/main`
+> but is not released. `@dff652/dsh-agentmemory@0.1.0` remains a local
+> public-source candidate until its separately authorized commit, push and
+> release. No package is published to npm, listed in a marketplace, or
+> deployed to a live profile by this repository.
 
 ## What you get
 
@@ -27,6 +29,7 @@ package is a small configuration bundle with its own version and allowlist.
 | --- | --- |
 | `@dff652/dsh-ai-asset-hub` | Starts a deployment-owned `aiah mcp` process. Eight read-only tools. Five-file package. |
 | `@dff652/dsh-agent-mail` | Starts a deployment-owned `agent-mail-mcp` process. Eleven tools with non-human approval denial. Six-file package including `NOTICE`. |
+| `@dff652/dsh-agentmemory` | Starts a deployment-owned AgentMemory stdio adapter. Exact eight tools. Five-file package. Users supply the reviewed adapter. |
 
 The bundles do **not** ship provider executables, copy provider handlers, store
 credentials, start automatic wake, or inject sessions.
@@ -45,13 +48,19 @@ npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts
 sha256sum dff652-dsh-agent-mail-0.1.0.tgz
 dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.0.tgz
 
+npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
+sha256sum dff652-dsh-agentmemory-0.1.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
+
 dsh --profile <profile> --dump-config
 ```
 
 AIAH requires `DSH_AIAH_COMMAND` as the absolute path of a reviewed `aiah`
 executable. Agent Mail requires absolute `DSH_AGENT_MAIL_COMMAND`,
-`DSH_AGENT_MAIL_HOME` and a non-human `DSH_AGENT_MAIL_ID`. Neither bundle
-resolves a provider through `PATH`.
+`DSH_AGENT_MAIL_HOME` and a non-human `DSH_AGENT_MAIL_ID`. AgentMemory
+requires absolute `DSH_AGENTMEMORY_COMMAND` pointing at a reviewed stdio
+adapter; this repository does not ship that adapter. None of the bundles
+resolve a provider through `PATH`.
 
 ## How the boundary works
 
@@ -61,8 +70,11 @@ DeepSeek Harness profile
         ├─ @dff652/dsh-ai-asset-hub      configuration only
         │          └─ DSH_AIAH_COMMAND mcp
         │
-        └─ @dff652/dsh-agent-mail        configuration only
-                   └─ DSH_AGENT_MAIL_COMMAND
+        ├─ @dff652/dsh-agent-mail        configuration only
+        │          └─ DSH_AGENT_MAIL_COMMAND
+        │
+        └─ @dff652/dsh-agentmemory       configuration only
+                   └─ DSH_AGENTMEMORY_COMMAND
 ```
 
 Provider binaries, identities, homes, endpoints, credentials, and runtime data
@@ -92,11 +104,22 @@ mcp__agent-mail__comm_approvals
 mcp__agent-mail__comm_tail
 mcp__agent-mail__comm_events
 mcp__agent-mail__comm_diagnose
+
+mcp__agentmemory__memory_consolidate
+mcp__agentmemory__memory_diagnose
+mcp__agentmemory__memory_lesson_save
+mcp__agentmemory__memory_recall
+mcp__agentmemory__memory_reflect
+mcp__agentmemory__memory_save
+mcp__agentmemory__memory_sessions
+mcp__agentmemory__memory_smart_search
 ```
 
 AIAH writer tools such as build, apply, and rollback are intentionally absent.
 Agent Mail advertises approval tools but a non-human Harness identity cannot
-execute them.
+execute them. AgentMemory advertises eight tools; the accepted business
+surface is recall plus explicit-project save. Automatic session capture is
+not enabled.
 
 ## Verify from source
 
@@ -107,6 +130,7 @@ npm run check:repo
 npm test
 npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
 npm pack --workspace @dff652/dsh-agent-mail --dry-run --ignore-scripts
+npm pack --workspace @dff652/dsh-agentmemory --dry-run --ignore-scripts
 ```
 
 On a host with the reviewed DSH runtime, run the activation and process
@@ -117,6 +141,8 @@ npm run test:activation:aiah
 npm run test:lifecycle:aiah
 npm run test:activation:agent-mail
 npm run test:lifecycle:agent-mail
+npm run test:activation:agentmemory
+npm run test:lifecycle:agentmemory
 npm run test:coexistence
 ```
 
@@ -131,6 +157,10 @@ npm run verify:aiah -- \
 
 npm run verify:agent-mail -- \
   --tarball /absolute/path/to/agent-mail-1.0.0-alpha.4.tgz
+
+npm run verify:agentmemory -- \
+  --command /absolute/path/to/agentmemory-stdio-adapter \
+  --check-save-requires-project
 ```
 
 For installation, upgrade, removal and rollback procedures, see the
@@ -143,11 +173,13 @@ are package-specific in this monorepo.
 | --- | --- |
 | AIAH package | `@dff652/dsh-ai-asset-hub@0.1.1` candidate |
 | Agent Mail package | `@dff652/dsh-agent-mail@0.1.0` source candidate |
+| AgentMemory package | `@dff652/dsh-agentmemory@0.1.0` source candidate |
 | DeepSeek Harness | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | AI Asset Hub executable | Official Release `v0.1.11` |
 | Agent Mail provider | `1.0.0-alpha.4` at commit `ca6601c` |
+| AgentMemory server | `0.9.28` through a deployment-owned stdio adapter |
 
 CI runs the portable contract on Node 22.19 and 24.19.
 
@@ -155,10 +187,11 @@ CI runs the portable contract on Node 22.19 and 24.19.
 
 | Transition | State |
 | --- | --- |
-| Clean repository and origin | AIAH source is on origin; Agent Mail source is local until a separate push |
+| Clean repository and origin | AIAH and Agent Mail source are on origin; AgentMemory source is local until a separate push |
 | Public repository and `dsh-plugin` topic | Complete |
 | AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
-| Agent Mail GitHub Release | Not released; local source candidate only |
+| Agent Mail GitHub Release | Not released; source is on origin |
+| AgentMemory GitHub Release | Not released; local source candidate only |
 | npm publication | Not published |
 | Marketplace listing | Not submitted |
 | Model-visible L5 acceptance | Not claimed |
@@ -174,10 +207,10 @@ the current and planned providers.
 ## Project notes
 
 - This is an independent project, not an official DeepSeek project or an
-  official security review of AI Asset Hub or Agent Mail.
+  official security review of AI Asset Hub, Agent Mail or AgentMemory.
 - Future providers must enter as separate workspaces after their own source,
   license, secret, artifact, and disposable-profile review.
-- AgentMemory remains a future public-export scope. Automatic wake and
+- AgentMemory users supply a reviewed stdio adapter. Automatic wake and
   automatic session capture are not claimed here.
 
 Contributions are welcome within the documented public boundary. Start with

@@ -99,6 +99,34 @@ test('public boundary scanner rejects credential and cross-platform path canarie
   }
 });
 
+test('public boundary scanner rejects a private AgentMemory data path without echoing it', async () => {
+  const fixture = await makeFixture();
+  const marker = [String.fromCharCode(46), 'agentmemory'].join('');
+  try {
+    await writeFile(path.join(fixture, 'memory-home.txt'), `${marker}/\n`, 'utf8');
+    const result = await runScanner(fixture);
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /memory-home\.txt: private AgentMemory data path/);
+    assert.doesNotMatch(result.stderr, new RegExp(marker.replaceAll('.', '\\.')));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
+test('public boundary scanner rejects an assigned AgentMemory secret without echoing it', async () => {
+  const fixture = await makeFixture();
+  const secret = `amsec_${'x'.repeat(16)}`;
+  try {
+    await writeFile(path.join(fixture, 'memory-secret.txt'), `AGENTMEMORY_SECRET=${secret}\n`, 'utf8');
+    const result = await runScanner(fixture);
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /memory-secret\.txt: assigned AgentMemory secret/);
+    assert.doesNotMatch(result.stderr, new RegExp(secret));
+  } finally {
+    await rm(fixture, { recursive: true, force: true });
+  }
+});
+
 test('public boundary scanner rejects a private Agent Mail data path without echoing it', async () => {
   const fixture = await makeFixture();
   const marker = [String.fromCharCode(46), 'agent', '-', 'mail'].join('');

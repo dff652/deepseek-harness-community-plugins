@@ -33,3 +33,4 @@ jobs:
         run: |
           npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
           npm pack --workspace @dff652/dsh-agent-mail --dry-run --ignore-scripts
+          npm pack --workspace @dff652/dsh-agentmemory --dry-run --ignore-scripts
