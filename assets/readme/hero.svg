@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="390" viewBox="0 0 1200 390" role="img" aria-labelledby="title desc">
+  <title id="title">DeepSeek Harness Plugins</title>
+  <desc id="desc">A configuration-only bridge connects DeepSeek Harness through the official MCP client to eight reviewed read-only AI Asset Hub tools.</desc>
+
+  <defs>
+    <linearGradient id="surface" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081425"/>
+      <stop offset="1" stop-color="#0b1b2d"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#58d6ff"/>
+      <stop offset="1" stop-color="#77f2c2"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="390" rx="28" fill="url(#surface)"/>
+  <path d="M0 318 C240 266 418 370 646 326 C864 284 1010 202 1200 238 V390 H0Z" fill="#0d2236"/>
+  <path d="M0 318 C240 266 418 370 646 326 C864 284 1010 202 1200 238" fill="none" stroke="#173a54" stroke-width="2"/>
+
+  <g id="title-block" transform="translate(62 54)">
+    <g transform="translate(0 0)">
+      <rect width="184" height="34" rx="17" fill="#102a3e" stroke="#24506b"/>
+      <circle cx="19" cy="17" r="5" fill="#77f2c2"/>
+      <text x="34" y="23" fill="#b9ccdc" font-size="17" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">PUBLIC PLUGIN LAB</text>
+    </g>
+    <text x="0" y="100" fill="#f3f8fc" font-size="56" font-weight="750" letter-spacing="-1.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif">DeepSeek Harness</text>
+    <text x="0" y="158" fill="url(#signal)" font-size="56" font-weight="750" letter-spacing="-1.5" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif">Plugins</text>
+    <text x="0" y="208" fill="#a9bdcc" font-size="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, PingFang SC, sans-serif">Reviewed bridges. Narrow contracts. No provider data.</text>
+    <g transform="translate(0 246)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">
+      <rect width="190" height="36" rx="10" fill="#0b1a29" stroke="#24445b"/>
+      <text x="17" y="24" fill="#d8e5ee">AIAH bundle 0.1.1</text>
+      <rect x="202" width="150" height="36" rx="10" fill="#0b1a29" stroke="#24445b"/>
+      <text x="220" y="24" fill="#77f2c2">8 × READ ONLY</text>
+    </g>
+  </g>
+
+  <g id="bridge-proof" transform="translate(710 48)">
+    <rect width="428" height="294" rx="22" fill="#07111d" stroke="#20435c" stroke-width="2"/>
+    <g transform="translate(24 22)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+      <circle cx="7" cy="7" r="7" fill="#ff7b72"/>
+      <circle cx="31" cy="7" r="7" fill="#ffb86b"/>
+      <circle cx="55" cy="7" r="7" fill="#77f2c2"/>
+      <text x="82" y="14" fill="#7890a3" font-size="16">reviewed path</text>
+    </g>
+
+    <g transform="translate(27 71)" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+      <rect width="104" height="66" rx="14" fill="#10283a" stroke="#2a5873"/>
+      <text x="52" y="31" text-anchor="middle" fill="#eff7fb" font-size="20" font-weight="700">DSH</text>
+      <text x="52" y="51" text-anchor="middle" fill="#8ea7b8" font-size="15">profile</text>
+
+      <path d="M112 33 H152" stroke="#58d6ff" stroke-width="3"/>
+      <path d="M145 27 L153 33 L145 39" fill="none" stroke="#58d6ff" stroke-width="3"/>
+
+      <rect x="160" width="214" height="66" rx="14" fill="#0d2233" stroke="#3b718e"/>
+      <text x="267" y="29" text-anchor="middle" fill="#eff7fb" font-size="18" font-weight="700">MCP client</text>
+      <text x="267" y="51" text-anchor="middle" fill="#8ea7b8" font-size="15">absolute command · stdio</text>
+    </g>
+
+    <g transform="translate(27 166)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+      <text x="0" y="0" fill="#8099ab" font-size="16">AI ASSET HUB / READ-ONLY SURFACE</text>
+      <g transform="translate(0 22)">
+        <g fill="#102a3b" stroke="#2c6079">
+          <rect width="84" height="38" rx="9"/>
+          <rect x="96" width="84" height="38" rx="9"/>
+          <rect x="192" width="84" height="38" rx="9"/>
+          <rect x="288" width="84" height="38" rx="9"/>
+          <rect y="50" width="84" height="38" rx="9"/>
+          <rect x="96" y="50" width="84" height="38" rx="9"/>
+          <rect x="192" y="50" width="84" height="38" rx="9"/>
+          <rect x="288" y="50" width="84" height="38" rx="9"/>
+        </g>
+        <g fill="#bfeeff" font-size="15" text-anchor="middle">
+          <text x="42" y="25">status</text>
+          <text x="138" y="25">diff</text>
+          <text x="234" y="25">doctor</text>
+          <text x="330" y="25">ready</text>
+          <text x="42" y="75">migration</text>
+          <text x="138" y="75">scan</text>
+          <text x="234" y="75">validate</text>
+          <text x="330" y="75">version</text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

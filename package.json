@@ -1,0 +1,21 @@
+{
+  "name": "deepseek-harness-community-plugins",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Clean staging monorepo for reviewed community DeepSeek Harness bundles",
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "check:repo": "node scripts/check-public-repo.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:activation:aiah": "node tests/dsh-ai-asset-hub-activation.acceptance.mjs",
+    "test:lifecycle:aiah": "node tests/dsh-ai-asset-hub-lifecycle.acceptance.mjs",
+    "verify:aiah": "node scripts/verify-aiah-mcp.mjs",
+    "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts"
+  }
+}

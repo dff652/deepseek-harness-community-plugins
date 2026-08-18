@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "selectedCandidate": "github-release-v0.1.11-linux-amd64",
+  "releaseTag": "v0.1.11",
+  "releaseCommit": "54a77e8a344618f7aa7fc69ba55caffaba985371",
+  "selfReportedVersion": "0.1.11",
+  "producedBy": "aiah 0.1.11+54a77e8a3446",
+  "linuxAmd64": {
+    "asset": "aiah_0.1.11_linux_amd64",
+    "sha256": "6836c21f5fe129d2a36ddaa6635b6b9e08bcd442576eabb9de5e93b11ba92ed8"
+  },
+  "identityNote": "The selected candidate is the official v0.1.11 Linux amd64 Release asset, not a source build or an unreviewed PATH install."
+}

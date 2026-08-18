@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "serverName": "aiah",
+  "commandArg": "mcp",
+  "tools": [
+    "aiah_asset_status",
+    "aiah_diff",
+    "aiah_doctor",
+    "aiah_migration_readiness",
+    "aiah_migration_status",
+    "aiah_scan",
+    "aiah_validate",
+    "aiah_version"
+  ],
+  "forbiddenTools": [
+    "aiah_apply",
+    "aiah_build",
+    "aiah_rollback",
+    "aiah_publish",
+    "aiah_pull",
+    "aiah_bootstrap"
+  ]
+}

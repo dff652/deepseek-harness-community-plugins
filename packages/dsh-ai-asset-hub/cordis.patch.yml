@@ -1,0 +1,19 @@
+# Machine paths belong to the deployment, not this bundle. Activation rejects
+# an unset, blank or relative command before the MCP client can resolve PATH.
+# The candidate exposes only the reviewed read-only MCP surface.
+- insert:
+    - id: mcp-aiah
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: aiah
+        transport: stdio
+        command: !!js (function () { var command = String(process.env.DSH_AIAH_COMMAND || '').trim(); if (!command) throw new Error('DSH_AIAH_COMMAND is required'); if (command.charAt(0) !== '/') throw new Error('DSH_AIAH_COMMAND must be an absolute path'); return command; })()
+        args:
+          - mcp
+        toolCallTimeoutMs: 60000
+        failOnStartupError: true
+        reconnect:
+          enabled: true
+          initialDelayMs: 500
+          maxDelayMs: 30000
+          maxAttempts: 10
