@@ -38,11 +38,16 @@ const PACKED_FILES = [
   'package.json',
 ];
 
-function fakeProviderSource(recallReport, { ignoreSigterm = false, stderr = '' } = {}) {
+function fakeProviderSource(
+  recallReport,
+  { ignoreSigterm = false, stderr = '', omitProjectSchema = false } = {},
+) {
+  const properties = omitProjectSchema ? {} : { project: { type: 'string' } };
   return [
     "const readline = require('node:readline');",
     `const tools = ${JSON.stringify(EXPECTED_TOOLS)};`,
     `const recallReport = ${JSON.stringify(recallReport)};`,
+    `const properties = ${JSON.stringify(properties)};`,
     `if (${JSON.stringify(ignoreSigterm)}) { process.on('SIGTERM', () => {}); setInterval(() => {}, 1000); }`,
     `if (${JSON.stringify(stderr)}) process.stderr.write(${JSON.stringify(stderr)});`,
     "const send = (id, result) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\\n');",
@@ -50,7 +55,7 @@ function fakeProviderSource(recallReport, { ignoreSigterm = false, stderr = '' }
     "input.on('line', (line) => {",
     '  const request = JSON.parse(line);',
     "  if (request.method === 'initialize') send(request.id, { protocolVersion: '2024-11-05', serverInfo: { name: 'fake-agentmemory', version: 'test' } });",
-    "  else if (request.method === 'tools/list') send(request.id, { tools: tools.map((name) => ({ name, inputSchema: { type: 'object', properties: { project: { type: 'string' } } } })) });",
+    "  else if (request.method === 'tools/list') send(request.id, { tools: tools.map((name) => ({ name, inputSchema: { type: 'object', properties } })) });",
     "  else if (request.method === 'tools/call' && request.params.name === 'memory_diagnose') send(request.id, { content: [{ type: 'text', text: JSON.stringify({ summary: { fail: 0, pass: 1, warning: 0 } }) }] });",
     "  else if (request.method === 'tools/call' && request.params.name === 'memory_recall') send(request.id, { content: [{ type: 'text', text: JSON.stringify(recallReport) }] });",
     '});',
@@ -214,6 +219,10 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
     path.join(root, 'tests', 'dsh-agentmemory-clean-profile.acceptance.mjs'),
     'utf8',
   );
+  const realMcp = await readFile(
+    path.join(root, 'tests', 'dsh-agentmemory-real-mcp.acceptance.mjs'),
+    'utf8',
+  );
   const verifier = await readFile(verifierPath, 'utf8');
   const helper = await readFile(path.join(root, 'scripts', 'lib', 'agentmemory-host.mjs'), 'utf8');
   const fake = await readFile(path.join(root, 'scripts', 'lib', 'agentmemory-fake-stdio.mjs'), 'utf8');
@@ -224,7 +233,11 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
   assert.match(activation, /relative-agentmemory/);
   assert.match(cleanProfile, /dump-config/);
   assert.match(cleanProfile, /@dff652\/dsh-agentmemory/);
-  assert.match(verifier, /observation\.content, observation\.text/);
+  assert.match(realMcp, /DSH_AGENTMEMORY_COMMAND/);
+  assert.match(realMcp, /0\.9\.28/);
+  assert.match(verifier, /memory_recall schema must declare project/);
+  assert.match(verifier, /returned observations from another project/);
+  assert.match(verifier, /CONTENT_KEYS/);
   assert.match(helper, /shell: false|writeFakeAdapterCommand/);
   assert.match(verifier, /memory_diagnose/);
   assert.match(verifier, /memory_recall/);
@@ -236,6 +249,7 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
     ['lifecycle', lifecycle],
     ['activation', activation],
     ['cleanProfile', cleanProfile],
+    ['realMcp', realMcp],
     ['verifier', verifier],
     ['helper', helper],
     ['fake', fake],
@@ -287,6 +301,7 @@ test('recall benchmark ignores expected IDs and keywords outside results', async
         observation: {
           id: 'mem_other',
           type: 'decision',
+          project: 'public-agentmemory-canary',
           content: 'unrelated text',
           decoy: 'DURABLE_MARKER mem_expected',
         },
@@ -321,6 +336,7 @@ test('recall benchmark rejects keywords stuffed only in non-content observation 
         observation: {
           id: 'mem_expected',
           type: 'decision',
+          project: 'public-agentmemory-canary',
           content: 'unrelated text',
           decoy: 'DURABLE_MARKER',
         },
@@ -337,6 +353,179 @@ test('recall benchmark rejects keywords stuffed only in non-content observation 
   });
 });
 
+test('recall benchmark rejects keywords that appear only in metadata fields', async () => {
+  const cases = [
+    {
+      name: 'metadata-only',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          sessionId: 'DURABLE_MARKER',
+          type: 'DURABLE_MARKER',
+          project: 'public-agentmemory-canary',
+          content: 'unrelated text',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /missed expected values in the matched observation/);
+  });
+});
+
+test('project-scoped recall fails closed when the schema omits project', async () => {
+  const cases = [
+    {
+      name: 'omit-project-schema',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport, { omitProjectSchema: true }),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /memory_recall schema must declare project/);
+  });
+});
+
+test('project-scoped recall rejects observations from another project', async () => {
+  const cases = [
+    {
+      name: 'other-project',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          project: 'other-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /returned observations from another project/);
+  });
+});
+
+test('project-scoped recall rejects a forbidden observation from another project', async () => {
+  const cases = [
+    {
+      name: 'forbidden-id',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      forbiddenObservationIds: ['mem_other_project'],
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          narrative: 'DURABLE_MARKER',
+        },
+      },
+      {
+        observation: {
+          id: 'mem_other_project',
+          type: 'decision',
+          narrative: 'DURABLE_MARKER from elsewhere',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /returned observations from another project/);
+  });
+});
+
+test('a provider that ignores project isolation cannot pass the benchmark', async () => {
+  const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-agentmemory-ignore-project.'));
+  try {
+    const store = path.join(work, 'store.json');
+    await seedStore(store, [
+      {
+        id: 'mem_fixture_rank_one',
+        project: 'other-canary',
+        narrative: 'PUBLIC_AM_RANK_MARKER',
+      },
+      {
+        id: 'mem_fixture_project_scope',
+        project: 'other-canary',
+        facts: ['PUBLIC_AM_PROJECT_MARKER', 'explicit project scope'],
+      },
+      {
+        id: 'mem_fixture_cross_session',
+        project: 'other-canary',
+        title: 'PUBLIC_AM_CROSS_SESSION_MARKER',
+      },
+    ]);
+    const command = await writeFakeAdapterCommand(work, store, ['--ignore-project']);
+    const result = await runVerifier({
+      command,
+      extra: ['--benchmark', path.join(root, 'tests', 'fixtures', 'agentmemory-recall-benchmark.json')],
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /returned observations from another project|schema must declare project/);
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+});
+
 test('recall benchmark rejects a cross-observation false PASS', async () => {
   const cases = [
     {
@@ -350,8 +539,22 @@ test('recall benchmark rejects a cross-observation false PASS', async () => {
   const recallReport = {
     truncated: false,
     results: [
-      { observation: { id: 'mem_expected', type: 'decision', content: 'unrelated text' } },
-      { observation: { id: 'mem_other', type: 'decision', content: 'DURABLE_MARKER' } },
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'unrelated text',
+        },
+      },
+      {
+        observation: {
+          id: 'mem_other',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
     ],
   };
   await withBenchmark(cases, async (benchmark) => {
@@ -378,9 +581,21 @@ test('recall benchmark rejects an expected observation outside the top five', as
     truncated: false,
     results: [
       ...Array.from({ length: 5 }, (_, index) => ({
-        observation: { id: `mem_other_${index}`, type: 'decision', content: 'other' },
+        observation: {
+          id: `mem_other_${index}`,
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'other',
+        },
       })),
-      { observation: { id: 'mem_sixth', type: 'decision', content: 'DURABLE_MARKER' } },
+      {
+        observation: {
+          id: 'mem_sixth',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
     ],
   };
   await withBenchmark(cases, async (benchmark) => {
@@ -405,7 +620,16 @@ test('recall benchmark rejects truncated results', async () => {
   ];
   const recallReport = {
     truncated: true,
-    results: [{ observation: { id: 'mem_expected', type: 'decision', content: 'DURABLE_MARKER' } }],
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
+    ],
   };
   await withBenchmark(cases, async (benchmark) => {
     const result = await runVerifier({
@@ -429,7 +653,16 @@ test('recall benchmark rejects missing or non-boolean truncation state', async (
   ];
   for (const truncated of [undefined, 'false']) {
     const recallReport = {
-      results: [{ observation: { id: 'mem_expected', type: 'decision', content: 'DURABLE_MARKER' } }],
+      results: [
+        {
+          observation: {
+            id: 'mem_expected',
+            type: 'decision',
+            project: 'public-agentmemory-canary',
+            content: 'DURABLE_MARKER',
+          },
+        },
+      ],
     };
     if (truncated !== undefined) recallReport.truncated = truncated;
     await withBenchmark(cases, async (benchmark) => {
@@ -462,7 +695,16 @@ test('provider stderr is summarized and an ignored SIGTERM escalates to confirme
   ];
   const recallReport = {
     truncated: false,
-    results: [{ observation: { id: 'mem_expected', type: 'decision', content: 'DURABLE_MARKER' } }],
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          project: 'public-agentmemory-canary',
+          content: 'DURABLE_MARKER',
+        },
+      },
+    ],
   };
   await withBenchmark(cases, async (benchmark) => {
     const result = await runVerifier({
@@ -592,22 +834,22 @@ test('synthetic recall benchmark is 3/3 at rank 1 against a conforming adapter',
       {
         id: 'mem_fixture_rank_one',
         project: 'public-agentmemory-canary',
-        content: 'PUBLIC_AM_RANK_MARKER',
+        narrative: 'PUBLIC_AM_RANK_MARKER',
       },
       {
         id: 'mem_fixture_project_scope',
         project: 'public-agentmemory-canary',
-        content: 'PUBLIC_AM_PROJECT_MARKER explicit project scope',
+        facts: ['PUBLIC_AM_PROJECT_MARKER', 'explicit project scope'],
       },
       {
         id: 'mem_fixture_cross_session',
         project: 'public-agentmemory-canary',
-        content: 'PUBLIC_AM_CROSS_SESSION_MARKER',
+        title: 'PUBLIC_AM_CROSS_SESSION_MARKER',
       },
       {
         id: 'mem_fixture_other_project',
         project: 'other-canary',
-        content: 'PUBLIC_AM_RANK_MARKER from another project',
+        narrative: 'PUBLIC_AM_RANK_MARKER from another project',
       },
     ]);
     const command = await writeFakeAdapterCommand(work, store);

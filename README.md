@@ -162,6 +162,8 @@ npm run verify:agent-mail -- \
 npm run verify:agentmemory -- \
   --command /absolute/path/to/agentmemory-stdio-adapter \
   --check-save-requires-project
+
+npm run test:real-mcp:agentmemory
 ```
 
 For installation, upgrade, removal and rollback procedures, see the

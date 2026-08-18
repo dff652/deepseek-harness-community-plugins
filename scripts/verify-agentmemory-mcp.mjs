@@ -107,13 +107,45 @@ function textFromResult(result) {
     .join('\n');
 }
 
+const CONTENT_KEYS = ['content', 'text', 'narrative', 'title'];
+
+function collectFactText(facts) {
+  if (typeof facts === 'string') return facts.trim() ? [facts] : [];
+  if (!Array.isArray(facts)) return [];
+  const values = [];
+  for (const item of facts) {
+    if (typeof item === 'string' && item.trim()) {
+      values.push(item);
+      continue;
+    }
+    if (!item || typeof item !== 'object') continue;
+    for (const key of ['text', 'content', 'narrative']) {
+      if (typeof item[key] === 'string' && item[key].trim()) values.push(item[key]);
+    }
+  }
+  return values;
+}
+
 function observationText(observation) {
   if (!observation || typeof observation !== 'object' || Array.isArray(observation)) {
     return '';
   }
-  return [observation.content, observation.text]
-    .filter((value) => typeof value === 'string')
-    .join('\n');
+  const values = [];
+  for (const key of CONTENT_KEYS) {
+    const value = observation[key];
+    if (typeof value === 'string' && value.trim()) values.push(value);
+  }
+  values.push(...collectFactText(observation.facts));
+  return values.join('\n');
+}
+
+function toolDeclaresProject(tool) {
+  const properties = tool?.inputSchema?.properties;
+  return Boolean(properties && typeof properties === 'object' && properties.project);
+}
+
+function observationProject(item) {
+  return String(item?.observation?.project ?? item?.project ?? '').trim();
 }
 
 function summarizeStderr(stderr) {
@@ -272,8 +304,18 @@ async function main() {
       throw new Error(`memory_diagnose reported failures: ${diagnosisText}`);
     }
 
+    const recallTool = listed.tools.find((tool) => tool.name === 'memory_recall');
+    const saveTool = listed.tools.find((tool) => tool.name === 'memory_save');
+    const projectScoped = cases.some((item) => item.project);
+    if (projectScoped && !toolDeclaresProject(recallTool)) {
+      throw new Error('memory_recall schema must declare project for project-scoped recall');
+    }
+
     let saveRequiresProject = null;
     if (options.checkSaveRequiresProject) {
+      if (!toolDeclaresProject(saveTool)) {
+        throw new Error('memory_save schema must declare project');
+      }
       const saved = await request('tools/call', {
         name: 'memory_save',
         arguments: { content: 'DSH_PUBLIC_BUNDLE_SHOULD_NOT_PERSIST' },
@@ -283,12 +325,13 @@ async function main() {
       }
       saveRequiresProject = 'PASS';
     }
-
-    const recallTool = listed.tools.find((tool) => tool.name === 'memory_recall');
     const benchmarkResults = [];
     for (const testCase of cases) {
       const recallArgs = { query: testCase.query, limit: 5, format: 'full' };
-      if (testCase.project && recallTool?.inputSchema?.properties?.project) {
+      if (testCase.project) {
+        if (!toolDeclaresProject(recallTool)) {
+          throw new Error(`${testCase.name}: memory_recall schema must declare project`);
+        }
         recallArgs.project = testCase.project;
       }
       const recalled = await request('tools/call', {
@@ -311,6 +354,26 @@ async function main() {
         throw new Error(`${testCase.name} must explicitly report truncated: false`);
       }
       const rankedResults = results.slice(0, 5);
+      if (testCase.project) {
+        const leaked = rankedResults.filter((item) => {
+          const project = observationProject(item);
+          return project && project !== testCase.project;
+        });
+        if (leaked.length > 0) {
+          throw new Error(`${testCase.name} returned observations from another project`);
+        }
+      }
+      const forbiddenIds = Array.isArray(testCase.forbiddenObservationIds)
+        ? testCase.forbiddenObservationIds
+        : [];
+      if (forbiddenIds.length > 0) {
+        const leakedIds = rankedResults
+          .map((item) => item?.observation?.id)
+          .filter((id) => id && forbiddenIds.includes(id));
+        if (leakedIds.length > 0) {
+          throw new Error(`${testCase.name} returned observations from another project`);
+        }
+      }
       const expectedResult = testCase.expectedObservationId
         ? rankedResults.find((item) => item?.observation?.id === testCase.expectedObservationId)
         : null;

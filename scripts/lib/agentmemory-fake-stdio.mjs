@@ -16,12 +16,20 @@ const EXPECTED_TOOLS = [
 ];
 
 function parseArgs(argv) {
-  const options = { ignoreSigterm: false, stderr: '' };
+  const options = { ignoreSigterm: false, ignoreProject: false, omitProjectSchema: false, stderr: '' };
   for (let index = 0; index < argv.length; index += 1) {
     const key = argv[index];
     const value = argv[index + 1];
     if (key === '--ignore-sigterm') {
       options.ignoreSigterm = true;
+      continue;
+    }
+    if (key === '--ignore-project') {
+      options.ignoreProject = true;
+      continue;
+    }
+    if (key === '--omit-project-schema') {
+      options.omitProjectSchema = true;
       continue;
     }
     if (!value) throw new Error(`missing value for ${key}`);
@@ -46,13 +54,14 @@ function sendError(id, message) {
   );
 }
 
-function toolDescriptor(name) {
-  const properties = { project: { type: 'string' } };
+function toolDescriptor(name, { omitProjectSchema = false } = {}) {
+  const properties = omitProjectSchema ? {} : { project: { type: 'string' } };
   const required = [];
   if (name === 'memory_save') {
     properties.content = { type: 'string' };
     properties.type = { type: 'string' };
-    required.push('content', 'project');
+    if (!omitProjectSchema) required.push('content', 'project');
+    else required.push('content');
   }
   if (name === 'memory_recall') {
     properties.query = { type: 'string' };
@@ -78,9 +87,17 @@ async function saveStore(storePath, store) {
 }
 
 function observationText(observation) {
-  return [observation.id, observation.type, observation.project, observation.content]
-    .filter(Boolean)
-    .join('\n');
+  const values = [observation.content, observation.text, observation.narrative, observation.title];
+  if (typeof observation.facts === 'string') values.push(observation.facts);
+  else if (Array.isArray(observation.facts)) {
+    for (const item of observation.facts) {
+      if (typeof item === 'string') values.push(item);
+      else if (item && typeof item === 'object') {
+        values.push(item.text, item.content, item.narrative);
+      }
+    }
+  }
+  return values.filter((value) => typeof value === 'string' && value.trim()).join('\n');
 }
 
 function explicitProject(value) {
@@ -110,7 +127,11 @@ input.on('line', async (line) => {
     }
     if (request.method === 'notifications/initialized') return;
     if (request.method === 'tools/list') {
-      send(request.id, { tools: EXPECTED_TOOLS.map(toolDescriptor) });
+      send(request.id, {
+        tools: EXPECTED_TOOLS.map((name) =>
+          toolDescriptor(name, { omitProjectSchema: options.omitProjectSchema }),
+        ),
+      });
       return;
     }
     if (request.method !== 'tools/call') {
@@ -161,7 +182,7 @@ input.on('line', async (line) => {
       const project = explicitProject(args.project);
       const store = await loadStore(options.store);
       const ranked = store.observations
-        .filter((item) => !project || item.project === project)
+        .filter((item) => options.ignoreProject || !project || item.project === project)
         .map((observation) => {
           const haystack = observationText(observation);
           const score = haystack.includes(query) ? 1 : 0.1;

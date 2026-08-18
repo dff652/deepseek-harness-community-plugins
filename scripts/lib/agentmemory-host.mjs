@@ -79,6 +79,10 @@ export async function seedStore(storePath, observations) {
       type: item.type ?? 'decision',
       project: item.project,
       content: item.content,
+      text: item.text,
+      narrative: item.narrative,
+      facts: item.facts,
+      title: item.title,
     })),
   };
   await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`);

@@ -136,9 +136,12 @@ Run all acceptance work in disposable homes and profiles:
 3. `memory_diagnose` reports `fail: 0`. Warnings remain visible.
 4. `memory_save` without an explicit project fails closed and does not write.
 5. Recall with an explicit project returns the expected fixture or canary at
-   rank 1 with `truncated: false`.
+   rank 1 with `truncated: false`. The `memory_recall` schema must declare
+   `project`; omitting it is an immediate FAIL.
 6. Expected observation IDs and keywords count only inside `results`. Decoy
-   fields outside that array must not produce a PASS.
+   fields outside that array, plus `id`, `sessionId` and `type`, must not
+   produce a PASS. Matchable text is `narrative`, `facts`, `content`, `text`
+   and `title`. A result from another project is a FAIL.
 7. A second process against the same disposable store recalls the same
    marker. This is cross-session evidence, not automatic capture.
 8. Unset, blank and relative commands fail closed.
@@ -272,7 +275,7 @@ publication authorization.
 | Package | `@dff652/dsh-agentmemory@0.1.0` public source candidate |
 | Adapter decision | Option A: user-supplied reviewed stdio adapter |
 | Node / npm | `v24.19.0` / `11.17.0` and `v22.19.0` |
-| Portable tests | 45/45 on Node `v24.19.0`; 45/45 on Node `v22.19.0` |
+| Portable tests | 50/50 on Node `v24.19.0`; 50/50 on Node `v22.19.0` |
 | Repository boundary | PASS, including AgentMemory secret/path negative canaries |
 | DSH | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer |
@@ -283,8 +286,9 @@ publication authorization.
 | Reproducible pack | Two clean packs with `SOURCE_DATE_EPOCH=1704067200` were byte-identical |
 | Packed files | Exact five-file allowlist, including `LICENSE` |
 | MCP / canary | Exact 8 tools; diagnose `fail=0`; save without project rejected with zero write |
-| Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; project isolation PASS |
-| Decoy recall | Expected ID/keywords outside `results` do not PASS |
+| Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; omit-schema and other-project negatives FAIL as required |
+| Real MCP benchmark | AgentMemory `0.9.28`; 8 tools; 3/3 rank 1; `truncated: false`; other-project ID excluded |
+| Decoy recall | Expected ID/keywords outside `results`, and `id`/`sessionId`/`type`, do not PASS |
 | Activation | Unset/blank/relative command PASS |
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
 | Clean profile | Disposable web/headless install once, start, remove, no leftover child PASS |
