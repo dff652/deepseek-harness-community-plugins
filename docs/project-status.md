@@ -74,11 +74,12 @@ fields are not a PASS. Project-scoped cases fail immediately if the
 `facts`, `content`, `text` and `title`, never from `id`, `sessionId` or
 `type`. A missing `project` on `memory_save` must leave the store unchanged.
 
-An independent re-review on 2026-08-18 closed the two prior verifier
-blockers. The omit-project-schema, ignored-project, cross-project observation,
-forbidden-ID and metadata-stuffing negatives now fail as required. Portable
-tests passed 50/50 on both Node 22.19 and Node 24.19; activation, lifecycle and
-clean Web/headless profile checks also passed. A read-only call through the
+An independent re-review on 2026-08-18 and follow-up hardening on 2026-08-19
+closed the verifier blockers. The omit-project-schema, ignored-project,
+cross-project observation, forbidden-ID, metadata-stuffing and split-content
+negatives now fail as required. Portable tests passed 54/54 on both Node 22.19
+and Node 24.19; activation, lifecycle and clean Web/headless profile checks
+also passed. A read-only call through the
 reviewed AgentMemory 0.9.28 adapter confirmed the exact eight-tool contract,
 `diagnosis.fail = 0`, explicit project forwarding, `truncated: false`, existing
 canary recall and clean process termination. The public source candidate is
@@ -86,10 +87,15 @@ therefore locally accepted and ready for a separately authorized push and
 remote CI gate.
 
 The full `test:real-mcp:agentmemory` gate is intentionally not read-only: it
-writes three expected canaries plus one cross-project decoy to dedicated test
-projects, and the accepted provider surface has no delete tool. It must run
-only against a disposable AgentMemory store. A routine audit of an existing
-store must use the verifier with reviewed existing canaries instead.
+writes three expected canaries plus three cross-project decoys (one per marker)
+to dedicated test projects, and the accepted provider surface has no delete
+tool. It must run only against a disposable AgentMemory store. A routine audit
+of an existing store must use the verifier with reviewed existing canaries
+instead. Ad-hoc query mode is a single-observation content smoke test, not
+project-isolation evidence. Because AgentMemory 0.9.28 observations omit
+`project`, every strong
+project-scoped benchmark case must name an expected observation ID and a known
+cross-project forbidden observation ID.
 
 Push, tag, GitHub Release, npm, marketplace listing and live-profile
 installation of the public package remain separate owner-authorized

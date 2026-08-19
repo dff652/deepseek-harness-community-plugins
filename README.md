@@ -169,11 +169,17 @@ npm run test:real-mcp:agentmemory
 > [!WARNING]
 > `test:real-mcp:agentmemory` is a write-producing acceptance test. It saves
 > three expected canaries in the dedicated `dsh-public-bundle-canary` project
-> and one cross-project decoy in `dsh-public-bundle-other`. The reviewed
-> eight-tool provider has no delete operation, so the test cannot remove those
-> observations. Run it only against an explicitly disposable AgentMemory
-> store, never a personal or production memory store. Routine rechecks should
-> use `verify:agentmemory` with reviewed existing canaries instead.
+> and three cross-project decoys in `dsh-public-bundle-other` (one per marker).
+> The reviewed eight-tool provider has no delete operation, so the test cannot
+> remove those observations. Run it only against an explicitly disposable
+> AgentMemory store, never a personal or production memory store. Routine
+> rechecks should use `verify:agentmemory` with reviewed existing canaries
+> instead. Ad-hoc
+> `--query`/`--expect` mode is a content smoke test: all expected terms must
+> occur in one observation, but it does not certify project isolation. Strong
+> isolation evidence requires a version 1 benchmark with an expected
+> observation ID and, when responses omit `project`, a known cross-project
+> `forbiddenObservationIds` canary for every case.
 
 For installation, upgrade, removal and rollback procedures, see the
 [consumer operations guide](./docs/install-upgrade-rollback.md). Release tags

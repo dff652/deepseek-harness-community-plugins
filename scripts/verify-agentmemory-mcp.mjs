@@ -96,6 +96,16 @@ async function loadCases(options) {
         `benchmark case ${index} requires name, query, project, expectedObservationId and expects`,
       );
     }
+    if (
+      item.forbiddenObservationIds !== undefined &&
+      (!Array.isArray(item.forbiddenObservationIds) ||
+        item.forbiddenObservationIds.length === 0 ||
+        item.forbiddenObservationIds.some(
+          (observationId) => typeof observationId !== 'string' || !observationId.trim(),
+        ))
+    ) {
+      throw new Error(`benchmark case ${index} forbiddenObservationIds must be non-empty strings`);
+    }
     return item;
   });
 }
@@ -354,7 +364,12 @@ async function main() {
         throw new Error(`${testCase.name} must explicitly report truncated: false`);
       }
       const rankedResults = results.slice(0, 5);
+      const forbiddenIds = Array.isArray(testCase.forbiddenObservationIds)
+        ? testCase.forbiddenObservationIds
+        : [];
+      let isolationEvidence = null;
       if (testCase.project) {
+        const strongBenchmark = Boolean(testCase.expectedObservationId);
         const leaked = rankedResults.filter((item) => {
           const project = observationProject(item);
           return project && project !== testCase.project;
@@ -362,10 +377,18 @@ async function main() {
         if (leaked.length > 0) {
           throw new Error(`${testCase.name} returned observations from another project`);
         }
+        const projectless = rankedResults.filter((item) => !observationProject(item));
+        if (strongBenchmark && projectless.length > 0 && forbiddenIds.length === 0) {
+          throw new Error(
+            `${testCase.name} requires forbiddenObservationIds when recall results omit project`,
+          );
+        }
+        isolationEvidence = strongBenchmark
+          ? projectless.length > 0
+            ? 'forbidden-observation-ids'
+            : 'response-project'
+          : 'content-smoke-only';
       }
-      const forbiddenIds = Array.isArray(testCase.forbiddenObservationIds)
-        ? testCase.forbiddenObservationIds
-        : [];
       if (forbiddenIds.length > 0) {
         const leakedIds = rankedResults
           .map((item) => item?.observation?.id)
@@ -386,9 +409,12 @@ async function main() {
           `${testCase.name} expected observation ${testCase.expectedObservationId} in top-5; got ${returnedIds || 'none'}`,
         );
       }
-      const content = expectedResult
-        ? observationText(expectedResult.observation)
-        : rankedResults.map((item) => observationText(item?.observation)).join('\n');
+      const sameObservationMatch = (item) => {
+        const content = observationText(item?.observation);
+        return testCase.expects.every((expected) => content.includes(expected));
+      };
+      const matchedResult = expectedResult ?? rankedResults.find(sameObservationMatch);
+      const content = matchedResult ? observationText(matchedResult.observation) : '';
       const missing = testCase.expects.filter((expected) => !content.includes(expected));
       if (missing.length > 0) {
         throw new Error(
@@ -402,6 +428,7 @@ async function main() {
         expected: testCase.expects,
         expectedObservationId: testCase.expectedObservationId ?? null,
         projectRequested: recallArgs.project ?? null,
+        isolationEvidence,
         resultCount: results.length,
         truncated: recallReport.truncated ?? null,
         matches: results.map((item, rank) => ({

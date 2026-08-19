@@ -235,6 +235,8 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
   assert.match(cleanProfile, /@dff652\/dsh-agentmemory/);
   assert.match(realMcp, /DSH_AGENTMEMORY_COMMAND/);
   assert.match(realMcp, /0\.9\.28/);
+  assert.match(realMcp, /for \(const item of saved\)/);
+  assert.match(realMcp, /item\.forbiddenObservationIds = \[decoyId\]/);
   assert.match(verifier, /memory_recall schema must declare project/);
   assert.match(verifier, /returned observations from another project/);
   assert.match(verifier, /CONTENT_KEYS/);
@@ -567,6 +569,72 @@ test('recall benchmark rejects a cross-observation false PASS', async () => {
   });
 });
 
+test('ad-hoc recall requires all expected terms in one observation', async () => {
+  const result = await runVerifier({
+    source: fakeProviderSource({
+      truncated: false,
+      results: [
+        {
+          observation: {
+            id: 'mem_alpha',
+            project: 'public-agentmemory-canary',
+            narrative: 'MARKER ALPHA',
+          },
+        },
+        {
+          observation: {
+            id: 'mem_beta',
+            project: 'public-agentmemory-canary',
+            narrative: 'MARKER BETA',
+          },
+        },
+      ],
+    }),
+    extra: [
+      '--project',
+      'public-agentmemory-canary',
+      '--query',
+      'MARKER',
+      '--expect',
+      'ALPHA',
+      '--expect',
+      'BETA',
+    ],
+  });
+  assert.notEqual(result.code, 0);
+  assert.match(result.stderr, /missed expected values in the matched observation/);
+});
+
+test('ad-hoc recall passes when all expected terms share one observation', async () => {
+  const result = await runVerifier({
+    source: fakeProviderSource({
+      truncated: false,
+      results: [
+        {
+          observation: {
+            id: 'mem_alpha_beta',
+            narrative: 'MARKER ALPHA BETA',
+          },
+        },
+      ],
+    }),
+    extra: [
+      '--project',
+      'public-agentmemory-canary',
+      '--query',
+      'MARKER',
+      '--expect',
+      'ALPHA',
+      '--expect',
+      'BETA',
+    ],
+  });
+  assert.equal(result.code, 0, result.stderr);
+  const report = JSON.parse(result.stdout);
+  assert.equal(report.benchmarks[0].expectedTermsMatched, true);
+  assert.equal(report.benchmarks[0].isolationEvidence, 'content-smoke-only');
+});
+
 test('recall benchmark rejects an expected observation outside the top five', async () => {
   const cases = [
     {
@@ -720,6 +788,72 @@ test('provider stderr is summarized and an ignored SIGTERM escalates to confirme
     assert.match(result.stderr, /provider stderr summary/);
     assert.match(result.stderr, /redacted/);
     assert.doesNotMatch(result.stderr, /DSH_REVIEW_FAKE_SECRET_MARKER/);
+  });
+});
+
+test('project-scoped recall fails closed when project evidence is absent', async () => {
+  const cases = [
+    {
+      name: 'missing-isolation-evidence',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          narrative: 'DURABLE_MARKER',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /requires forbiddenObservationIds when recall results omit project/);
+  });
+});
+
+test('project-scoped recall accepts projectless observations with a forbidden-ID canary', async () => {
+  const cases = [
+    {
+      name: 'forbidden-id-evidence',
+      query: 'marker',
+      project: 'public-agentmemory-canary',
+      expectedObservationId: 'mem_expected',
+      forbiddenObservationIds: ['mem_other_project'],
+      expects: ['DURABLE_MARKER'],
+    },
+  ];
+  const recallReport = {
+    truncated: false,
+    results: [
+      {
+        observation: {
+          id: 'mem_expected',
+          type: 'decision',
+          narrative: 'DURABLE_MARKER',
+        },
+      },
+    ],
+  };
+  await withBenchmark(cases, async (benchmark) => {
+    const result = await runVerifier({
+      source: fakeProviderSource(recallReport),
+      benchmark,
+    });
+    assert.equal(result.code, 0, result.stderr);
+    const report = JSON.parse(result.stdout);
+    assert.equal(report.benchmarks[0].isolationEvidence, 'forbidden-observation-ids');
   });
 });
 

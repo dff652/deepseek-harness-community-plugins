@@ -141,7 +141,10 @@ Run all acceptance work in disposable homes and profiles:
 6. Expected observation IDs and keywords count only inside `results`. Decoy
    fields outside that array, plus `id`, `sessionId` and `type`, must not
    produce a PASS. Matchable text is `narrative`, `facts`, `content`, `text`
-   and `title`. A result from another project is a FAIL.
+   and `title`. A result from another project is a FAIL. If returned
+   observations omit `project` (as AgentMemory 0.9.28 does), every
+   project-scoped benchmark case must provide a distinct
+   `forbiddenObservationIds` decoy; missing isolation evidence is a FAIL.
 7. A second process against the same disposable store recalls the same
    marker. This is cross-session evidence, not automatic capture.
 8. Unset, blank and relative commands fail closed.
@@ -275,7 +278,7 @@ publication authorization.
 | Package | `@dff652/dsh-agentmemory@0.1.0` public source candidate |
 | Adapter decision | Option A: user-supplied reviewed stdio adapter |
 | Node / npm | `v24.19.0` / `11.17.0` and `v22.19.0` |
-| Portable tests | 50/50 on Node `v24.19.0`; 50/50 on Node `v22.19.0` |
+| Portable tests | 54/54 on Node `v24.19.0`; 54/54 on Node `v22.19.0` |
 | Repository boundary | PASS, including AgentMemory secret/path negative canaries |
 | DSH | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer |
@@ -286,23 +289,27 @@ publication authorization.
 | Reproducible pack | Two clean packs with `SOURCE_DATE_EPOCH=1704067200` were byte-identical |
 | Packed files | Exact five-file allowlist, including `LICENSE` |
 | MCP / canary | Exact 8 tools; diagnose `fail=0`; save without project rejected with zero write |
-| Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; omit-schema and other-project negatives FAIL as required |
-| Real MCP benchmark | AgentMemory `0.9.28`; 8 tools; 3/3 rank 1; `truncated: false`; other-project ID excluded |
+| Recall / isolation | Synthetic 3/3 rank 1, `truncated: false`; omit-schema, missing-evidence and other-project negatives FAIL as required |
+| Real MCP benchmark | AgentMemory `0.9.28`; 8 tools; 3/3 rank 1; `truncated: false`; one other-project ID excluded per case |
 | Decoy recall | Expected ID/keywords outside `results`, and `id`/`sessionId`/`type`, do not PASS |
 | Activation | Unset/blank/relative command PASS |
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
 | Clean profile | Disposable web/headless install once, start, remove, no leftover child PASS |
 
-### Independent AgentMemory re-review (2026-08-18)
+### Independent AgentMemory re-review and hardening (2026-08-18 to 2026-08-19)
 
-The post-fix review returned PASS without further package or verifier changes:
+The independent review found and closed two additional verifier false-positive
+paths before push:
 
-- Node 22.19 and Node 24.19 each passed 50/50 portable tests;
+- Node 22.19 and Node 24.19 each passed 54/54 portable tests;
 - repository boundary, exact five-file package, reproducible pack,
   activation, lifecycle and clean Web/headless profile gates passed;
-- project-scoped recall now fails closed when the schema omits `project`, and
-  ignored-project, cross-project, forbidden-ID and metadata-only keyword
-  canaries are rejected;
+- project-scoped recall now fails closed when the schema omits `project`, when
+  project evidence is absent without a forbidden-ID canary, and ignored-
+  project, cross-project, forbidden-ID and metadata-only keyword canaries are
+  rejected;
+- ad-hoc recall requires all expected terms to occur within one observation,
+  preventing a PASS assembled from multiple Top-5 results;
 - a read-only check through the reviewed AgentMemory 0.9.28 adapter confirmed
   eight tools, `diagnosis.fail = 0`, explicit project forwarding, existing
   canary recall, `truncated: false` and clean child termination; and
@@ -310,12 +317,16 @@ The post-fix review returned PASS without further package or verifier changes:
   public-package deployment was performed.
 
 The recorded real 3/3 gate is a write-producing acceptance test. It saves
-three expected observations in `dsh-public-bundle-canary` and one isolation
-decoy in `dsh-public-bundle-other`. Because the accepted eight-tool surface
-does not include deletion, that gate must use a disposable AgentMemory store.
+three expected observations in `dsh-public-bundle-canary` and three isolation
+decoys in `dsh-public-bundle-other`, one matching decoy for each marker.
+Because the accepted eight-tool surface does not include deletion, that gate
+must use a disposable AgentMemory store.
 Independent routine rechecks should recall reviewed existing canaries and
 must not recreate the write-producing fixture against a personal or
-production store.
+production store. Ad-hoc query mode requires all expected terms in one
+observation but is only a content smoke test. A project-isolation claim against
+AgentMemory 0.9.28 requires an expected observation ID and a distinct known
+cross-project forbidden observation ID in every benchmark case.
 
 This record does not authorize push, tag, GitHub Release, npm publication,
 marketplace submission or live-profile installation. Live private observation

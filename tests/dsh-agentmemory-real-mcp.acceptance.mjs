@@ -122,18 +122,28 @@ try {
       saved.push({ ...item, expectedObservationId: id, project, expects: [item.expect] });
     }
 
-    const decoy = await first.request('tools/call', {
-      name: 'memory_save',
-      arguments: {
-        content: `${runId}_RANK narrative from another project`,
-        project: 'dsh-public-bundle-other',
-        type: 'decision',
-      },
-    });
-    assert.notEqual(decoy.isError, true, `decoy save failed: ${textFromResult(decoy)}`);
-    const decoyId = savedObservationId(parseBody(decoy));
-    assert.match(String(decoyId ?? ''), /^mem_[a-z0-9_]+$/i, 'decoy save must return an id');
-    saved[0].forbiddenObservationIds = [decoyId];
+    for (const item of saved) {
+      const decoy = await first.request('tools/call', {
+        name: 'memory_save',
+        arguments: {
+          content: `${item.expect} from another project`,
+          project: 'dsh-public-bundle-other',
+          type: 'decision',
+        },
+      });
+      assert.notEqual(
+        decoy.isError,
+        true,
+        `${item.name} decoy save failed: ${textFromResult(decoy)}`,
+      );
+      const decoyId = savedObservationId(parseBody(decoy));
+      assert.match(
+        String(decoyId ?? ''),
+        /^mem_[a-z0-9_]+$/i,
+        `${item.name} decoy save must return an id`,
+      );
+      item.forbiddenObservationIds = [decoyId];
+    }
   } finally {
     await first.close();
   }
@@ -168,6 +178,9 @@ try {
   });
   assert.ok(report.benchmarks.every((item) => item.truncated === false));
   assert.ok(report.benchmarks.every((item) => item.projectRequested === project));
+  assert.ok(
+    report.benchmarks.every((item) => item.isolationEvidence === 'forbidden-observation-ids'),
+  );
   assert.doesNotMatch(stderr, /Unhandled 'error' event/);
   console.log(
     JSON.stringify({
