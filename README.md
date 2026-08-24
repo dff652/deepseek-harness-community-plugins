@@ -18,10 +18,11 @@ package is a small configuration bundle with its own version and allowlist.
 > [!IMPORTANT]
 > `@dff652/dsh-ai-asset-hub@0.1.1` has a reviewed GitHub Release with an exact
 > tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` is on `origin/main`
-> but is not released. `@dff652/dsh-agentmemory@0.1.0` remains a local
-> public-source candidate until its separately authorized commit, push and
-> release. No package is published to npm, listed in a marketplace, or
-> deployed to a live profile by this repository.
+> but is not released. `@dff652/dsh-agentmemory@0.1.0` is also public source on
+> `origin/main` but is not released. The AIAH marketplace entry from
+> [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
+> is merged and visible in the public catalog. No package is published to npm
+> or deployed to a live profile by this repository.
 
 ## What you get
 
@@ -185,11 +186,31 @@ For installation, upgrade, removal and rollback procedures, see the
 [consumer operations guide](./docs/install-upgrade-rollback.md). Release tags
 are package-specific in this monorepo.
 
+Verify the live catalog and exact Release bytes. Listing-only mode deliberately
+returns `NOT_COVERED` with exit code 2 because it does not install anything:
+
+```bash
+npm run verify:marketplace:aiah -- --listing-only
+
+npm run verify:marketplace:aiah -- \
+  --dsh-bin /absolute/path/to/dsh \
+  --aiah-command /absolute/path/to/aiah \
+  --pnpm-cli /absolute/path/to/pnpm.mjs \
+  --report /absolute/path/to/report.json
+```
+
+Full mode pins DSH `0.1.0-rc.6` and pnpm `11.7.0`, downloads and hashes the
+catalog tarball once, installs those same bytes from a local temporary file,
+checks the installed manifest, then removes the bundle and its package
+directory. `DSH_HOME`, the consumer home, caches and the pnpm store are all
+test-owned temporary paths. This proves catalog discovery plus disposable DSH
+install/remove; it does not claim a browser click or live-profile deployment.
+
 ## Reviewed compatibility
 
 | Component | Reviewed value |
 | --- | --- |
-| AIAH package | `@dff652/dsh-ai-asset-hub@0.1.1` candidate |
+| AIAH package | `@dff652/dsh-ai-asset-hub@0.1.1` GitHub Release |
 | Agent Mail package | `@dff652/dsh-agent-mail@0.1.0` source candidate |
 | AgentMemory package | `@dff652/dsh-agentmemory@0.1.0` source candidate |
 | DeepSeek Harness | `0.1.0-rc.6` |
@@ -205,13 +226,13 @@ CI runs the portable contract on Node 22.19 and 24.19.
 
 | Transition | State |
 | --- | --- |
-| Clean repository and origin | AIAH and Agent Mail source are on origin; AgentMemory source is local until a separate push |
+| Clean repository and origin | AIAH, Agent Mail and AgentMemory public source are on `origin/main` |
 | Public repository and `dsh-plugin` topic | Complete |
 | AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
 | Agent Mail GitHub Release | Not released; source is on origin |
-| AgentMemory GitHub Release | Not released; local source candidate only |
+| AgentMemory GitHub Release | Not released; public source candidate only |
 | npm publication | Not published |
-| Marketplace listing | Not submitted |
+| Marketplace listing | AIAH listed after merged [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); live catalog, exact digest and disposable install/remove PASS |
 | Model-visible L5 acceptance | Not claimed |
 | Live-profile deployment | Not part of this repository |
 

@@ -11,9 +11,12 @@ mirroring an earlier Git database. Its root commit uses a GitHub noreply
 identity, and Node 22.19/24.19 CI passes. An unauthenticated API and fresh-clone
 audit confirms the public boundary. AI Asset Hub `0.1.1` is tagged and has a
 reviewed GitHub Release. Agent Mail source is on `origin/main` but is not
-released. The AgentMemory source candidate is local until a separate push. No
-package is published to npm, listed in the marketplace, or deployed live by
-this repository.
+released. AgentMemory source is also on `origin/main` but is not released. No
+package is published to npm or deployed live by this repository. The AIAH
+marketplace entry originated in
+[awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957).
+Both automated checks passed, the PR merged, and the entry is in the live
+catalog.
 
 The first package is a configuration-only bridge to an independently
 installed AI Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through
@@ -224,10 +227,39 @@ accepted run.
 6. Obtain separate authorization before changing visibility to Public. **Complete.**
 7. Add the `dsh-plugin` topic only after public-readiness review. **Complete.**
 8. Wait until the repository naturally satisfies the marketplace age and
-   meaningful-commit requirements.
+   meaningful-commit requirements. **Complete: 10 meaningful commits.**
 9. Obtain separate authorization for tag and GitHub Release creation. **Complete for AIAH `0.1.1`.**
-10. Submit the marketplace entry separately.
+10. Submit the marketplace entry separately. **AIAH submitted and merged as
+    [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957);
+    checks, catalog rebuild and disposable exact-artifact install/remove PASS.**
 11. Treat npm publication and live deployment as independent future choices.
+
+### Marketplace submission evidence (2026-08-24)
+
+- Catalog commit: `23a5eaa6` on fork branch `dff652:add-dff652-aiah`.
+- Entry: `dff652/deepseek-harness-community-plugins#dsh-ai-asset-hub` in
+  category `tools`, pointing at the exact AIAH `0.1.1` GitHub Release tarball.
+- Downloaded tarball SHA-256:
+  `8a6409cbe69b97269dc7a959e6ddc8ea9814bd86c132939488f9a1b840de7314`,
+  matching the Release `SHA256SUMS` and a fresh pack from the annotated tag.
+- Source verification: public-boundary check PASS and portable tests `64/64`
+  on both Node 22.19 and 24.19.
+- Catalog verification: generated READMEs, site build, local submission gate,
+  remote `PR check` and remote `Submission gate` all PASS.
+- Maintainer merge: 2026-08-24, merge commit
+  `26f0b94088165fc559134a4268f08ed509d0cb69`.
+- Live catalog: exact entry URL, owner, category, English/Chinese descriptions,
+  Release tarball and detail page PASS. The catalog count was `2051` at the
+  accepted run; that aggregate count is expected to change.
+- Post-merge consumer gate: DSH `0.1.0-rc.6`, pnpm `11.7.0`, exact downloaded
+  bytes, installed manifest identity, single config row, isolated DSH home and
+  pnpm store, removal and package-directory cleanup PASS.
+- The installed `dshmarket@1.10.1` compatibility helper was checked read-only
+  and injects pnpm workspace-root `-w` for add/remove. The catalog's displayed
+  copy command omits `-w` and does not work directly on the reviewed rc.6 host;
+  project commands and the verifier include it explicitly.
+- A browser click, npm publication and any live-profile deployment remain
+  unclaimed separate transitions.
 
 ## Local Agent Mail candidate
 
@@ -328,7 +360,8 @@ observation but is only a content smoke test. A project-isolation claim against
 AgentMemory 0.9.28 requires an expected observation ID and a distinct known
 cross-project forbidden observation ID in every benchmark case.
 
-This record does not authorize push, tag, GitHub Release, npm publication,
-marketplace submission or live-profile installation. Live private observation
-IDs were not copied into this repository. Automatic session capture is not
-claimed.
+The AgentMemory source and verifier hardening were later pushed through
+`4720f69`, with remote CI passing. This record does not authorize an
+AgentMemory tag, GitHub Release, npm publication, marketplace submission or
+live-profile installation. Live private observation IDs were not copied into
+this repository. Automatic session capture is not claimed.

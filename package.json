@@ -2,7 +2,7 @@
   "name": "deepseek-harness-community-plugins",
   "version": "0.1.1",
   "private": true,
-  "description": "Clean staging monorepo for reviewed community DeepSeek Harness bundles",
+  "description": "Reviewed configuration-only DeepSeek Harness bundles for AI Asset Hub, Agent Mail and AgentMemory",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,6 +33,7 @@
     "verify:aiah": "node scripts/verify-aiah-mcp.mjs",
     "verify:agent-mail": "node scripts/verify-agent-mail-mcp.mjs",
     "verify:agentmemory": "node scripts/verify-agentmemory-mcp.mjs",
+    "verify:marketplace:aiah": "node scripts/verify-aiah-marketplace.mjs",
     "test:real-mcp:agentmemory": "node tests/dsh-agentmemory-real-mcp.acceptance.mjs",
     "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts",
     "pack:agent-mail": "npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts",

@@ -1,9 +1,8 @@
 # Public DeepSeek Harness Plugins collaboration rules
 
-This repository is a sanitized staging tree for configuration-only DeepSeek
-Harness bundle packages. GitHub visibility is a separate owner decision and
-is not implied by the repository name. Provider implementations, provider
-data models and deployment credentials remain in their own projects.
+This repository is the sanitized public source tree for reviewed,
+configuration-only DeepSeek Harness bundle packages. Provider implementations,
+provider data models and deployment credentials remain in their own projects.
 
 ## Public boundary
 

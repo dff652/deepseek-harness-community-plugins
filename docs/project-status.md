@@ -1,6 +1,6 @@
 # Project status
 
-Status date: 2026-08-18.
+Status date: 2026-08-24.
 
 This matrix separates implementation, private deployment, public source,
 GitHub Release, npm publication, marketplace listing and live deployment.
@@ -11,9 +11,9 @@ requires owner authorization.
 
 | Bundle | Implementation | Public source | GitHub Release | npm | Marketplace | Live use |
 |---|---|---|---|---|---|---|
-| `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Not eligible yet | Separate decision |
+| `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Private candidate validated | Public source on origin; not released | None | Not published | Not submitted | Not installed by this project |
-| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public candidate implemented | Public source candidate; not pushed | None | Not published | Not submitted | Private deployment remains separate; public package not installed live |
+| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public candidate implemented | Public source on origin; not released | None | Not published | Not submitted | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
 
@@ -42,10 +42,16 @@ and seven-tree zero-write verification, removed cleanly, and left no provider
 process behind.
 
 npm publication remains an independent product and account decision. The
-marketplace gate is also still pending: the repository must naturally reach
-the required age and at least ten meaningful commits. Empty commits must not
-be created to satisfy that count. Model-visible L5 selection and any live
-profile deployment are separate acceptance gates and are not claimed here.
+repository naturally reached the required age and ten meaningful commits, and
+the AIAH entry was submitted as
+[awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957).
+Both automated checks passed, the PR merged as `26f0b940`, and the entry is
+visible in the live catalog and detail page. The exact catalog tarball digest
+was rechecked, then those same downloaded bytes installed exactly once and
+removed cleanly with DSH `0.1.0-rc.6` and pnpm `11.7.0` in an isolated
+temporary home and store. This is not evidence of a browser click.
+Model-visible L5 selection and any live-profile deployment are separate gates
+and are not claimed here.
 
 ## AgentMemory
 
@@ -82,9 +88,9 @@ and Node 24.19; activation, lifecycle and clean Web/headless profile checks
 also passed. A read-only call through the
 reviewed AgentMemory 0.9.28 adapter confirmed the exact eight-tool contract,
 `diagnosis.fail = 0`, explicit project forwarding, `truncated: false`, existing
-canary recall and clean process termination. The public source candidate is
-therefore locally accepted and ready for a separately authorized push and
-remote CI gate.
+canary recall and clean process termination. The public source candidate was
+pushed to `origin/main`; remote CI passed at commit `4720f69`. It remains
+unreleased.
 
 The full `test:real-mcp:agentmemory` gate is intentionally not read-only: it
 writes three expected canaries plus three cross-project decoys (one per marker)
@@ -97,9 +103,8 @@ project-isolation evidence. Because AgentMemory 0.9.28 observations omit
 project-scoped benchmark case must name an expected observation ID and a known
 cross-project forbidden observation ID.
 
-Push, tag, GitHub Release, npm, marketplace listing and live-profile
-installation of the public package remain separate owner-authorized
-transitions.
+Tag, GitHub Release, npm, marketplace listing and live-profile installation of
+the public package remain separate owner-authorized transitions.
 
 ## Agent Mail
 
