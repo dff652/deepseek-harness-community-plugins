@@ -242,7 +242,7 @@ accepted run.
 - Downloaded tarball SHA-256:
   `8a6409cbe69b97269dc7a959e6ddc8ea9814bd86c132939488f9a1b840de7314`,
   matching the Release `SHA256SUMS` and a fresh pack from the annotated tag.
-- Source verification: public-boundary check PASS and portable tests `64/64`
+- Source verification: public-boundary check PASS and portable tests `77/77`
   on both Node 22.19 and 24.19.
 - Catalog verification: generated READMEs, site build, local submission gate,
   remote `PR check` and remote `Submission gate` all PASS.
@@ -258,8 +258,25 @@ accepted run.
   and injects pnpm workspace-root `-w` for add/remove. The catalog's displayed
   copy command omits `-w` and does not work directly on the reviewed rc.6 host;
   project commands and the verifier include it explicitly.
-- A browser click, npm publication and any live-profile deployment remain
-  unclaimed separate transitions.
+- The real dshmarket `1.10.1` backend route was then exercised independently
+  through its same-origin install and uninstall endpoints in a disposable web
+  profile. It resolved source commit
+  `f16f317190b4a98db5177045f0b4755ee93ae2fd`, bound that response to the exact
+  package lock stanza and integrity, required restart activation, started one
+  exact reviewed AIAH provider copy, removed the package and profile entries,
+  and proved provider cleanup and no resurrection after another restart.
+- The backend compatibility boundary is explicit: the registry entry has
+  `npm: null`, so dshmarket installs
+  `github:dff652/deepseek-harness-community-plugins#path:/packages/dsh-ai-asset-hub`.
+  It does not consume the catalog's Release `tarball` field. The backend report
+  therefore records `sourceInstall: true`, `exactReleaseArtifact: false`,
+  `sameOriginBackendPost: true`, `browserDomClick: false`,
+  `l5ModelUse: false` and `liveProfileChanged: false`.
+- Run this gate with `npm run verify:marketplace:aiah:backend -- --dsh-bin
+  /absolute/path/to/dsh --pnpm-cli /absolute/path/to/pnpm.cjs --aiah-command
+  /absolute/path/to/reviewed/aiah --report /absolute/path/to/report.json`.
+- A literal browser DOM click, npm publication and any live-profile deployment
+  remain unclaimed separate transitions.
 
 ## Local Agent Mail candidate
 

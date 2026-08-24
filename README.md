@@ -206,6 +206,27 @@ directory. `DSH_HOME`, the consumer home, caches and the pnpm store are all
 test-owned temporary paths. This proves catalog discovery plus disposable DSH
 install/remove; it does not claim a browser click or live-profile deployment.
 
+Verify the installation route used by the reviewed dshmarket `1.10.1` web
+backend separately:
+
+```bash
+npm run verify:marketplace:aiah:backend -- \
+  --dsh-bin /absolute/path/to/dsh \
+  --pnpm-cli /absolute/path/to/pnpm.cjs \
+  --aiah-command /absolute/path/to/reviewed/aiah \
+  --report /absolute/path/to/report.json
+```
+
+This verifier starts only disposable profiles and caches, fetches the live
+registry, sends the same-origin backend request used by the UI, binds the
+resolved source commit to the installed lockfile, checks restart activation
+and the exact reviewed provider executable, then uninstalls and proves cleanup
+and non-resurrection. The current catalog record has `npm: null`, so this
+backend route installs the repository source target rather than the Release
+tarball. The report therefore records `sourceInstall: true` and
+`exactReleaseArtifact: false`. It does not claim a literal browser DOM click,
+model-visible L5 use, or a live-profile change.
+
 ## Reviewed compatibility
 
 | Component | Reviewed value |

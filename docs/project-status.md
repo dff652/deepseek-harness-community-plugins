@@ -53,6 +53,18 @@ temporary home and store. This is not evidence of a browser click.
 Model-visible L5 selection and any live-profile deployment are separate gates
 and are not claimed here.
 
+The reviewed dshmarket `1.10.1` backend route also passed independently in a
+disposable profile. The verifier fetched the live registry, submitted the
+same-origin install request, tied the response to source commit
+`f16f317190b4a98db5177045f0b4755ee93ae2fd` and the installed lockfile,
+confirmed restart activation with the exact reviewed AIAH executable, then
+uninstalled and proved package, profile and provider-process cleanup. Because
+the catalog record has `npm: null`, this route installs the GitHub source
+target, not the exact Release tarball; the machine report says
+`sourceInstall: true`, `exactReleaseArtifact: false`, `browserDomClick: false`
+and `liveProfileChanged: false`. The exact-tarball gate above and this backend
+gate are complementary rather than interchangeable.
+
 ## AgentMemory
 
 The architecture decision is option A: users supply a reviewed stdio adapter.

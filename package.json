@@ -34,6 +34,7 @@
     "verify:agent-mail": "node scripts/verify-agent-mail-mcp.mjs",
     "verify:agentmemory": "node scripts/verify-agentmemory-mcp.mjs",
     "verify:marketplace:aiah": "node scripts/verify-aiah-marketplace.mjs",
+    "verify:marketplace:aiah:backend": "node scripts/verify-aiah-market-backend.mjs",
     "test:real-mcp:agentmemory": "node tests/dsh-agentmemory-real-mcp.acceptance.mjs",
     "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts",
     "pack:agent-mail": "npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts",
