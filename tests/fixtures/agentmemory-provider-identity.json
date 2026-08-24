@@ -2,8 +2,13 @@
   "version": 1,
   "serverName": "agentmemory",
   "reviewedServerVersion": "0.9.28",
-  "adapterOwnership": "deployment",
+  "adapterOwnership": "separate-public-product-candidate",
+  "adapterName": "@dff652/agentmemory-mcp-adapter",
+  "adapterVersion": "0.1.0",
+  "adapterSourceCommit": "c0656ebba90ce7563b2bd16898dfd44c191cf5e2",
+  "adapterArtifactSha256": "b38484f70bea9c7a632cabc922d9d7789af80fd5c987afb15146cc65afb49c5a",
+  "adapterReleaseStatus": "local-reviewed-candidate",
   "automaticSessionCapture": false,
   "mcpClient": "0.1.0-rc.6",
-  "identityNote": "The public bundle starts a reviewed host stdio adapter. It does not ship AgentMemory, copy a private adapter, or enable automatic session capture."
+  "identityNote": "The public bundle starts an externally installed reviewed stdio adapter. It does not ship AgentMemory or the separate adapter candidate, copy a private adapter, or enable automatic session capture."
 }

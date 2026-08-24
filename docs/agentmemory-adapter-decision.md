@@ -1,7 +1,25 @@
 # AgentMemory stdio adapter decision
 
-Status: accepted.
+Status: amended; option A remains the bundle boundary and option B is
+authorized as a separate product.
 Date: 2026-08-18.
+Amended: 2026-08-24.
+
+## 2026-08-24 amendment
+
+The owner authorized option B in its own clean-room repository. The resulting
+local `@dff652/agentmemory-mcp-adapter@0.1.0` candidate does not change this
+bundle into a provider package: `@dff652/dsh-agentmemory` still starts only an
+absolute deployment-supplied command and carries no adapter dependency,
+endpoint, credential or provider code.
+
+The candidate is MIT licensed, has no runtime dependencies, verifies exact
+AgentMemory `0.9.28` health and upstream tool identity before serving MCP,
+binds project-sensitive calls to one configured project, reads only a protected
+secret file, rejects redirects and never falls back to local storage. Its
+security, Node 22/24, reproducible-pack, real disposable-provider and DSH
+lifecycle gates passed locally. Repository visibility, push, tag, GitHub
+Release, npm publication and deployment remain separate transitions.
 
 ## Decision
 
@@ -11,9 +29,8 @@ deployment-owned, already reviewed stdio command through
 does not ship a provider executable, and does not publish a portable
 AgentMemory adapter.
 
-Option B, a separately maintained public adapter, remains a future product
-decision in its own project. It is not part of this configuration-only
-candidate.
+Option B is now an independently maintained product candidate. It remains
+outside this configuration-only package and is not yet publicly released.
 
 ## Why A
 

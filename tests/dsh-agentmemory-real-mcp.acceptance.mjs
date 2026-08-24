@@ -17,6 +17,7 @@ const EXPECTED_TOOLS = [
   'memory_sessions',
   'memory_smart_search',
 ];
+const EXPECTED_PROVIDER_VERSION = '0.9.28';
 
 function resolveCommand() {
   const command = String(process.env.DSH_AGENTMEMORY_COMMAND || '').trim();
@@ -60,7 +61,11 @@ function savedObservationId(body) {
 
 const command = resolveCommand();
 const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-agentmemory-real-mcp.'));
-const project = 'dsh-public-bundle-canary';
+const project = String(process.env.AGENTMEMORY_PROJECT_ID || '').trim();
+if (!project) {
+  throw new Error('AgentMemory real MCP acceptance requires AGENTMEMORY_PROJECT_ID');
+}
+const decoyProject = `${project}-other`;
 const runId = `PUBAM_${Date.now().toString(36)}`;
 const cases = [
   {
@@ -83,13 +88,21 @@ const cases = [
 try {
   const first = new McpClient(command, [], process.env, 20000);
   const saved = [];
+  let providerAttestation;
   try {
     const initialized = await first.initialize({
       name: 'dsh-agentmemory-real',
       version: '0.1.0',
     });
     assert.equal(initialized.serverInfo?.name, 'agentmemory');
-    assert.equal(initialized.serverInfo?.version, '0.9.28');
+    assert.equal(initialized.serverInfo?.version, '0.1.0');
+    providerAttestation = initialized._meta?.['io.github.dff652/agentmemory-mcp-adapter'];
+    assert.deepEqual(providerAttestation, {
+      adapterVersion: '0.1.0',
+      providerName: 'agentmemory',
+      providerVersion: EXPECTED_PROVIDER_VERSION,
+      providerCompatibilityVerified: true,
+    });
     const listed = await first.request('tools/list');
     const tools = (listed.tools ?? []).map((tool) => tool.name).sort();
     assert.deepEqual(tools, EXPECTED_TOOLS);
@@ -122,12 +135,21 @@ try {
       saved.push({ ...item, expectedObservationId: id, project, expects: [item.expect] });
     }
 
+  } finally {
+    await first.close();
+  }
+
+  const originalProject = process.env.AGENTMEMORY_PROJECT_ID;
+  process.env.AGENTMEMORY_PROJECT_ID = decoyProject;
+  const decoyClient = new McpClient(command, [], process.env, 20000);
+  try {
+    await decoyClient.initialize({ name: 'dsh-agentmemory-decoy', version: '0.1.0' });
     for (const item of saved) {
-      const decoy = await first.request('tools/call', {
+      const decoy = await decoyClient.request('tools/call', {
         name: 'memory_save',
         arguments: {
           content: `${item.expect} from another project`,
-          project: 'dsh-public-bundle-other',
+          project: decoyProject,
           type: 'decision',
         },
       });
@@ -145,7 +167,9 @@ try {
       item.forbiddenObservationIds = [decoyId];
     }
   } finally {
-    await first.close();
+    await decoyClient.close();
+    if (originalProject === undefined) delete process.env.AGENTMEMORY_PROJECT_ID;
+    else process.env.AGENTMEMORY_PROJECT_ID = originalProject;
   }
 
   const benchmark = path.join(work, 'benchmark.json');
@@ -166,7 +190,7 @@ try {
   );
   const report = JSON.parse(stdout);
   assert.equal(report.status, 'PASS', stderr);
-  assert.equal(report.server?.version, '0.9.28');
+  assert.equal(report.server?.version, '0.1.0');
   assert.equal(report.toolCount, 8);
   assert.equal(report.checks.saveRequiresProject, 'PASS');
   assert.deepEqual(report.benchmarkSummary, {
@@ -186,6 +210,7 @@ try {
     JSON.stringify({
       status: 'PASS',
       server: report.server,
+      providerVersion: providerAttestation.providerVersion,
       toolCount: report.toolCount,
       diagnosis: report.diagnosis,
       benchmarkSummary: report.benchmarkSummary,

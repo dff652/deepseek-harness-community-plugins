@@ -20,9 +20,11 @@ package is a small configuration bundle with its own version and allowlist.
 > tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` now has the same
 > reviewed Release boundary; its marketplace submission is open as
 > [awesome-dsh-plugin#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
-> with both automated checks passing. `@dff652/dsh-agentmemory@0.1.0` remains
-> public source only because no portable, publicly reviewable adapter is
-> shipped. The AIAH marketplace entry from
+> with both automated checks passing. A separate clean-room
+> `@dff652/agentmemory-mcp-adapter@0.1.0` local source candidate now passes its
+> security, exact-pack, AgentMemory 0.9.28 and disposable DSH gates. It is not
+> yet a public repository or Release, so `@dff652/dsh-agentmemory@0.1.0`
+> remains public source only. The AIAH marketplace entry from
 > [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
 > is merged and visible in the public catalog. No package is published to npm
 > or deployed to a live profile by this repository.
@@ -242,7 +244,8 @@ model-visible L5 use, or a live-profile change.
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | AI Asset Hub executable | Official Release `v0.1.11` |
 | Agent Mail provider | `1.0.0-alpha.4` at commit `ca6601c` |
-| AgentMemory server | `0.9.28` through a deployment-owned stdio adapter |
+| AgentMemory adapter | `@dff652/agentmemory-mcp-adapter@0.1.0` reviewed local commit `c0656eb`; not yet pushed, public or released |
+| AgentMemory server | Exact `0.9.28`, attested after adapter startup preflight |
 
 CI runs the portable contract on Node 22.19 and 24.19.
 
@@ -254,9 +257,9 @@ CI runs the portable contract on Node 22.19 and 24.19.
 | Public repository and `dsh-plugin` topic | Complete |
 | AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
 | Agent Mail GitHub Release | [`dsh-agent-mail-v0.1.0`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0); exact tarball and `SHA256SUMS` verified |
-| AgentMemory GitHub Release | Blocked pending a separately authorized, publicly reviewable adapter product; public bundle source only |
+| AgentMemory GitHub Release | Adapter implementation/real acceptance complete locally; blocked pending separately authorized adapter repository publication and Release |
 | npm publication | Not published |
-| Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) open with both checks passing; AgentMemory blocked on adapter portability |
+| Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) open with both checks passing; AgentMemory waits for public adapter bytes and bundle Release |
 | Model-visible L5 acceptance | Not claimed |
 | Live-profile deployment | Not part of this repository |
 
@@ -273,7 +276,8 @@ the current and planned providers.
   official security review of AI Asset Hub, Agent Mail or AgentMemory.
 - Future providers must enter as separate workspaces after their own source,
   license, secret, artifact, and disposable-profile review.
-- AgentMemory users supply a reviewed stdio adapter. Automatic wake and
+- AgentMemory users supply a reviewed stdio adapter. The separately maintained
+  public-adapter candidate remains outside this bundle. Automatic wake and
   automatic session capture are not claimed here.
 
 Contributions are welcome within the documented public boundary. Start with

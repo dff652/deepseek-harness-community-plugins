@@ -13,7 +13,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
-| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public configuration candidate implemented | Complete source; no public adapter product | Blocked on publicly reviewable adapter | Not published | Not submitted; adapter portability gate open | Private deployment remains separate; public package not installed live |
+| `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
 
@@ -67,9 +67,13 @@ gate are complementary rather than interchangeable.
 
 ## AgentMemory
 
-The architecture decision is option A: users supply a reviewed stdio adapter.
-This repository does not copy the private adapter and does not publish a
-portable one. The decision record is
+The bundle architecture remains option A: users supply a reviewed stdio
+adapter and this repository stays configuration-only. On 2026-08-24 the owner
+authorized option B as a separate clean-room product. A local
+`@dff652/agentmemory-mcp-adapter@0.1.0` candidate now exists outside this
+monorepo at local commit `c0656eb`; it is not yet pushed, public, tagged,
+released or published to npm.
+The amended decision record is
 [agentmemory-adapter-decision.md](agentmemory-adapter-decision.md).
 
 A public configuration-only workspace now exists at
@@ -115,11 +119,20 @@ project-isolation evidence. Because AgentMemory 0.9.28 observations omit
 project-scoped benchmark case must name an expected observation ID and a known
 cross-project forbidden observation ID.
 
-The public configuration bundle must not advance to tag, GitHub Release or
-marketplace submission on historical private-adapter evidence alone. A future
-transition requires a separately authorized public adapter product with its
-own identity, license, digest, secret contract and disposable-store acceptance.
-npm publication and live-profile installation also remain separate decisions.
+The new adapter candidate is MIT licensed, dependency-free and fail closed. It
+pins AgentMemory `0.9.28` through startup health/tool preflight, requires a
+protected secret file and a configured project, and never falls back to local
+memory. Node 22.19/24.19 portable checks passed, two packs were byte-identical,
+and the final ten-file tarball SHA-256 is
+`b38484f70bea9c7a632cabc922d9d7789af80fd5c987afb15146cc65afb49c5a`.
+A clean install of those bytes passed real project A/B isolation, restart
+persistence, provider-stop failure, DSH 3/3 rank-one recall, activation,
+reconnect/cleanup, install/remove and Web/headless clean-profile gates.
+
+The configuration bundle must still not advance to tag, GitHub Release or
+marketplace submission until the adapter repository and Release are separately
+authorized, public, CI-clean and revalidated from downloaded Release bytes.
+npm publication and live-profile installation remain separate decisions.
 
 ## Agent Mail
 

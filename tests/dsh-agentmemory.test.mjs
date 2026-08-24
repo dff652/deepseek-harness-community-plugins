@@ -197,10 +197,15 @@ test('provider identity fixture records reviewed 0.9.28 without machine paths', 
 
   assert.equal(identity.serverName, 'agentmemory');
   assert.equal(identity.reviewedServerVersion, '0.9.28');
-  assert.equal(identity.adapterOwnership, 'deployment');
+  assert.equal(identity.adapterOwnership, 'separate-public-product-candidate');
+  assert.equal(identity.adapterName, '@dff652/agentmemory-mcp-adapter');
+  assert.equal(identity.adapterVersion, '0.1.0');
+  assert.match(identity.adapterSourceCommit, /^[a-f0-9]{40}$/);
+  assert.match(identity.adapterArtifactSha256, /^[a-f0-9]{64}$/);
+  assert.equal(identity.adapterReleaseStatus, 'local-reviewed-candidate');
   assert.equal(identity.automaticSessionCapture, false);
   assert.equal(identity.mcpClient, '0.1.0-rc.6');
-  assert.match(identity.identityNote, /does not ship AgentMemory/);
+  assert.match(identity.identityNote, /does not ship AgentMemory or the separate adapter candidate/);
   const serialized = JSON.stringify(identity);
   assert.doesNotMatch(serialized, /\/home\//);
   assert.doesNotMatch(serialized, /Bearer|credential|access[_-]?token/i);
@@ -235,8 +240,11 @@ test('lifecycle and verifier stay host-gated and do not embed machine paths', as
   assert.match(cleanProfile, /@dff652\/dsh-agentmemory/);
   assert.match(realMcp, /DSH_AGENTMEMORY_COMMAND/);
   assert.match(realMcp, /0\.9\.28/);
+  assert.match(realMcp, /providerCompatibilityVerified: true/);
+  assert.match(realMcp, /providerAttestation\.providerVersion/);
   assert.match(realMcp, /for \(const item of saved\)/);
   assert.match(realMcp, /item\.forbiddenObservationIds = \[decoyId\]/);
+  assert.match(realMcp, /process\.env\.AGENTMEMORY_PROJECT_ID = decoyProject/);
   assert.match(verifier, /memory_recall schema must declare project/);
   assert.match(verifier, /returned observations from another project/);
   assert.match(verifier, /CONTENT_KEYS/);

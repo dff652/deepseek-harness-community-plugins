@@ -13,9 +13,11 @@ audit confirms the public boundary. AI Asset Hub `0.1.1` is tagged and has a
 reviewed GitHub Release. Agent Mail `0.1.0` is also tagged with a reviewed
 GitHub Release; marketplace PR
 [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
-is open with both checks passing. AgentMemory source is on `origin/main`, but
-Release and marketplace transitions are blocked on a separately authorized,
-publicly reviewable adapter product. No
+is open with both checks passing. AgentMemory source is on `origin/main`. Its
+separate public-adapter implementation and disposable gates are complete
+locally, but that adapter has not been authorized for repository visibility,
+push, tag or Release. AgentMemory bundle Release and marketplace transitions
+therefore remain blocked on public, downloaded adapter bytes. No
 package is published to npm or deployed live by this repository. The AIAH
 marketplace entry originated in
 [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957).
@@ -28,9 +30,10 @@ the exact `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer and exposes the
 reviewed eight read-only tools. The second package is a configuration-only
 bridge to an independently installed Agent Mail `agent-mail-mcp` executable
 and exposes the reviewed eleven-tool surface with non-human approval denial.
-The third package is a configuration-only bridge to a deployment-owned
+The third package is a configuration-only bridge to an externally installed
 AgentMemory stdio adapter and exposes the reviewed eight-tool surface. Users
-supply that adapter; this repository does not ship one. Provider code,
+supply that adapter; this repository does not ship one. A separate clean-room
+adapter candidate now exists, without changing this package boundary. Provider code,
 binaries, credentials, homes and runtime data remain outside the packages.
 
 ## Required source and history gates
@@ -343,8 +346,9 @@ not by itself authorize any external transition.
 ## Local AgentMemory candidate
 
 `@dff652/dsh-agentmemory@0.1.0` is an independent workspace in this public
-monorepo. The private-integration digest is not reused. The adapter decision
-is option A and is recorded in
+monorepo. The private-integration digest is not reused. The bundle retains
+option A while the separately authorized option B adapter remains its own
+product candidate, as recorded in
 [agentmemory-adapter-decision.md](agentmemory-adapter-decision.md). Dual-pack
 SHA-256 values below are source-candidate evidence only and are not a
 publication authorization.
@@ -414,15 +418,24 @@ this repository. Automatic session capture is not claimed.
 
 ### AgentMemory publication hold (2026-08-24)
 
-The current public package is a configuration contract for users who already
-own a conforming adapter; it is not a standalone public AgentMemory client.
-This run did not have a publicly distributable adapter with a recorded name,
-version, source commit, digest and license, and therefore could not repeat the
-real MCP and isolation gate against public bytes. Historical private-adapter
-acceptance and the fixture-only fake adapter do not close that gap.
+The owner authorized option B as a separate product. The local clean-room
+`@dff652/agentmemory-mcp-adapter@0.1.0` candidate is MIT licensed, has no
+runtime dependencies and passed secret-file, URL/auth, exact 0.9.28 preflight,
+eight-tool, project binding, no-fallback and Node 22/24 tests. Its final two
+packs were byte-identical; the ten-file tarball SHA-256 is
+`b38484f70bea9c7a632cabc922d9d7789af80fd5c987afb15146cc65afb49c5a`.
 
-Do not create `dsh-agentmemory-v0.1.0` or submit a marketplace entry until the
-owner separately authorizes option B from
-[agentmemory-adapter-decision.md](agentmemory-adapter-decision.md), and that
-adapter passes its own security, secret-file, license, Release and disposable-
-store gates. This hold is fail-closed; it is not an npm or catalog-format issue.
+Those exact locally packed bytes were installed into a clean prefix and tested
+against a disposable AgentMemory 0.9.28 store. Project A/B isolation, restart
+persistence, provider-stop failure, sanitized provider attestation, DSH real
+MCP 3/3 rank-one recall, activation negatives, reconnect/process cleanup,
+install/remove and Web/headless clean profiles passed. No live or personal
+memory store was used, and all temporary provider state was removed.
+
+The remaining hold is publication evidence, not implementation: the adapter
+Git repository has reviewed local commit `c0656eb` but no pushed public
+commit, remote CI, tag, GitHub Release or downloaded Release asset. Do not
+create `dsh-agentmemory-v0.1.0` or submit a
+marketplace entry until those adapter transitions are separately authorized
+and the downloaded adapter Release bytes repeat the disposable gates. npm and
+live-profile installation remain separate decisions.

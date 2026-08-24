@@ -97,11 +97,15 @@ dsh --profile <profile> --dump-config
 
 Set `DSH_AGENTMEMORY_COMMAND` in the DSH service environment to the reviewed
 stdio adapter's absolute path. Do not rely on `PATH`. This repository does
-not ship the adapter; the adapter owns the AgentMemory URL, secret file and
-explicit-project save policy. See the
+not ship or auto-install the adapter. The separately maintained
+`@dff652/agentmemory-mcp-adapter` candidate additionally requires absolute
+`AGENTMEMORY_SECRET_FILE`, exact `AGENTMEMORY_PROJECT_ID` and
+`AGENTMEMORY_URL`; non-loopback URLs must use HTTPS. Run its `--check` before
+starting DSH. See the
 [adapter decision](./agentmemory-adapter-decision.md).
 
 ```bash
+agentmemory-mcp-adapter --check
 sha256sum dff652-dsh-agentmemory-0.1.0.tgz
 dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
 dsh --profile <profile> --dump-config
