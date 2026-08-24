@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { lstat, mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,7 @@ import {
   resolveDsh,
   resolveReviewedProvider,
   runDsh,
+  sha256File,
   stopProcessGroup,
   toolEnv,
   waitFor,
@@ -30,7 +31,31 @@ const dshBin = resolveDsh('Agent Mail lifecycle acceptance');
 const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-agent-mail-lifecycle.'));
 const sender = 'dsh-export@local';
 
+async function resolvePluginTarball(work, cache) {
+  const supplied = String(process.env.DSH_AGENT_MAIL_PLUGIN_TARBALL || '').trim();
+  const expectedSha256 = String(process.env.DSH_AGENT_MAIL_PLUGIN_SHA256 || '').trim();
+  if (supplied || expectedSha256) {
+    assert.equal(path.isAbsolute(supplied), true, 'DSH_AGENT_MAIL_PLUGIN_TARBALL must be absolute');
+    assert.match(expectedSha256, /^[0-9a-f]{64}$/, 'DSH_AGENT_MAIL_PLUGIN_SHA256 must be lowercase SHA-256');
+    const metadata = await lstat(supplied);
+    assert.equal(metadata.isSymbolicLink(), false, 'plugin tarball must not be a symbolic link');
+    assert.equal(metadata.isFile(), true, 'plugin tarball must be a regular file');
+    assert.equal(await sha256File(supplied), expectedSha256, 'plugin tarball digest mismatch');
+    return supplied;
+  }
+
+  const packageDir = path.join(root, 'packages', 'dsh-agent-mail');
+  const { stdout } = await execFileAsync(
+    'npm',
+    ['pack', '--json', '--ignore-scripts', '--cache', cache, '--pack-destination', work],
+    { cwd: packageDir },
+  );
+  return path.join(work, JSON.parse(stdout)[0].filename);
+}
+
 try {
+  const cache = path.join(work, 'npm-cache');
+  const tarball = await resolvePluginTarball(work, cache);
   const provider = await resolveReviewedProvider(work, identity);
   const { home } = await initMailHome(provider.cli, work, [sender]);
   const pattern = provider.pattern;
@@ -117,14 +142,6 @@ try {
   assert.deepEqual(await pidsMatching(pattern), []);
   assert.equal([...ownedProviderPids].some((pid) => pidExists(pid)), false);
 
-  const cache = path.join(work, 'npm-cache');
-  const packageDir = path.join(root, 'packages', 'dsh-agent-mail');
-  const { stdout } = await execFileAsync(
-    'npm',
-    ['pack', '--json', '--ignore-scripts', '--cache', cache, '--pack-destination', work],
-    { cwd: packageDir },
-  );
-  const tarball = path.join(work, JSON.parse(stdout)[0].filename);
   const installEnv = mailEnv(home, sender, provider.command, {
     DSH_HOME: path.join(work, 'dsh-install'),
   });

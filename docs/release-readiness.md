@@ -10,8 +10,12 @@ created from reviewed source files without copying, cloning, forking or
 mirroring an earlier Git database. Its root commit uses a GitHub noreply
 identity, and Node 22.19/24.19 CI passes. An unauthenticated API and fresh-clone
 audit confirms the public boundary. AI Asset Hub `0.1.1` is tagged and has a
-reviewed GitHub Release. Agent Mail source is on `origin/main` but is not
-released. AgentMemory source is also on `origin/main` but is not released. No
+reviewed GitHub Release. Agent Mail `0.1.0` is also tagged with a reviewed
+GitHub Release; marketplace PR
+[#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
+is open with both checks passing. AgentMemory source is on `origin/main`, but
+Release and marketplace transitions are blocked on a separately authorized,
+publicly reviewable adapter product. No
 package is published to npm or deployed live by this repository. The AIAH
 marketplace entry originated in
 [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957).
@@ -278,7 +282,7 @@ accepted run.
 - A literal browser DOM click, npm publication and any live-profile deployment
   remain unclaimed separate transitions.
 
-## Local Agent Mail candidate
+## Agent Mail Release
 
 `@dff652/dsh-agent-mail@0.1.0` is an independent workspace in this public
 monorepo. The private-integration digest is not reused. Dual-pack SHA-256
@@ -308,8 +312,33 @@ authorization.
 | Lifecycle | Missing executable, duplicate namespace, reconnect, cleanup, install/remove PASS |
 | Coexistence | Shared disposable profile with AIAH; remove AIAH then Agent Mail PASS |
 
-This record does not authorize tag, GitHub Release, npm publication,
-marketplace submission or live-profile installation.
+This source-candidate record was the input to the later Release gate. It did
+not by itself authorize any external transition.
+
+### Agent Mail Release and marketplace evidence (2026-08-24)
+
+- Post-fix portable tests and the public repository boundary passed `77/77`
+  on both Node `22.19.0` and `24.19.0`; all three package dry-runs retained
+  their exact five/six/five-file allowlists.
+- Annotated tag `dsh-agent-mail-v0.1.0` resolves to public commit
+  `db1b729b3f3726cc79f4e45cb7301186d7487bde`.
+- GitHub Release
+  [`@dff652/dsh-agent-mail v0.1.0`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0)
+  contains only `dff652-dsh-agent-mail-0.1.0.tgz` and `SHA256SUMS`.
+- The uploaded and anonymously downloaded tarball SHA-256 is
+  `d571c170e1b156407d88ef5f9f0cdb688aaffc522fdf68b11798f4066b71869f`;
+  it is byte-identical to two clean packs from the tag and contains the exact
+  six-file allowlist.
+- The downloaded artifact passed disposable DSH `0.1.0-rc.6` lifecycle with
+  pnpm `11.7.0`: install, single config row, exact reviewed Agent Mail provider,
+  reconnect, stop cleanup and removal PASS.
+- Marketplace PR [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
+  adds only the Agent Mail YAML and generated README rows. Local generation,
+  lint, site build and submission gate PASS; remote `PR check` and
+  `Submission gate` PASS. The PR is open, so a live catalog listing is not yet
+  claimed.
+- npm publication, literal browser interaction, model-visible L5 use and
+  live-profile deployment remain separate and were not performed.
 
 ## Local AgentMemory candidate
 
@@ -382,3 +411,18 @@ The AgentMemory source and verifier hardening were later pushed through
 AgentMemory tag, GitHub Release, npm publication, marketplace submission or
 live-profile installation. Live private observation IDs were not copied into
 this repository. Automatic session capture is not claimed.
+
+### AgentMemory publication hold (2026-08-24)
+
+The current public package is a configuration contract for users who already
+own a conforming adapter; it is not a standalone public AgentMemory client.
+This run did not have a publicly distributable adapter with a recorded name,
+version, source commit, digest and license, and therefore could not repeat the
+real MCP and isolation gate against public bytes. Historical private-adapter
+acceptance and the fixture-only fake adapter do not close that gap.
+
+Do not create `dsh-agentmemory-v0.1.0` or submit a marketplace entry until the
+owner separately authorizes option B from
+[agentmemory-adapter-decision.md](agentmemory-adapter-decision.md), and that
+adapter passes its own security, secret-file, license, Release and disposable-
+store gates. This hold is fail-closed; it is not an npm or catalog-format issue.

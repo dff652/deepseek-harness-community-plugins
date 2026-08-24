@@ -64,6 +64,18 @@ dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.0.tgz
 dsh --profile <profile> --dump-config
 ```
 
+For a repository-side recheck of downloaded Release bytes, provide both the
+absolute artifact path and its reviewed digest; supplying only one fails
+closed and symbolic-link artifacts are rejected:
+
+```bash
+DSH_AGENT_MAIL_PLUGIN_TARBALL=/absolute/path/to/dff652-dsh-agent-mail-0.1.0.tgz \
+DSH_AGENT_MAIL_PLUGIN_SHA256=d571c170e1b156407d88ef5f9f0cdb688aaffc522fdf68b11798f4066b71869f \
+DSH_AGENT_MAIL_TARBALL=/absolute/path/to/reviewed/agent-mail-1.0.0-alpha.4.tgz \
+DSH_BIN=/absolute/path/to/dsh \
+node tests/dsh-agent-mail-lifecycle.acceptance.mjs
+```
+
 The composed config must contain the bundle exactly once, with `serverName:
 agent-mail` and the environment-backed command, home and identity checks.
 Confirm the exact eleven-tool namespace, then run send/inbox/claim/done/ack on

@@ -12,8 +12,8 @@ requires owner authorization.
 | Bundle | Implementation | Public source | GitHub Release | npm | Marketplace | Live use |
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
-| `@dff652/dsh-agent-mail@0.1.0` | Private candidate validated | Public source on origin; not released | None | Not published | Not submitted | Not installed by this project |
-| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public candidate implemented | Public source on origin; not released | None | Not published | Not submitted | Private deployment remains separate; public package not installed live |
+| `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
+| `@dff652/dsh-agentmemory@0.1.0` | Private integration active; public configuration candidate implemented | Complete source; no public adapter product | Blocked on publicly reviewable adapter | Not published | Not submitted; adapter portability gate open | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
 
@@ -115,8 +115,11 @@ project-isolation evidence. Because AgentMemory 0.9.28 observations omit
 project-scoped benchmark case must name an expected observation ID and a known
 cross-project forbidden observation ID.
 
-Tag, GitHub Release, npm, marketplace listing and live-profile installation of
-the public package remain separate owner-authorized transitions.
+The public configuration bundle must not advance to tag, GitHub Release or
+marketplace submission on historical private-adapter evidence alone. A future
+transition requires a separately authorized public adapter product with its
+own identity, license, digest, secret contract and disposable-store acceptance.
+npm publication and live-profile installation also remain separate decisions.
 
 ## Agent Mail
 
@@ -126,11 +129,16 @@ repository: exact peer dependency, package-local MIT `LICENSE` and `NOTICE`,
 and no private Git history, provider source or host-specific fixture paths.
 
 The private `@dff652/dsh-agent-mail@0.1.0` digest is not the public artifact.
+The public package was released as
+[`dsh-agent-mail-v0.1.0`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0).
 Local Node 22/24 portable checks, dual pack, eleven-tool canary, approval
 denial, fail-closed activation, reconnect, cleanup, clean-profile
-install/remove and AIAH coexistence passed. The public source is on
-`origin/main`. Tag, GitHub Release, npm, marketplace listing and live-profile
-installation remain separate owner-authorized transitions.
+install/remove and AIAH coexistence passed. The anonymously downloaded Release
+tarball matched the recorded SHA-256 and passed the same disposable lifecycle.
+Marketplace PR [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
+is open and mergeable with both automated checks passing; this is a submission,
+not a live catalog listing. npm publication and live-profile installation were
+not performed.
 
 Native automatic wake and session injection are not part of the
 configuration-only candidate. The provider `MIGRATION-REPORT.md` is stale

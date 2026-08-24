@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
-  <img alt="Agent Mail candidate 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-candidate%200.1.0-38bdf8">
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0"><img alt="Agent Mail release 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-release%200.1.0-5fa04e"></a>
   <img alt="AgentMemory candidate 0.1.0" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.0-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
@@ -17,9 +17,12 @@ package is a small configuration bundle with its own version and allowlist.
 
 > [!IMPORTANT]
 > `@dff652/dsh-ai-asset-hub@0.1.1` has a reviewed GitHub Release with an exact
-> tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` is on `origin/main`
-> but is not released. `@dff652/dsh-agentmemory@0.1.0` is also public source on
-> `origin/main` but is not released. The AIAH marketplace entry from
+> tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` now has the same
+> reviewed Release boundary; its marketplace submission is open as
+> [awesome-dsh-plugin#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
+> with both automated checks passing. `@dff652/dsh-agentmemory@0.1.0` remains
+> public source only because no portable, publicly reviewable adapter is
+> shipped. The AIAH marketplace entry from
 > [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
 > is merged and visible in the public catalog. No package is published to npm
 > or deployed to a live profile by this repository.
@@ -232,7 +235,7 @@ model-visible L5 use, or a live-profile change.
 | Component | Reviewed value |
 | --- | --- |
 | AIAH package | `@dff652/dsh-ai-asset-hub@0.1.1` GitHub Release |
-| Agent Mail package | `@dff652/dsh-agent-mail@0.1.0` source candidate |
+| Agent Mail package | `@dff652/dsh-agent-mail@0.1.0` GitHub Release |
 | AgentMemory package | `@dff652/dsh-agentmemory@0.1.0` source candidate |
 | DeepSeek Harness | `0.1.0-rc.6` |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` |
@@ -250,10 +253,10 @@ CI runs the portable contract on Node 22.19 and 24.19.
 | Clean repository and origin | AIAH, Agent Mail and AgentMemory public source are on `origin/main` |
 | Public repository and `dsh-plugin` topic | Complete |
 | AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
-| Agent Mail GitHub Release | Not released; source is on origin |
-| AgentMemory GitHub Release | Not released; public source candidate only |
+| Agent Mail GitHub Release | [`dsh-agent-mail-v0.1.0`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0); exact tarball and `SHA256SUMS` verified |
+| AgentMemory GitHub Release | Blocked pending a separately authorized, publicly reviewable adapter product; public bundle source only |
 | npm publication | Not published |
-| Marketplace listing | AIAH listed after merged [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); live catalog, exact digest and disposable install/remove PASS |
+| Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) open with both checks passing; AgentMemory blocked on adapter portability |
 | Model-visible L5 acceptance | Not claimed |
 | Live-profile deployment | Not part of this repository |
 
