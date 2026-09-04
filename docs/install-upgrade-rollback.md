@@ -146,12 +146,39 @@ Removing the bundle does not delete AgentMemory observations. Deleting
 long-lived memories is a separate data-governance operation on the
 AgentMemory service.
 
+## Agent Mail UI
+
+This package does not start `agent-mail-mcp`. It reuses an already registered
+`mcp__agent-mail__*` namespace. Missing MCP tools do not fail DSH startup; the
+panel reports offline. With `dsh-better-sidebar` it registers a mailbox tab.
+Without that sidebar it uses a standalone bottom-right drawer. The two hosts
+are exclusive.
+
+```bash
+sha256sum dff652-dsh-agent-mail-ui-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.2.tgz
+dsh --profile <profile> --dump-config
+```
+
+The composed config must contain `id: dsh-agent-mail-ui` exactly once. With
+better-sidebar, open the existing right-hand workbench, then `+` → Agent
+Mail. Without it, use the bottom-right mail control. Do not expect a new
+top-right window icon.
+
+```bash
+dsh plugin --profile <profile> remove @dff652/dsh-agent-mail-ui
+dsh --profile <profile> --dump-config
+```
+
+Removing the UI does not remove `@dff652/dsh-agent-mail` or mailbox data.
+
 ## Coexistence
 
 The bundles may share one disposable profile when their namespaces and
 provider commands remain distinct. Agent Mail also needs a distinct
-non-human identity. Remove AIAH first, then Agent Mail, then AgentMemory,
-and confirm that the config rows and provider children are gone.
+non-human identity. Remove AIAH first, then Agent Mail UI, then Agent Mail,
+then AgentMemory, and confirm that the config rows and provider children are
+gone.
 
 The provider executables and their data are deployment-owned and are not
 deleted by removing these bundles. Do not delete provider state as part of
@@ -164,6 +191,7 @@ This is a multi-package repository. Tags are package-specific:
 ```text
 dsh-ai-asset-hub-v0.1.1
 dsh-agent-mail-v0.1.0
+dsh-agent-mail-ui-v0.1.0
 dsh-agentmemory-v0.1.0
 ```
 

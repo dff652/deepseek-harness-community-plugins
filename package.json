@@ -29,6 +29,8 @@
     "test:activation:agentmemory": "node tests/dsh-agentmemory-activation.acceptance.mjs",
     "test:lifecycle:agentmemory": "node tests/dsh-agentmemory-lifecycle.acceptance.mjs",
     "test:clean-profile:agentmemory": "node tests/dsh-agentmemory-clean-profile.acceptance.mjs",
+    "test:activation:agent-mail-ui": "node tests/dsh-agent-mail-ui-activation.acceptance.mjs",
+    "test:clean-profile:agent-mail-ui": "node tests/dsh-agent-mail-ui-clean-profile.acceptance.mjs",
     "test:coexistence": "node tests/dsh-agent-mail-coexistence.acceptance.mjs",
     "verify:aiah": "node scripts/verify-aiah-mcp.mjs",
     "verify:agent-mail": "node scripts/verify-agent-mail-mcp.mjs",
@@ -38,6 +40,7 @@
     "test:real-mcp:agentmemory": "node tests/dsh-agentmemory-real-mcp.acceptance.mjs",
     "pack:aiah": "npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts",
     "pack:agent-mail": "npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts",
-    "pack:agentmemory": "npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts"
+    "pack:agentmemory": "npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts",
+    "pack:agent-mail-ui": "npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts"
   }
 }

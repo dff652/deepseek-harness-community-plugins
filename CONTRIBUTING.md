@@ -26,6 +26,7 @@ npm test
 npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
 npm pack --workspace @dff652/dsh-agent-mail --dry-run --ignore-scripts
 npm pack --workspace @dff652/dsh-agentmemory --dry-run --ignore-scripts
+npm pack --workspace @dff652/dsh-agent-mail-ui --dry-run --ignore-scripts
 ```
 
 Provider E2E checks require a separately reviewed executable and disposable

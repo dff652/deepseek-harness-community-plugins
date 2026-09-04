@@ -26,15 +26,18 @@ catalog.
 
 The previously published AIAH `0.1.1` and Agent Mail `0.1.0` artifacts remain
 the rc.6-compatible release bytes recorded below. HEAD now carries new,
-unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1` and
-AgentMemory `0.1.1`; their disposable evidence is recorded in
+unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1`,
+Agent Mail UI `0.1.2` and AgentMemory `0.1.1`; their disposable evidence is
+recorded in
 [the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md).
-The current candidate packages are configuration-only bridges: AIAH starts
+The MCP candidate packages are configuration-only bridges: AIAH starts
 `DSH_AIAH_COMMAND mcp`, Agent Mail starts an independently installed
 `agent-mail-mcp` executable, and AgentMemory starts an externally installed
-stdio adapter. Each uses the exact
-`@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` peer and exposes its reviewed tool
-surface. Users supply the providers; this repository does not ship them.
+stdio adapter. Agent Mail UI is a host/client mailbox that reuses an already
+mounted `mcp__agent-mail__*` namespace and does not spawn a second child.
+The MCP bundles use the exact
+`@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` peer and expose their reviewed tool
+surfaces. Users supply the providers; this repository does not ship them.
 Provider code, binaries, credentials, homes and runtime data remain outside
 the packages.
 

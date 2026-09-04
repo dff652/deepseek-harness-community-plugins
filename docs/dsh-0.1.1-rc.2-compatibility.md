@@ -39,6 +39,11 @@ dump no longer contained that row.
 | `@dff652/dsh-ai-asset-hub@0.1.2` | `a36803b0863e03fbfc1b6c80e5c1300e467a3f2b924437d846c3d20c53b9e097` | add/config/remove PASS |
 | `@dff652/dsh-agent-mail@0.1.1` | `03664058d3a7c56d9a151f3a57091d06102d564f66b8cb2efe5f432fa5c18e0d` | add/config/remove PASS |
 | `@dff652/dsh-agentmemory@0.1.1` | `c3e20073df2e264f91f27ab63ce0483d3dd5f60c110b39c890a1fc0b4e52644c` | add/config/remove PASS |
+| `@dff652/dsh-agent-mail-ui@0.1.2` | `1f191f2d034389638f9d349ccc33aee50f49cfda3aa038acb84febc93970ee5b` | add/config/remove PASS (web and headless; row `id: dsh-agent-mail-ui`) |
+
+The Agent Mail UI check used the same disposable-home pattern. The first
+config dump contained `id: dsh-agent-mail-ui` exactly once and did not start
+an MCP child; the final dump no longer contained that row.
 
 The check did not start any provider process, write provider data, modify a
 live DSH profile, publish a package, create a Release or deploy anything.

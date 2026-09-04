@@ -1,6 +1,6 @@
 # Project status
 
-Status date: 2026-08-24.
+Status date: 2026-09-04.
 
 This matrix separates implementation, private deployment, public source,
 GitHub Release, npm publication, marketplace listing and live deployment.
@@ -13,6 +13,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
+| `@dff652/dsh-agent-mail-ui@0.1.2` | Source candidate; GUI acceptance pending | Complete in this tree | Not tagged | Not published | Not submitted | Not performed by this repository |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
@@ -156,3 +157,25 @@ not performed.
 Native automatic wake and session injection are not part of the
 configuration-only candidate. The provider `MIGRATION-REPORT.md` is stale
 relative to public `ca6601c` and is not edited from this repository.
+
+## Agent Mail UI
+
+`@dff652/dsh-agent-mail-ui@0.1.2` is a separate host/client package. It does
+not start `agent-mail-mcp`, copy Agent Mail handlers, or change the
+configuration-only MCP bundle. The host JSON API reuses already registered
+`mcp__agent-mail__*` tools. Approve/reject are not proxied.
+
+The client ships as a DSH `ModuleLoader` factory bundle generated from
+`client-src.js`. With `dsh-better-sidebar` it registers tab
+`dsh-agent-mail:inbox` (open the existing right panel, then `+` → Agent Mail).
+Without that sidebar it mounts a standalone bottom-right drawer. The two
+hosts are exclusive. Tool-call cards for inbox/send/diagnose/approvals remain
+in either case.
+
+Portable contract tests, `check:repo`, pack allowlist, fail-closed write
+send, and disposable web/headless install/remove all passed. The candidate
+tarball SHA-256 is
+`1f191f2d034389638f9d349ccc33aee50f49cfda3aa038acb84febc93970ee5b`.
+Browser GUI acceptance (the `+` menu or standalone drawer) is still pending.
+Tag, GitHub Release, npm, marketplace and any live-profile change remain
+separate owner-authorized transitions.

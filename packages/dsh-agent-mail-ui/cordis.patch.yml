@@ -1,0 +1,7 @@
+# Host UI for Agent Mail. This row is a plain insert so DSH can hot-mount
+# it. It does not start a second MCP child, does not wake sessions, and
+# does not run Harness as human@local. Mail data stays in the deployment
+# mailbox owned by @dff652/dsh-agent-mail.
+- insert:
+    - id: dsh-agent-mail-ui
+      name: '@dff652/dsh-agent-mail-ui'

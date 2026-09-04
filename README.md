@@ -6,6 +6,7 @@
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0"><img alt="Agent Mail release 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-release%200.1.0-5fa04e"></a>
+  <img alt="Agent Mail UI candidate 0.1.2" src="https://img.shields.io/badge/Agent%20Mail%20UI-candidate%200.1.2-38bdf8">
   <img alt="AgentMemory candidate 0.1.1" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.1-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
@@ -31,10 +32,11 @@ package is a small configuration bundle with its own version and allowlist.
 > or deployed to a live profile by this repository.
 
 HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
-`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
-`@dff652/dsh-agentmemory@0.1.1`. They are source candidates only—not tagged,
-released, published or installed into a live profile. The disposable
-install/config/remove evidence is recorded in
+`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1`,
+`@dff652/dsh-agent-mail-ui@0.1.2` and `@dff652/dsh-agentmemory@0.1.1`. They
+are source candidates only—not tagged, released, published or installed into
+a live profile by this repository. The disposable install/config/remove
+evidence is recorded in
 [`docs/dsh-0.1.1-rc.2-compatibility.md`](./docs/dsh-0.1.1-rc.2-compatibility.md).
 
 ## What you get
@@ -43,6 +45,7 @@ install/config/remove evidence is recorded in
 | --- | --- |
 | `@dff652/dsh-ai-asset-hub` | Starts a deployment-owned `aiah mcp` process. Eight read-only tools. Five-file package. |
 | `@dff652/dsh-agent-mail` | Starts a deployment-owned `agent-mail-mcp` process. Eleven tools with non-human approval denial. Six-file package including `NOTICE`. |
+| `@dff652/dsh-agent-mail-ui` | Optional host/client mailbox tab for the existing Agent Mail MCP namespace. Does not spawn a second MCP child. |
 | `@dff652/dsh-agentmemory` | Starts a deployment-owned AgentMemory stdio adapter. Exact eight tools. Five-file package. Users supply the reviewed adapter. |
 
 The bundles do **not** ship provider executables, copy provider handlers, store
@@ -61,6 +64,10 @@ dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
 npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts
 sha256sum dff652-dsh-agent-mail-0.1.1.tgz
 dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
+
+npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts
+sha256sum dff652-dsh-agent-mail-ui-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.2.tgz
 
 npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
 sha256sum dff652-dsh-agentmemory-0.1.1.tgz
@@ -86,6 +93,9 @@ DeepSeek Harness profile
         │
         ├─ @dff652/dsh-agent-mail        configuration only
         │          └─ DSH_AGENT_MAIL_COMMAND
+        │
+        ├─ @dff652/dsh-agent-mail-ui     host/client mailbox tab
+        │          └─ reuses mcp__agent-mail__* (no second child)
         │
         └─ @dff652/dsh-agentmemory       configuration only
                    └─ DSH_AGENTMEMORY_COMMAND
@@ -145,6 +155,7 @@ npm test
 npm pack --workspace @dff652/dsh-ai-asset-hub --dry-run --ignore-scripts
 npm pack --workspace @dff652/dsh-agent-mail --dry-run --ignore-scripts
 npm pack --workspace @dff652/dsh-agentmemory --dry-run --ignore-scripts
+npm pack --workspace @dff652/dsh-agent-mail-ui --dry-run --ignore-scripts
 ```
 
 On a host with the reviewed DSH runtime, run the activation and process
@@ -155,6 +166,8 @@ npm run test:activation:aiah
 npm run test:lifecycle:aiah
 npm run test:activation:agent-mail
 npm run test:lifecycle:agent-mail
+npm run test:activation:agent-mail-ui
+npm run test:clean-profile:agent-mail-ui
 npm run test:activation:agentmemory
 npm run test:lifecycle:agentmemory
 npm run test:clean-profile:agentmemory
@@ -248,6 +261,7 @@ model-visible L5 use, or a live-profile change.
 | HEAD AIAH candidate | `@dff652/dsh-ai-asset-hub@0.1.2`; rc.2 compatibility evidence |
 | Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.1.0` GitHub Release; historical rc.6 evidence |
 | HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.1.1`; rc.2 compatibility evidence |
+| HEAD Agent Mail UI candidate | `@dff652/dsh-agent-mail-ui@0.1.2`; host/client mailbox; GUI acceptance pending |
 | HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.1`; rc.2 compatibility evidence |
 | DeepSeek Harness | `0.1.1-rc.2` for HEAD candidates |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` for HEAD candidates |
