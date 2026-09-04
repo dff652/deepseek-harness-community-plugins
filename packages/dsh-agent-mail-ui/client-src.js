@@ -143,7 +143,6 @@ function currentScope(ctx) {
 }
 
 function MailPanel({ pluginCtx, ctx, scope, visible }) {
-  const host = pluginCtx ?? ctx;
   const [status, setStatus] = useState(null);
   const [diagnose, setDiagnose] = useState(null);
   const [items, setItems] = useState([]);
@@ -239,7 +238,10 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
 
   const quote = (item) => {
     const sessionId = scope?.sessionId;
-    if (!sessionId || !appendToDraft(host, sessionId, quoteComposerText(item))) {
+    const text = quoteComposerText(item);
+    // Tab props.ctx is the sidebar fiber (sessions + conversation). pluginCtx
+    // is this package's own fiber and does not see those services.
+    if (!sessionId || !(appendToDraft(ctx, sessionId, text) || appendToDraft(pluginCtx, sessionId, text))) {
       setError('Could not insert into the composer');
     }
   };

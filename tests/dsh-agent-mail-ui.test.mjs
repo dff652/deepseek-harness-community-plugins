@@ -7,12 +7,14 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
+  apply,
   handleApiMethod,
   invokeMailTool,
   isTrustedApiRequest,
   mailStatus,
 } from '../packages/dsh-agent-mail-ui/index.js';
 import {
+  API_PREFIX,
   HUMAN_ONLY_TOOLS,
   PROXY_TOOLS,
   TAB_ID,
@@ -116,6 +118,49 @@ test('write send requires an explicit confirm flag', () => {
   );
 });
 
+test('apply waits for webServer via inject instead of skipping the host API', () => {
+  const registered = [];
+  const ctx = {
+    get() {
+      return undefined;
+    },
+    inject(deps, callback) {
+      assert.ok(deps.includes('webServer'));
+      const host = {
+        webServer: {
+          register(route) {
+            registered.push(route);
+            return () => {};
+          },
+        },
+        get(name) {
+          return name === 'webServer' ? this.webServer : undefined;
+        },
+        effect(factory) {
+          return factory();
+        },
+      };
+      callback(host);
+      return () => {};
+    },
+  };
+  apply(ctx);
+  assert.equal(registered.length, 1);
+  assert.equal(registered[0].kind, 'prefix');
+  assert.equal(registered[0].path, API_PREFIX);
+});
+
+test('apply stays headless-safe when webServer never appears', () => {
+  apply({
+    get() {
+      return undefined;
+    },
+    inject() {
+      return () => {};
+    },
+  });
+});
+
 test('host reuses the registered MCP tool execute path', async () => {
   const calls = [];
   const ctx = toolsCtx({
@@ -190,6 +235,9 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.doesNotMatch(client, /IconPanelRight/);
   assert.match(client, /Quote to chat/);
   assert.match(client, /human@local/);
+  const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
+  assert.match(source, /appendToDraft\(ctx, sessionId/);
+  assert.match(source, /appendToDraft\(pluginCtx, sessionId/);
 });
 
 test('client.js factory stays generated from client-src.js', async () => {

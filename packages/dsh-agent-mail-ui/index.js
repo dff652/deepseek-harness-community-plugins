@@ -16,37 +16,47 @@ const MAX_BODY_BYTES = 1 << 20;
 const TOOL_TIMEOUT_MS = 60000;
 
 export function apply(ctx) {
-  const webServer = ctx.get('webServer');
-  if (webServer === undefined) return;
-
-  ctx.effect(() => webServer.register({
-    kind: 'prefix',
-    path: API_PREFIX,
-    handler: async (req, res) => {
-      if (!isTrustedApiRequest(req, ctx.get('webRuntime')?.trustedHosts ?? [])) {
-        writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } });
-        return;
-      }
-      if (req.method !== 'POST') {
-        writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } });
-        return;
-      }
-      const pathname = new URL(req.url ?? '/', 'http://dsh.internal').pathname;
-      const method = pathname.startsWith(`${API_PREFIX}/`) ? pathname.slice(API_PREFIX.length + 1) : '';
-      try {
-        const payload = await readJsonBody(req);
-        const result = await handleApiMethod(ctx, method, payload);
-        writeJson(res, 200, { ok: true, value: result });
-      } catch (error) {
-        const code = error?.code ?? 'internal';
-        const status = error?.status ?? (code === 'mcp-unavailable' ? 503 : 400);
-        writeJson(res, status, {
-          ok: false,
-          error: { code, message: error instanceof Error ? error.message : String(error) },
-        });
-      }
-    },
-  }));
+  // Cordis only exposes webServer after inject; a bare ctx.get() skips the API.
+  if (typeof ctx.inject !== 'function') return;
+  ctx.inject(['webServer'], (host) => {
+    const webServer = host.webServer ?? host.get?.('webServer');
+    if (webServer?.register == null) return;
+    host.effect(() => webServer.register({
+      kind: 'prefix',
+      path: API_PREFIX,
+      handler: async (req, res) => {
+        const trustedHosts = host.get?.('webRuntime')?.trustedHosts
+          ?? ctx.get?.('webRuntime')?.trustedHosts
+          ?? [];
+        if (!isTrustedApiRequest(req, trustedHosts)) {
+          writeJson(res, 403, { ok: false, error: { code: 'forbidden', message: 'forbidden' } });
+          return;
+        }
+        if (req.method !== 'POST') {
+          writeJson(res, 405, { ok: false, error: { code: 'method-error', message: 'method not allowed' } });
+          return;
+        }
+        const pathname = new URL(req.url ?? '/', 'http://dsh.internal').pathname;
+        const method = pathname.startsWith(`${API_PREFIX}/`) ? pathname.slice(API_PREFIX.length + 1) : '';
+        try {
+          const payload = await readJsonBody(req);
+          const result = await handleApiMethod({
+            get(name) {
+              return host.get?.(name) ?? host[name] ?? ctx.get?.(name);
+            },
+          }, method, payload);
+          writeJson(res, 200, { ok: true, value: result });
+        } catch (error) {
+          const code = error?.code ?? 'internal';
+          const status = error?.status ?? (code === 'mcp-unavailable' ? 503 : 400);
+          writeJson(res, status, {
+            ok: false,
+            error: { code, message: error instanceof Error ? error.message : String(error) },
+          });
+        }
+      },
+    }));
+  });
 }
 
 export async function handleApiMethod(ctx, method, payload = {}) {
