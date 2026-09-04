@@ -6,7 +6,7 @@
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0"><img alt="Agent Mail release 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-release%200.1.0-5fa04e"></a>
-  <img alt="AgentMemory candidate 0.1.0" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.0-38bdf8">
+  <img alt="AgentMemory candidate 0.1.1" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.1-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
 </p>
@@ -24,10 +24,18 @@ package is a small configuration bundle with its own version and allowlist.
 > `@dff652/agentmemory-mcp-adapter@0.1.0` local source candidate now passes its
 > security, exact-pack, AgentMemory 0.9.28 and disposable DSH gates. It is not
 > yet a public repository or Release, so `@dff652/dsh-agentmemory@0.1.0`
-> remains public source only. The AIAH marketplace entry from
+> is superseded by the current `@dff652/dsh-agentmemory@0.1.1` source
+> candidate below. The AIAH marketplace entry from
 > [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
 > is merged and visible in the public catalog. No package is published to npm
 > or deployed to a live profile by this repository.
+
+HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
+`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
+`@dff652/dsh-agentmemory@0.1.1`. They are source candidates only—not tagged,
+released, published or installed into a live profile. The disposable
+install/config/remove evidence is recorded in
+[`docs/dsh-0.1.1-rc.2-compatibility.md`](./docs/dsh-0.1.1-rc.2-compatibility.md).
 
 ## What you get
 
@@ -47,16 +55,16 @@ that exact tarball into a disposable DSH profile:
 
 ```bash
 npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts
-sha256sum dff652-dsh-ai-asset-hub-0.1.1.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.1.tgz
+sha256sum dff652-dsh-ai-asset-hub-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts
-sha256sum dff652-dsh-agent-mail-0.1.0.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.0.tgz
+sha256sum dff652-dsh-agent-mail-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
 
 npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
-sha256sum dff652-dsh-agentmemory-0.1.0.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
+sha256sum dff652-dsh-agentmemory-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.1.tgz
 
 dsh --profile <profile> --dump-config
 ```
@@ -236,11 +244,13 @@ model-visible L5 use, or a live-profile change.
 
 | Component | Reviewed value |
 | --- | --- |
-| AIAH package | `@dff652/dsh-ai-asset-hub@0.1.1` GitHub Release |
-| Agent Mail package | `@dff652/dsh-agent-mail@0.1.0` GitHub Release |
-| AgentMemory package | `@dff652/dsh-agentmemory@0.1.0` source candidate |
-| DeepSeek Harness | `0.1.0-rc.6` |
-| MCP client | `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` |
+| Published AIAH artifact | `@dff652/dsh-ai-asset-hub@0.1.1` GitHub Release; historical rc.6 evidence |
+| HEAD AIAH candidate | `@dff652/dsh-ai-asset-hub@0.1.2`; rc.2 compatibility evidence |
+| Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.1.0` GitHub Release; historical rc.6 evidence |
+| HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.1.1`; rc.2 compatibility evidence |
+| HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.1`; rc.2 compatibility evidence |
+| DeepSeek Harness | `0.1.1-rc.2` for HEAD candidates |
+| MCP client | `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` for HEAD candidates |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | AI Asset Hub executable | Official Release `v0.1.11` |
 | Agent Mail provider | `1.0.0-alpha.4` at commit `ca6601c` |

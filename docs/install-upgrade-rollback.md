@@ -13,14 +13,18 @@ does not install provider products and does not authorize a live deployment.
   whose digest differs from the reviewed release record.
 - Start in a disposable profile before considering a shared profile.
 
+The commands below use the current HEAD candidates: AIAH `0.1.2`, Agent Mail
+`0.1.1` and AgentMemory `0.1.1`. The previously published AIAH `0.1.1` and
+Agent Mail `0.1.0` artifacts remain immutable historical release bytes.
+
 ## AI Asset Hub
 
 Set `DSH_AIAH_COMMAND` in the DSH service environment to the reviewed `aiah`
 executable's absolute path. Do not rely on `PATH`.
 
 ```bash
-sha256sum dff652-dsh-ai-asset-hub-0.1.1.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.1.tgz
+sha256sum dff652-dsh-ai-asset-hub-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -59,8 +63,8 @@ Do not put a bearer token, certificate or provider data directory in the
 package or a committed patch.
 
 ```bash
-sha256sum dff652-dsh-agent-mail-0.1.0.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.0.tgz
+sha256sum dff652-dsh-agent-mail-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -106,8 +110,8 @@ starting DSH. See the
 
 ```bash
 agentmemory-mcp-adapter --check
-sha256sum dff652-dsh-agentmemory-0.1.0.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
+sha256sum dff652-dsh-agentmemory-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.1.tgz
 dsh --profile <profile> --dump-config
 ```
 

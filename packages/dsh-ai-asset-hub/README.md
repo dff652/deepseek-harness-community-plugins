@@ -5,6 +5,13 @@ Hub executable. It mounts the official `@deepseek-ai/dsh-mcp-client` peer and
 starts a deployment-owned `aiah mcp` command; it does not copy AIAH handlers,
 store credentials, ship a provider binary or expose build/apply/rollback.
 
+## Pinned combination
+
+| Item | Pin |
+|---|---|
+| DeepSeek Harness | `0.1.1-rc.2` |
+| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
+
 ## Deployment contract
 
 The DSH service must define `DSH_AIAH_COMMAND` as a non-blank absolute path to
@@ -18,7 +25,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
 dsh --profile <profile> --dump-config
 ```
 

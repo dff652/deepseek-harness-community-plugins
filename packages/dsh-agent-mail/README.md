@@ -9,8 +9,8 @@ handlers, store tokens, ship a provider binary, or wake any model.
 
 | Item | Pin |
 |---|---|
-| DeepSeek Harness | `0.1.0-rc.6` |
-| `@deepseek-ai/dsh-mcp-client` | `0.1.0-rc.6` |
+| DeepSeek Harness | `0.1.1-rc.2` |
+| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
 | Agent Mail | `1.0.0-alpha.4` |
 | Reviewed provider commit | `ca6601c95eeda2d5d558cca37179be1412b75a8d` |
 
@@ -48,7 +48,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
 dsh --profile <profile> --dump-config
 ```
 

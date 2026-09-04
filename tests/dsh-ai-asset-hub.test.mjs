@@ -22,11 +22,11 @@ const EXPECTED_TOOLS = [
   'aiah_version',
 ];
 
-test('manifest pins the rc.6 MCP client as a peer and exposes only reviewed files', async () => {
+test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed files', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
 
   assert.equal(manifest.name, '@dff652/dsh-ai-asset-hub');
-  assert.equal(manifest.version, '0.1.1');
+  assert.equal(manifest.version, '0.1.2');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(
@@ -41,7 +41,7 @@ test('manifest pins the rc.6 MCP client as a peer and exposes only reviewed file
   assert.equal(manifest.engines.node, '^22.19.0 || >=24.0.0');
   assert.equal(manifest.dependencies, undefined);
   assert.deepEqual(manifest.peerDependencies, {
-    '@deepseek-ai/dsh-mcp-client': '0.1.0-rc.6',
+    '@deepseek-ai/dsh-mcp-client': '0.1.1-rc.2',
   });
   assert.deepEqual(manifest.dsh.bundle, { patch: './cordis.patch.yml' });
   assert.deepEqual(manifest.files, ['index.js', 'cordis.patch.yml', 'README.md', 'LICENSE']);

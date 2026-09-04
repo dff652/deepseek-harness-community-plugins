@@ -24,17 +24,19 @@ marketplace entry originated in
 Both automated checks passed, the PR merged, and the entry is in the live
 catalog.
 
-The first package is a configuration-only bridge to an independently
-installed AI Asset Hub executable. It starts `DSH_AIAH_COMMAND mcp` through
-the exact `@deepseek-ai/dsh-mcp-client@0.1.0-rc.6` peer and exposes the
-reviewed eight read-only tools. The second package is a configuration-only
-bridge to an independently installed Agent Mail `agent-mail-mcp` executable
-and exposes the reviewed eleven-tool surface with non-human approval denial.
-The third package is a configuration-only bridge to an externally installed
-AgentMemory stdio adapter and exposes the reviewed eight-tool surface. Users
-supply that adapter; this repository does not ship one. A separate clean-room
-adapter candidate now exists, without changing this package boundary. Provider code,
-binaries, credentials, homes and runtime data remain outside the packages.
+The previously published AIAH `0.1.1` and Agent Mail `0.1.0` artifacts remain
+the rc.6-compatible release bytes recorded below. HEAD now carries new,
+unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1` and
+AgentMemory `0.1.1`; their disposable evidence is recorded in
+[the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md).
+The current candidate packages are configuration-only bridges: AIAH starts
+`DSH_AIAH_COMMAND mcp`, Agent Mail starts an independently installed
+`agent-mail-mcp` executable, and AgentMemory starts an externally installed
+stdio adapter. Each uses the exact
+`@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` peer and exposes its reviewed tool
+surface. Users supply the providers; this repository does not ship them.
+Provider code, binaries, credentials, homes and runtime data remain outside
+the packages.
 
 ## Required source and history gates
 

@@ -9,8 +9,8 @@ store credentials, ship a provider binary, or capture sessions.
 
 | Item | Pin |
 |---|---|
-| DeepSeek Harness | `0.1.0-rc.6` |
-| `@deepseek-ai/dsh-mcp-client` | `0.1.0-rc.6` |
+| DeepSeek Harness | `0.1.1-rc.2` |
+| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
 | Reviewed AgentMemory server | `0.9.28` |
 | Stdio adapter | Deployment-owned; not shipped here |
 
@@ -36,7 +36,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.1.tgz
 dsh --profile <profile> --dump-config
 ```
 
