@@ -35,60 +35,71 @@ that plain fixtures did not catch. The final pack explicitly injects
 
 ## Runtime baseline and compatibility gate
 
-Read-only inspection found the running DSH process using `0.1.0-rc.6`.
-The live Web profile directly resolves MCP client `0.1.0-rc.6`, Agent Mail
-bundle `0.1.1`, UI `0.1.2` and better-sidebar `0.12.2`. A package manifest pin
-alone is not proof of the loaded runtime combination.
+Before this cutover, read-only inspection found the live DSH process using
+`0.1.0-rc.6`. The then-live Web profile directly resolved MCP client
+`0.1.0-rc.6`, Agent Mail bundle `0.1.1`, UI `0.1.2` and better-sidebar `0.12.2`.
+A package manifest pin alone is not proof of the loaded runtime combination.
 
-The chosen 0.1.4 acceptance target is DSH/MCP client `0.1.1-rc.2`,
+The chosen 0.1.4 acceptance target was DSH/MCP client `0.1.1-rc.2`,
 Agent Mail bundle `0.1.1`, UI `0.1.4`, and optional better-sidebar `0.12.2`.
-This follows the exact manifest peers. A later live upgrade therefore needs
-a separately authorized core/MCP migration with a core-runtime rollback,
-not only replacement of the UI archive. Retain the rc.6 runtime and prior
-profile as the rollback baseline. Do not infer rc.6 acceptance from rc.2
-test results; the existing mixed installation remains unqualified.
+This followed the exact manifest peers. The separately authorized core/MCP
+migration and core-runtime rollback are recorded below. Retain the rc.6
+runtime and prior profile as the rollback baseline. Do not infer rc.6
+acceptance from rc.2 test results; the former mixed installation remains
+unqualified.
 
 ## Full-profile migration hold (2026-09-05)
 
+**Status: resolved.**
+
 The owner approved the rc.2 migration, the private AgentMemory adaptation,
-and temporary exclusion of Git Graph. Compatibility decisions are resolved;
-actual live cutover is still pending authorized HTTPS access evidence.
+and temporary exclusion of Git Graph. A stopped fresh copy of the then-current
+live home was cut over; no candidate or rehearsal copy was promoted. The live
+profile now runs DSH/MCP `0.1.1-rc.2`, Agent Mail `0.1.1`, UI `0.1.4`, private
+AgentMemory `0.1.1`, better-sidebar `0.12.2` and dsh-market `1.41.0`.
 
-| Component | Accepted candidate state |
+| Component | Candidate evidence / validated live state |
 |---|---|
-| Private AgentMemory | Private `0.1.1` uses exact MCP rc.2 peer; four-file archive, distinct from the public package/adapter. Actual discovery, read-only recall, forced test-child failure, reconnect, recall, removal and cleanup passed. |
+| Private AgentMemory | Private `0.1.1` uses exact MCP rc.2 peer; its four-file archive is distinct from the public package/adapter. Disposable candidate discovery, read-only recall, forced test-child failure, reconnect, recall, removal and cleanup passed. The live private package is active; no persistent production write or fault-injection test was performed. |
 | Git Graph `0.3.13` | Temporarily excluded with owner approval; its declared DSH range excludes rc.2. The existing rc.6 baseline also falls outside that declaration. |
-| better-sidebar `0.12.2` | Real rc.2 integration passed. Its rc.6-family peer declaration remains an explicit compatibility exception, not static peer-contract compliance. |
-| Plugin market `1.41.0` | Installed-list and capabilities API passed; five candidate plugins active, no diagnostics. |
+| better-sidebar `0.12.2` | Disposable candidate real rc.2 integration passed; the live authorized browser rendered the Mail sidebar. Its rc.6-family peer declaration remains an explicit compatibility exception, not static peer-contract compliance. |
+| Plugin market `1.41.0` | Disposable candidate installed-list and capabilities API passed; the live package is active and live Mail API/diagnostics checks returned 200. |
 
-A fresh running-home copy was first booted without external plugins, then
+The rehearsal profile was first booted without external plugins and then
 received Agent Mail `0.1.1`, released UI `0.1.4`, sidebar, market and the
-adapted private AgentMemory. The final profile has no experimental MCP
-override or profile-level rc.6 dependency. Private repository contracts passed
-70/70 on both Node 22 and Node 24, with independent review; the stable registry
-verifier passed while keeping the private rc.2 candidate separately reported.
-All 187 installed DSH runtime
-modules have version `0.1.1-rc.2`; offline frozen installation exited normally.
+adapted private AgentMemory; it was not promoted. For cutover, the service was
+stopped and its then-current home was copied afresh before the approved
+combination was activated. The live profile has no experimental MCP override
+or profile-level rc.6 dependency.
+The disposable candidate passed private repository contracts 70/70 on both
+Node 22 and Node 24, with independent review; the stable registry verifier
+passed while keeping the private rc.2 candidate separately reported. All 187
+installed DSH runtime modules in the activated profile have version
+`0.1.1-rc.2`; offline frozen installation exited normally.
 
-Chrome passed the complete five-plugin sidebar combination, including
-selected-session Quote, Done/Ack/reload and all-mail state. A pre-existing
-session reached `openState=open`, and new blank sessions survived a server
-restart. Settings bytes were unchanged; credential format migrated with the
-original credential values retained. No model turn or persistent AgentMemory
-write was performed; Mail tests used a disposable mailbox.
+The disposable candidate Chrome run passed the complete five-plugin sidebar
+combination, including selected-session Quote, Done/Ack/reload and all-mail
+state. In the live authorized browser, the pre-existing session reached
+`openState=open` and the Mail sidebar rendered; a new blank live session
+survived the final server restart. Settings bytes were unchanged; credential
+format migrated with the original credential values retained. No model turn
+or persistent AgentMemory write was performed; candidate Mail tests used a
+disposable mailbox.
 
 Staged service units passed verification, and protected rollback configuration
-was retained. Live remains rc.6/UI `0.1.2`. Final cutover must stop the old
-service and copy its then-current home afresh; rehearsal sessions and test
-probes must not be promoted. Restore the old runtime and original home together
-if cutover fails.
+was retained. The post-cutover restart passed with `NRestarts=0`; live Mail API
+and diagnostics checks returned 200. The old rc.6 runtime and original home
+remain available as a paired rollback baseline. Restore them together if a
+later observation fails.
 
-Loopback/LAN and the TLS authentication front door remain reachable. Local
-HTTPS DNS resolution fails, and no reusable local login credential is
-available. The owner has been asked to verify the authorized browser flow;
-401 alone is not authorized upstream evidence. The older runtime's `/health`
-200 was the same HTML as its homepage, not a health API: use actual session,
-API and MCP checks rather than treating rc.2's 404 there as a health regression.
+Loopback/LAN and the TLS authentication front door remain reachable. The
+authorized HTTPS browser flow passed with the existing session open and the
+Mail sidebar rendered; the new blank live session also persisted across the
+final restart. System DNS still does not resolve the entry and was not
+changed; the browser used the existing proxy mapping over valid TLS. The older
+runtime's `/health` 200 was the same HTML as its homepage, not a health API:
+use actual session, API and MCP checks rather than treating rc.2's 404 there as
+a health regression.
 
 ## Next steps and exit gates
 
@@ -113,29 +124,30 @@ API and MCP checks rather than treating rc.2's 404 there as a health regression.
    `ed87f8fca7db9a153e0105a4c89c2b8dca2c108456c85bfb81024c85735fe1e9`.
    Downloaded bytes passed disposable Web/headless install once and remove
    checks. npm and marketplace publication were not performed.
-5. **Full-profile candidate validation complete; authorized-entry evidence pending.**
-   The owner approved the target combination and temporary Git Graph exclusion.
-   Preserve the staged rollback baseline and close the browser-entry gate
-   before stopping live; do not promote the running-home rehearsal copy.
-6. **Upgrade, verify, or roll back.** Install only the reviewed downloaded
-   archive into that profile, then verify the actual loaded version, exactly
-   one UI config row, existing MCP-child reuse, and the intended sidebar or
-   drawer. Check current-session Quote and mailbox state. A write-producing
-   canary must use an expressly designated test mailbox. On failure, restore
-   the recorded prior runtime/profile and UI archive, then repeat health and
-   UI checks. Do not delete provider data or uninstall the companion bundle
-   as part of a UI-only rollback.
+5. **Live migration and authorized-entry verification complete.** The approved
+   target combination is active after a stop-and-fresh-copy cutover with Git
+   Graph temporarily excluded. The existing HTTPS session opened, the Mail
+   sidebar rendered, the new blank session survived restart, and live Mail API
+   plus diagnostics checks returned 200. System DNS was unchanged; browser
+   access used the existing proxy mapping and valid TLS.
+6. **Observe and retain rollback.** Keep the old rc.6 runtime/home and the
+   cutover baseline for the observation period. On failure, restore the old
+   runtime and original home together, then repeat the session, API, MCP and UI
+   checks. Do not delete provider data or uninstall the companion bundle as
+   part of a UI-only rollback.
 
 See [install/upgrade/rollback](install-upgrade-rollback.md#agent-mail-ui) for
 the plugin commands. Completion of each stage should record commit/version,
 digest, target runtime, checks and observed result without private paths,
 credentials, message contents or deployment data in this repository.
 
-The live profile remains unchanged at UI `0.1.2` on the existing rc.6 runtime.
-Migration toward the selected DSH/MCP `0.1.1-rc.2` target is held on the
-full-profile compatibility decisions above; the
-published UI archive has not been installed live, and no upgraded live state
-is claimed.
+The live profile now runs DSH/MCP `0.1.1-rc.2`, Agent Mail `0.1.1`, UI
+`0.1.4`, private AgentMemory `0.1.1`, better-sidebar `0.12.2` and dsh-market
+`1.41.0`; Git Graph is temporarily excluded. The cutover used a stopped fresh
+copy of the then-current home and the reviewed UI archive. Authorized browser,
+Mail sidebar, live API/diagnostics and post-restart session checks passed.
+System DNS remains unchanged and the old rc.6 runtime/home are retained for
+rollback. npm and marketplace publication remain separate transitions.
 
 ## Delegation
 

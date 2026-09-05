@@ -1,8 +1,8 @@
 # Public release readiness
 
 Agent Mail UI 0.1.4 closes the three P2 findings and passes local acceptance.
-[Live runtime migration](agent-mail-ui-release-plan.md) remains a separate
-gate; source push, CI and the reviewed GitHub Release are complete.
+The approved [live runtime migration](agent-mail-ui-release-plan.md) is
+complete; source push, CI and the reviewed GitHub Release are also complete.
 
 This document defines the gates for the independently versioned public bundle
 candidates. Passing one gate does not authorize the next state transition.
@@ -199,9 +199,8 @@ and browser evidence. Firefox and Chrome fixture regressions passed; the
 final bytes also passed real standalone checks in both browsers and real
 better-sidebar integration in Chrome. Tool-card owners are synthetic fixtures
 matching the actual DSH contract, not model-driven dispatch. Follow the
-[release plan](agent-mail-ui-release-plan.md) for the remaining core/MCP
-migration and live-upgrade gates. npm and marketplace publication remain
-unperformed.
+[release plan](agent-mail-ui-release-plan.md) for the live observations and
+rollback baseline. npm and marketplace publication remain unperformed.
 
 ## Evidence to record after verification
 
@@ -397,11 +396,16 @@ run `33945657776` passed on Node 22.19 and 24.19. The annotated tag
   checks; the acceptance record retains the decompressed-tar digest and local
   browser/MCP evidence.
 - npm publication and marketplace submission were not performed.
-- The live profile remains unchanged at UI `0.1.2` on the existing rc.6
-  runtime. Migration toward DSH/MCP `0.1.1-rc.2` is held on the
-  [validated candidate and remaining authorized-entry gate](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05); the published
-  UI archive has not been installed live, and no upgraded live state is
-  claimed.
+- The live profile now runs DSH/MCP `0.1.1-rc.2`, Agent Mail `0.1.1`, UI
+  `0.1.4`, private AgentMemory `0.1.1`, better-sidebar `0.12.2` and dsh-market
+  `1.41.0`; Git Graph is temporarily excluded. The stop-and-fresh-copy
+  cutover used the then-current home, not a candidate or rehearsal copy.
+- Authorized HTTPS browser access opened the existing session, the Mail
+  sidebar rendered, live Mail API and diagnostics returned 200, and a new
+  blank session survived the final restart. System DNS was not changed; the
+  browser used the existing proxy mapping over valid TLS.
+- The old rc.6 runtime and original home remain the paired rollback baseline;
+  no npm or marketplace publication is implied by this live deployment.
 
 ## Local AgentMemory candidate
 

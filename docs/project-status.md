@@ -7,8 +7,9 @@ retain their previously recorded evidence and are not a new release audit.
 
 Agent Mail UI 0.1.4 closes the broader review findings and passes the local
 acceptance gates. Its source is pushed, CI passed and the reviewed GitHub
-Release is published. See [next steps](agent-mail-ui-release-plan.md) for the
-separate live runtime migration.
+Release is published. The approved five-plugin rc.2 live migration is also
+complete; see [next steps](agent-mail-ui-release-plan.md) for the observed
+state and rollback baseline.
 
 This matrix separates implementation, private deployment, public source,
 GitHub Release, npm publication, marketplace listing and live deployment.
@@ -21,7 +22,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
-| `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | UI 0.1.2 remains live; rc.2 candidate PASS, authorized-entry evidence pending |
+| `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Live with DSH/MCP rc.2, Agent Mail 0.1.1, private Memory 0.1.1, sidebar 0.12.2 and market 1.41.0; Graph temporarily excluded; browser/API/restart PASS |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
@@ -184,11 +185,12 @@ previous Done/Ack fixes. See the [current acceptance record](agent-mail-ui-0.1.4
 for exact bytes, checks and their scope; [0.1.3 evidence](agent-mail-ui-acceptance.md)
 is historical and must not be used to qualify a new archive.
 
-Read-only inspection found live DSH/MCP `0.1.0-rc.6`, Agent Mail bundle
-`0.1.1`, UI `0.1.2` and better-sidebar `0.12.2`. The status API reports existing
-MCP tools available. The selected new acceptance target is DSH/MCP
-`0.1.1-rc.2`, following the manifest pins. These are different combinations;
-a future live upgrade needs an explicit core/MCP migration and rollback.
+The prior live baseline was DSH/MCP `0.1.0-rc.6`, Agent Mail bundle `0.1.1`,
+UI `0.1.2` and better-sidebar `0.12.2`. The selected target followed the
+manifest pins: DSH/MCP `0.1.1-rc.2`, Agent Mail `0.1.1`, UI `0.1.4`, private
+AgentMemory `0.1.1`, better-sidebar `0.12.2` and dsh-market `1.41.0`, with Git
+Graph temporarily excluded. A stop-and-fresh-copy cutover completed; the old
+runtime and home remain the rollback baseline.
 
 Commit `8187f7b` introduced the UI, `27a5a2e` fixed host registration and
 composer context, and `013ddd1` recorded 0.1.3 fixes and the full-range
@@ -198,6 +200,9 @@ tag `dsh-agent-mail-ui-v0.1.4` targets that commit, and its GitHub Release
 contains the exact archive and `SHA256SUMS`. Anonymous download verification
 reproduced the archive digest and passed disposable Web/headless install once
 and remove checks. npm publication and marketplace submission were not
-performed. The live profile remains on UI 0.1.2; migration to the selected
-DSH/MCP `0.1.1-rc.2` target is held on [full-profile compatibility](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05), and no upgraded live state is
-claimed.
+performed. The live profile now runs the selected DSH/MCP `0.1.1-rc.2` target
+and the approved five-plugin combination. Authorized HTTPS browser access, the
+Mail sidebar, live Mail API/diagnostics and a new blank session after restart
+passed. System DNS was not changed; browser access used the existing proxy
+mapping over valid TLS. The old rc.6 runtime and home remain available for
+rollback.

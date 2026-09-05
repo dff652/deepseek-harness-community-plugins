@@ -37,17 +37,23 @@ package is a small configuration bundle with its own version and allowlist.
 HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
 `@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
 `@dff652/dsh-agentmemory@0.1.1`. These remain unreleased source candidates.
-`@dff652/dsh-agent-mail-ui@0.1.4` has been pushed and released, while the
-live profile still uses UI 0.1.2; the approved five-plugin rc.2 candidate
-passed integration checks, with authorized HTTPS entry evidence pending in the
-[migration record](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05).
+`@dff652/dsh-agent-mail-ui@0.1.4` has been pushed and released. The approved
+five-plugin rc.2 profile is now live after a stop-and-fresh-copy cutover: DSH/MCP
+`0.1.1-rc.2`, Agent Mail `0.1.1`, UI `0.1.4`, private AgentMemory `0.1.1`,
+better-sidebar `0.12.2` and dsh-market `1.41.0` are active; Git Graph is
+temporarily excluded. An authorized HTTPS browser session opened, the Mail
+sidebar rendered, and a new blank session survived the final restart. System
+DNS was not changed; the browser used the existing proxy mapping over valid
+TLS. The [migration record](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05)
+keeps the old runtime/home as the rollback baseline.
 Source, release and live-use states are tracked separately in
 [project status](docs/project-status.md).
 The disposable install/config/remove evidence is recorded in
 [`docs/dsh-0.1.1-rc.2-compatibility.md`](./docs/dsh-0.1.1-rc.2-compatibility.md),
 with newer UI evidence in [UI acceptance](docs/agent-mail-ui-0.1.4-acceptance.md).
 The [full-range UI review and release plan](docs/agent-mail-ui-release-plan.md)
-records the completed local gates and the remaining live-upgrade steps.
+records the completed local and live gates, current observations and rollback
+steps.
 
 ## What you get
 
