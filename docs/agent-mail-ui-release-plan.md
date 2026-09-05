@@ -50,32 +50,45 @@ test results; the existing mixed installation remains unqualified.
 
 ## Full-profile migration hold (2026-09-05)
 
-The release gate is complete, but the existing full profile adds compatibility
-requirements beyond the isolated Agent Mail combination:
+The owner approved the rc.2 migration, the private AgentMemory adaptation,
+and temporary exclusion of Git Graph. Compatibility decisions are resolved;
+actual live cutover is still pending authorized HTTPS access evidence.
 
-| Existing component | Finding | Required decision or evidence |
-|---|---|---|
-| Private AgentMemory `0.1.0` | Direct dependency on MCP client `0.1.0-rc.6`; this is a different artifact from the public configuration candidate. | Prepare a controlled rc.2 adaptation and verify actual discovery/recall. A candidate-only dependency override is exploratory, not qualification. |
-| Git Graph `0.3.13` | Declares `dsh.engines.dsh: >=0.1.2-alpha.4`, which the rc.2 target does not satisfy. The existing rc.6 baseline also falls outside this declaration. | Choose an independently qualified compatible version, approve temporary exclusion from the rc.2 profile, or retain the existing live runtime. Do not silently drop an installed feature. |
-| better-sidebar `0.12.2` | Declares rc.6-family peer ranges. | Preserve the recorded real rc.2 integration evidence and explicitly document the compatibility exception; this is not static peer-contract compliance. |
+| Component | Accepted candidate state |
+|---|---|
+| Private AgentMemory | Private `0.1.1` uses exact MCP rc.2 peer; four-file archive, distinct from the public package/adapter. Actual discovery, read-only recall, forced test-child failure, reconnect, recall, removal and cleanup passed. |
+| Git Graph `0.3.13` | Temporarily excluded with owner approval; its declared DSH range excludes rc.2. The existing rc.6 baseline also falls outside that declaration. |
+| better-sidebar `0.12.2` | Real rc.2 integration passed. Its rc.6-family peer declaration remains an explicit compatibility exception, not static peer-contract compliance. |
+| Plugin market `1.41.0` | Installed-list and capabilities API passed; five candidate plugins active, no diagnostics. |
 
-A separate durable rc.2 runtime was built and its version checked. A copy of
-the home, excluding old dependency trees, was prepared with all six existing
-package versions pinned and the released UI archive selected. Its dependency
-installation succeeded using an experimental MCP rc.2 override. No candidate
-server, model turn or live cutover was performed during this migration step.
-The copied profile is not an accepted production replacement.
+A fresh running-home copy was first booted without external plugins, then
+received Agent Mail `0.1.1`, released UI `0.1.4`, sidebar, market and the
+adapted private AgentMemory. The final profile has no experimental MCP
+override or profile-level rc.6 dependency. Private repository contracts passed
+70/70 on both Node 22 and Node 24, with independent review; the stable registry
+verifier passed while keeping the private rc.2 candidate separately reported.
+All 187 installed DSH runtime
+modules have version `0.1.1-rc.2`; offline frozen installation exited normally.
 
-The next concrete choice is whether the rc.2 migration may temporarily omit
-Git Graph while AgentMemory is adapted. Until that choice and the full-profile
-gates are resolved, preserve the running rc.6/UI 0.1.2 environment and all
-provider data. Final cutover still needs a fresh stopped copy of the home,
-validated rollback pointers, and endpoint/auth/session checks. The current
-read-only preflight kept the same live process and recorded config/artifact
-hashes: loopback/LAN returned 200; local DNS lookup of the HTTPS entry failed.
-Routing directly to the documented proxy returned 401 with successful TLS
-verification, which proves only the authentication front door, not authorized
-upstream access. DNS and authorized-flow acceptance remain cutover gates.
+Chrome passed the complete five-plugin sidebar combination, including
+selected-session Quote, Done/Ack/reload and all-mail state. A pre-existing
+session reached `openState=open`, and new blank sessions survived a server
+restart. Settings bytes were unchanged; credential format migrated with the
+original credential values retained. No model turn or persistent AgentMemory
+write was performed; Mail tests used a disposable mailbox.
+
+Staged service units passed verification, and protected rollback configuration
+was retained. Live remains rc.6/UI `0.1.2`. Final cutover must stop the old
+service and copy its then-current home afresh; rehearsal sessions and test
+probes must not be promoted. Restore the old runtime and original home together
+if cutover fails.
+
+Loopback/LAN and the TLS authentication front door remain reachable. Local
+HTTPS DNS resolution fails, and no reusable local login credential is
+available. The owner has been asked to verify the authorized browser flow;
+401 alone is not authorized upstream evidence. The older runtime's `/health`
+200 was the same HTML as its homepage, not a health API: use actual session,
+API and MCP checks rather than treating rc.2's 404 there as a health regression.
 
 ## Next steps and exit gates
 
@@ -100,11 +113,10 @@ upstream access. DNS and authorized-flow acceptance remain cutover gates.
    `ed87f8fca7db9a153e0105a4c89c2b8dca2c108456c85bfb81024c85735fe1e9`.
    Downloaded bytes passed disposable Web/headless install once and remove
    checks. npm and marketplace publication were not performed.
-5. **Full-profile migration. HOLD on compatibility decisions above.** Confirm target core/MCP/UI
-   versions and the effective loaded plugins, retain the old UI archive and
-   digest, and back up the deployment-owned profile/lock/config files. If
-   core DSH also changes, retain its prior runtime and rollback procedure.
-   Approve the concrete archive and target profile before changing live.
+5. **Full-profile candidate validation complete; authorized-entry evidence pending.**
+   The owner approved the target combination and temporary Git Graph exclusion.
+   Preserve the staged rollback baseline and close the browser-entry gate
+   before stopping live; do not promote the running-home rehearsal copy.
 6. **Upgrade, verify, or roll back.** Install only the reviewed downloaded
    archive into that profile, then verify the actual loaded version, exactly
    one UI config row, existing MCP-child reuse, and the intended sidebar or

@@ -399,7 +399,7 @@ run `33945657776` passed on Node 22.19 and 24.19. The annotated tag
 - npm publication and marketplace submission were not performed.
 - The live profile remains unchanged at UI `0.1.2` on the existing rc.6
   runtime. Migration toward DSH/MCP `0.1.1-rc.2` is held on the
-  [full-profile compatibility decisions](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05); the published
+  [validated candidate and remaining authorized-entry gate](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05); the published
   UI archive has not been installed live, and no upgraded live state is
   claimed.
 

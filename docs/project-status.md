@@ -21,7 +21,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
-| `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | UI 0.1.2 remains live; full-profile compatibility HOLD |
+| `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | UI 0.1.2 remains live; rc.2 candidate PASS, authorized-entry evidence pending |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub

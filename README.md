@@ -38,8 +38,9 @@ HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
 `@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
 `@dff652/dsh-agentmemory@0.1.1`. These remain unreleased source candidates.
 `@dff652/dsh-agent-mail-ui@0.1.4` has been pushed and released, while the
-live profile still uses UI 0.1.2; the rc.2 migration is held on the
-[full-profile compatibility decisions](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05).
+live profile still uses UI 0.1.2; the approved five-plugin rc.2 candidate
+passed integration checks, with authorized HTTPS entry evidence pending in the
+[migration record](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05).
 Source, release and live-use states are tracked separately in
 [project status](docs/project-status.md).
 The disposable install/config/remove evidence is recorded in
