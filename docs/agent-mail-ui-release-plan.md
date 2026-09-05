@@ -134,7 +134,8 @@ a health regression.
    cutover baseline for the observation period. On failure, restore the old
    runtime and original home together, then repeat the session, API, MCP and UI
    checks. Do not delete provider data or uninstall the companion bundle as
-   part of a UI-only rollback.
+   part of a UI-only rollback. Host systemd units, the LAN socket and the TLS
+   front door belong to the host deployment tree, not this repository.
 
 See [install/upgrade/rollback](install-upgrade-rollback.md#agent-mail-ui) for
 the plugin commands. Completion of each stage should record commit/version,
