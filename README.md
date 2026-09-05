@@ -6,7 +6,7 @@
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0"><img alt="Agent Mail release 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-release%200.1.0-5fa04e"></a>
-  <img alt="Agent Mail UI candidate 0.1.4" src="https://img.shields.io/badge/Agent%20Mail%20UI-candidate%200.1.4-38bdf8">
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4"><img alt="Agent Mail UI release 0.1.4" src="https://img.shields.io/badge/Agent%20Mail%20UI-release%200.1.4-5fa04e"></a>
   <img alt="AgentMemory candidate 0.1.1" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.1-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
@@ -29,19 +29,24 @@ package is a small configuration bundle with its own version and allowlist.
 > candidate below. The AIAH marketplace entry from
 > [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
 > is merged and visible in the public catalog. No package is published to npm
-> via this repository. Current live-use observations are tracked separately below.
+> via this repository. `@dff652/dsh-agent-mail-ui@0.1.4` also has a reviewed
+> GitHub Release with its exact tarball and `SHA256SUMS`; its downloaded bytes
+> passed disposable Web/headless install/remove checks. Current live-use
+> observations are tracked separately below.
 
 HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
-`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1`,
-`@dff652/dsh-agent-mail-ui@0.1.4` and `@dff652/dsh-agentmemory@0.1.1`. They
-are unreleased source candidates. Earlier UI 0.1.2 was observed live; UI
-0.1.4 has not been deployed. Source, release and live-use states are tracked
-separately in [project status](docs/project-status.md).
+`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
+`@dff652/dsh-agentmemory@0.1.1`. These remain unreleased source candidates.
+`@dff652/dsh-agent-mail-ui@0.1.4` has been pushed and released, while the
+live profile still uses UI 0.1.2; the rc.2 migration is held on the
+[full-profile compatibility decisions](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05).
+Source, release and live-use states are tracked separately in
+[project status](docs/project-status.md).
 The disposable install/config/remove evidence is recorded in
 [`docs/dsh-0.1.1-rc.2-compatibility.md`](./docs/dsh-0.1.1-rc.2-compatibility.md),
 with newer UI evidence in [UI acceptance](docs/agent-mail-ui-0.1.4-acceptance.md).
 The [full-range UI review and release plan](docs/agent-mail-ui-release-plan.md)
-records the completed local gates and the remaining release/upgrade steps.
+records the completed local gates and the remaining live-upgrade steps.
 
 ## What you get
 
@@ -268,7 +273,7 @@ model-visible L5 use, or a live-profile change.
 | HEAD AIAH candidate | `@dff652/dsh-ai-asset-hub@0.1.2`; rc.2 compatibility evidence |
 | Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.1.0` GitHub Release; historical rc.6 evidence |
 | HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.1.1`; rc.2 compatibility evidence |
-| HEAD Agent Mail UI candidate | `@dff652/dsh-agent-mail-ui@0.1.4`; task interaction fixes; [acceptance evidence](docs/agent-mail-ui-0.1.4-acceptance.md) |
+| Published Agent Mail UI artifact | [`@dff652/dsh-agent-mail-ui@0.1.4`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4); rc.2 acceptance evidence |
 | HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.1`; rc.2 compatibility evidence |
 | DeepSeek Harness | `0.1.1-rc.2` for HEAD candidates |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` for HEAD candidates |
@@ -284,10 +289,11 @@ CI runs the portable contract on Node 22.19 and 24.19.
 
 | Transition | State |
 | --- | --- |
-| Clean repository and origin | AIAH, Agent Mail and AgentMemory public source are on `origin/main` |
+| Clean repository and origin | AIAH, Agent Mail, Agent Mail UI and AgentMemory public source are on `origin/main` |
 | Public repository and `dsh-plugin` topic | Complete |
 | AIAH GitHub Release | [`dsh-ai-asset-hub-v0.1.1`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1); exact tarball and `SHA256SUMS` verified |
 | Agent Mail GitHub Release | [`dsh-agent-mail-v0.1.0`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0); exact tarball and `SHA256SUMS` verified |
+| Agent Mail UI GitHub Release | [`dsh-agent-mail-ui-v0.1.4`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4); exact tarball and `SHA256SUMS` verified |
 | AgentMemory GitHub Release | Adapter implementation/real acceptance complete locally; blocked pending separately authorized adapter repository publication and Release |
 | npm publication | Not published |
 | Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) open with both checks passing; AgentMemory waits for public adapter bytes and bundle Release |

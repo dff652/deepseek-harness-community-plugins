@@ -6,8 +6,9 @@ The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.
 
 Agent Mail UI 0.1.4 closes the broader review findings and passes the local
-acceptance gates. See [next steps](agent-mail-ui-release-plan.md) for source
-push/CI, release and the separate live runtime migration.
+acceptance gates. Its source is pushed, CI passed and the reviewed GitHub
+Release is published. See [next steps](agent-mail-ui-release-plan.md) for the
+separate live runtime migration.
 
 This matrix separates implementation, private deployment, public source,
 GitHub Release, npm publication, marketplace listing and live deployment.
@@ -20,7 +21,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
-| `@dff652/dsh-agent-mail-ui@0.1.4` | Local v1 fixes; see current acceptance note | Local, unpushed | Not tagged | Not published | Not submitted | Earlier 0.1.2 observed live; 0.1.4 not deployed |
+| `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | UI 0.1.2 remains live; full-profile compatibility HOLD |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
@@ -191,6 +192,12 @@ a future live upgrade needs an explicit core/MCP migration and rollback.
 
 Commit `8187f7b` introduced the UI, `27a5a2e` fixed host registration and
 composer context, and `013ddd1` recorded 0.1.3 fixes and the full-range
-review findings. Remote main was checked at `df853b0` on 2026-09-05.
-The current follow-up remains local. Push, tag, GitHub Release, npm,
-marketplace submission and deploying 0.1.4 have not been performed.
+review findings. Commit `e179d893a15a71979e8c8a05919a691abe65d5d6` is now on
+`origin/main`; CI run `33945657776` passed on Node 22.19 and 24.19. Annotated
+tag `dsh-agent-mail-ui-v0.1.4` targets that commit, and its GitHub Release
+contains the exact archive and `SHA256SUMS`. Anonymous download verification
+reproduced the archive digest and passed disposable Web/headless install once
+and remove checks. npm publication and marketplace submission were not
+performed. The live profile remains on UI 0.1.2; migration to the selected
+DSH/MCP `0.1.1-rc.2` target is held on [full-profile compatibility](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05), and no upgraded live state is
+claimed.

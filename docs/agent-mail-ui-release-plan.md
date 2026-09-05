@@ -1,14 +1,17 @@
 # Agent Mail UI release and upgrade plan
 
-Review date: 2026-09-05. Local candidate: `@dff652/dsh-agent-mail-ui@0.1.4`.
+Review date: 2026-09-05. Reviewed release: `@dff652/dsh-agent-mail-ui@0.1.4`.
 
 ## Decision and scope
 
 The 0.1.4 follow-up closes the three P2 implementation findings below. Local
-acceptance and complete-range review precede any external transition. This
-document does not authorize push, tag, publication or deployment.
+acceptance and complete-range review preceded the source, CI and GitHub Release
+transitions recorded below. npm, marketplace publication and live deployment
+remain separate transitions.
 
-Remote main was verified at `df853b0`. The unpushed history starts with
+The reviewed source commit is `e179d893a15a71979e8c8a05919a691abe65d5d6` on
+`origin/main`; CI run `33945657776` passed on Node 22.19 and 24.19. The history
+review started with
 `8187f7b` (UI package), `27a5a2e` (host API/composer fix), and `013ddd1`
 (0.1.3 interaction fixes and review record), followed by the 0.1.4 changes.
 Review includes the initial UI, generated bundle, CI/package changes, tests
@@ -45,6 +48,35 @@ not only replacement of the UI archive. Retain the rc.6 runtime and prior
 profile as the rollback baseline. Do not infer rc.6 acceptance from rc.2
 test results; the existing mixed installation remains unqualified.
 
+## Full-profile migration hold (2026-09-05)
+
+The release gate is complete, but the existing full profile adds compatibility
+requirements beyond the isolated Agent Mail combination:
+
+| Existing component | Finding | Required decision or evidence |
+|---|---|---|
+| Private AgentMemory `0.1.0` | Direct dependency on MCP client `0.1.0-rc.6`; this is a different artifact from the public configuration candidate. | Prepare a controlled rc.2 adaptation and verify actual discovery/recall. A candidate-only dependency override is exploratory, not qualification. |
+| Git Graph `0.3.13` | Declares `dsh.engines.dsh: >=0.1.2-alpha.4`, which the rc.2 target does not satisfy. The existing rc.6 baseline also falls outside this declaration. | Choose an independently qualified compatible version, approve temporary exclusion from the rc.2 profile, or retain the existing live runtime. Do not silently drop an installed feature. |
+| better-sidebar `0.12.2` | Declares rc.6-family peer ranges. | Preserve the recorded real rc.2 integration evidence and explicitly document the compatibility exception; this is not static peer-contract compliance. |
+
+A separate durable rc.2 runtime was built and its version checked. A copy of
+the home, excluding old dependency trees, was prepared with all six existing
+package versions pinned and the released UI archive selected. Its dependency
+installation succeeded using an experimental MCP rc.2 override. No candidate
+server, model turn or live cutover was performed during this migration step.
+The copied profile is not an accepted production replacement.
+
+The next concrete choice is whether the rc.2 migration may temporarily omit
+Git Graph while AgentMemory is adapted. Until that choice and the full-profile
+gates are resolved, preserve the running rc.6/UI 0.1.2 environment and all
+provider data. Final cutover still needs a fresh stopped copy of the home,
+validated rollback pointers, and endpoint/auth/session checks. The current
+read-only preflight kept the same live process and recorded config/artifact
+hashes: loopback/LAN returned 200; local DNS lookup of the HTTPS entry failed.
+Routing directly to the documented proxy returned 401 with successful TLS
+verification, which proves only the authentication front door, not authorized
+upstream access. DNS and authorized-flow acceptance remain cutover gates.
+
 ## Next steps and exit gates
 
 1. **Local fixes and portable gates complete.** The final source includes
@@ -56,17 +88,19 @@ test results; the existing mixed installation remains unqualified.
    browsers and real better-sidebar interaction in Chrome. Selected-session
    Quote, Done/Ack/reload, all-mail state and no duplicate drawer are covered.
    Tool-card lifecycle uses DSH-shaped fixture owners; no model turn is claimed.
-3. **Review and push source.** Review all commits relative to current remote
-   main, including source, generated bundle, tests and docs. After separate
-   push authorization, require CI success for that exact remote commit.
-4. **Release reviewed bytes.** After release authorization, use a
-   package-specific tag such as `dsh-agent-mail-ui-v0.1.4` only if that remains
-   the selected version. Pack from the reviewed commit, attach the exact
-   archive and `SHA256SUMS`, anonymously download them and verify the digest.
-   Revalidate downloaded bytes in a disposable profile. npm and marketplace
-   publication are separate choices; a GitHub Release is sufficient to
-   distribute an explicitly selected tarball upgrade.
-5. **Prepare and authorize the live upgrade.** Confirm target core/MCP/UI
+3. **Review and push source. Complete.** The complete history, source,
+   generated bundle, tests and docs were reviewed. Commit
+   `e179d893a15a71979e8c8a05919a691abe65d5d6` is on `origin/main`, and CI run
+   `33945657776` passed on Node 22.19 and 24.19.
+4. **Release reviewed bytes. Complete.** Annotated tag
+   `dsh-agent-mail-ui-v0.1.4` targets the reviewed commit. The [GitHub
+   Release](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4)
+   contains the exact eight-file archive and `SHA256SUMS`; anonymous download
+   verification reproduced SHA-256
+   `ed87f8fca7db9a153e0105a4c89c2b8dca2c108456c85bfb81024c85735fe1e9`.
+   Downloaded bytes passed disposable Web/headless install once and remove
+   checks. npm and marketplace publication were not performed.
+5. **Full-profile migration. HOLD on compatibility decisions above.** Confirm target core/MCP/UI
    versions and the effective loaded plugins, retain the old UI archive and
    digest, and back up the deployment-owned profile/lock/config files. If
    core DSH also changes, retain its prior runtime and rollback procedure.
@@ -84,6 +118,12 @@ See [install/upgrade/rollback](install-upgrade-rollback.md#agent-mail-ui) for
 the plugin commands. Completion of each stage should record commit/version,
 digest, target runtime, checks and observed result without private paths,
 credentials, message contents or deployment data in this repository.
+
+The live profile remains unchanged at UI `0.1.2` on the existing rc.6 runtime.
+Migration toward the selected DSH/MCP `0.1.1-rc.2` target is held on the
+full-profile compatibility decisions above; the
+published UI archive has not been installed live, and no upgraded live state
+is claimed.
 
 ## Delegation
 

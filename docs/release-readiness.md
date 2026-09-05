@@ -1,8 +1,8 @@
 # Public release readiness
 
 Agent Mail UI 0.1.4 closes the three P2 findings and passes local acceptance.
-[Push/CI, release and live runtime migration](agent-mail-ui-release-plan.md)
-remain separate gates.
+[Live runtime migration](agent-mail-ui-release-plan.md) remains a separate
+gate; source push, CI and the reviewed GitHub Release are complete.
 
 This document defines the gates for the independently versioned public bundle
 candidates. Passing one gate does not authorize the next state transition.
@@ -30,10 +30,10 @@ Both automated checks passed, the PR merged, and the entry is in the live
 catalog.
 
 The previously published AIAH `0.1.1` and Agent Mail `0.1.0` artifacts remain
-the rc.6-compatible release bytes recorded below. HEAD now carries new,
-unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1`,
-Agent Mail UI `0.1.4` and AgentMemory `0.1.1`; their disposable evidence is
-recorded in
+the rc.6-compatible release bytes recorded below. HEAD now carries new
+rc.2-compatible source candidates AIAH `0.1.2`, Agent Mail `0.1.1` and
+AgentMemory `0.1.1`; the Agent Mail UI `0.1.4` source is pushed and has a
+reviewed GitHub Release. Their disposable evidence is recorded in
 [the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md); the newer UI
 fixes have a separate [acceptance record](./agent-mail-ui-0.1.4-acceptance.md).
 The MCP candidate packages are configuration-only bridges: AIAH starts
@@ -199,8 +199,9 @@ and browser evidence. Firefox and Chrome fixture regressions passed; the
 final bytes also passed real standalone checks in both browsers and real
 better-sidebar integration in Chrome. Tool-card owners are synthetic fixtures
 matching the actual DSH contract, not model-driven dispatch. Follow the
-[release plan](agent-mail-ui-release-plan.md) for remaining source/CI,
-publication and core/MCP migration gates.
+[release plan](agent-mail-ui-release-plan.md) for the remaining core/MCP
+migration and live-upgrade gates. npm and marketplace publication remain
+unperformed.
 
 ## Evidence to record after verification
 
@@ -378,6 +379,29 @@ not by itself authorize any external transition.
   claimed.
 - npm publication, literal browser interaction, model-visible L5 use and
   live-profile deployment remain separate and were not performed.
+
+## Agent Mail UI Release (2026-09-05)
+
+`@dff652/dsh-agent-mail-ui@0.1.4` is the reviewed host/client release for the
+rc.2 compatibility target. The source commit
+`e179d893a15a71979e8c8a05919a691abe65d5d6` is on `origin/main`, and remote CI
+run `33945657776` passed on Node 22.19 and 24.19. The annotated tag
+`dsh-agent-mail-ui-v0.1.4` targets that commit.
+
+- The [GitHub Release](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4)
+  was published on 2026-09-05 with the exact eight-file
+  `dff652-dsh-agent-mail-ui-0.1.4.tgz` and `SHA256SUMS`.
+- The uploaded and anonymously downloaded archive SHA-256 is
+  `ed87f8fca7db9a153e0105a4c89c2b8dca2c108456c85bfb81024c85735fe1e9`.
+- Downloaded bytes passed disposable Web/headless install once and remove
+  checks; the acceptance record retains the decompressed-tar digest and local
+  browser/MCP evidence.
+- npm publication and marketplace submission were not performed.
+- The live profile remains unchanged at UI `0.1.2` on the existing rc.6
+  runtime. Migration toward DSH/MCP `0.1.1-rc.2` is held on the
+  [full-profile compatibility decisions](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05); the published
+  UI archive has not been installed live, and no upgraded live state is
+  claimed.
 
 ## Local AgentMemory candidate
 

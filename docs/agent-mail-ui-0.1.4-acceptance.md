@@ -1,6 +1,6 @@
 # Agent Mail UI 0.1.4 acceptance
 
-Date: 2026-09-05. Candidate: `@dff652/dsh-agent-mail-ui@0.1.4`.
+Date: 2026-09-05. Release: `@dff652/dsh-agent-mail-ui@0.1.4`.
 
 ## Scope and target
 
@@ -72,6 +72,23 @@ resolved to `0.1.1-rc.2`; the installed companion/UI/sidebar manifests were
 The expected HTTP 400 during premature Check & Ack is the provider rejection
 asserted by the test, not a successful acknowledgement.
 
+## Source, CI and release state
+
+The reviewed source commit
+`e179d893a15a71979e8c8a05919a691abe65d5d6` is on `origin/main`. Remote CI run
+`33945657776` passed on Node 22.19 and 24.19. The annotated tag
+`dsh-agent-mail-ui-v0.1.4` targets that commit, and the [GitHub
+Release](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4)
+contains the exact archive and `SHA256SUMS` listed above. Anonymous download
+verification reproduced SHA-256
+`ed87f8fca7db9a153e0105a4c89c2b8dca2c108456c85bfb81024c85735fe1e9`; the
+downloaded bytes passed disposable Web/headless install once and remove checks.
+
+The 0.1.4 source and GitHub Release stages completed on 2026-09-05. npm publication and
+marketplace submission were not performed. The live profile remains unchanged
+at UI `0.1.2` on the existing rc.6 runtime while migration toward the selected
+DSH/MCP `0.1.1-rc.2` target is held on [full-profile compatibility](agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05); no upgraded live state is claimed.
+
 ## Reproduce
 
 ```bash
@@ -113,6 +130,6 @@ were stopped and removed after acceptance. Six recorded live config/artifact
 digests remained unchanged, and the live status endpoint still reported
 `live: true`, no missing tools and existing-child reuse.
 
-All write-producing checks use disposable mailboxes and profiles. Push,
-remote CI, tag, GitHub Release, npm, marketplace submission and live upgrade
-remain separate stages in the [release plan](agent-mail-ui-release-plan.md).
+All write-producing checks use disposable mailboxes and profiles. Push, remote
+CI, tag and GitHub Release are recorded above; npm, marketplace submission and
+live upgrade remain separate stages in the [release plan](agent-mail-ui-release-plan.md).
