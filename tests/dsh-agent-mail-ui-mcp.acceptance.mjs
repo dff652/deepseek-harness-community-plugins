@@ -89,11 +89,16 @@ try {
   assert.ok(thread.every((entry) => entry.taskId === ''));
   assert.equal((await handleApiMethod(recipientCtx, 'ack', message)).status, 'acked');
   assert.equal(inboxItems(await handleApiMethod(recipientCtx, 'inbox')).length, 0);
+  const allMail = inboxItems(await handleApiMethod(recipientCtx, 'inbox', { unread_only: false }));
+  const acknowledged = allMail.find((entry) => entry.messageId === sent.id);
+  assert.ok(acknowledged, 'all-mail retains the acknowledged task');
+  assert.equal(acknowledged.deliveryStatus, 'acked');
+  assert.equal(acknowledged.unread, false);
   await assert.rejects(() => handleApiMethod(recipientCtx, 'claim', message), /already acked/);
   await assert.rejects(() => handleApiMethod(recipientCtx, 'claim', {
     message_id: 'missing-ui-acceptance-message',
   }));
-  console.log('Agent Mail UI real MCP: PASS (claim renewal, premature Ack rejection, Done -> Ack, alpha.4 tail shape, claim failures)');
+  console.log('Agent Mail UI real MCP: PASS (claim renewal, premature Ack rejection, Done -> Ack, acknowledged all-mail state, alpha.4 tail shape, claim failures)');
 } finally {
   await Promise.all([sender?.client.close(), recipient?.client.close()]);
   await rm(work, { recursive: true, force: true });

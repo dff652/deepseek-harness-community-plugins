@@ -39,8 +39,10 @@ try:
     from selenium import webdriver
     from selenium.common.exceptions import WebDriverException
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.firefox.options import Options
-    from selenium.webdriver.firefox.service import Service
+    from selenium.webdriver.chrome.options import Options as ChromeOptions
+    from selenium.webdriver.chrome.service import Service as ChromeService
+    from selenium.webdriver.firefox.options import Options as FirefoxOptions
+    from selenium.webdriver.firefox.service import Service as FirefoxService
     from selenium.webdriver.support.ui import WebDriverWait
 except ModuleNotFoundError as error:  # pragma: no cover - optional local gate
     print(
@@ -90,6 +92,7 @@ class Fixture:
 
     @property
     def item(self) -> dict[str, object]:
+        delivery_status = "acked" if self.acked else "claimed" if self.claimed else "pending"
         return {
             "message_id": "fixture-message-1",
             "thread_id": "fixture-thread-1",
@@ -99,8 +102,7 @@ class Fixture:
             "to": "ui-harness@local",
             "body_md": "Fixture task: verify the Agent Mail UI.",
             "effect_level": "read",
-            "unread": True,
-            "delivery_status": "claimed" if self.claimed else "pending",
+            "delivery_status": delivery_status,
         }
 
     def thread(self) -> list[dict[str, object]]:
@@ -114,7 +116,7 @@ class Fixture:
             "to": self.item["to"],
             "body_md": self.item["body_md"],
             "effect_level": self.item["effect_level"],
-            "unread": self.item["unread"],
+            "delivery_status": self.item["delivery_status"],
         }]
         if self.done:
             rows.append({
@@ -124,7 +126,7 @@ class Fixture:
                 "to": "worker@local",
                 "body_md": "done",
                 "effect_level": "read",
-                "unread": False,
+                "delivery_status": "outbound",
             })
         return rows
 
@@ -152,9 +154,11 @@ class Fixture:
                     "agents": ["ui-harness@local", "worker@local"],
                 })
             if method == "inbox":
+                unread_only = payload.get("unread_only", True) is not False
+                shown = [] if self.acked and unread_only else [self.item]
                 return HTTPStatus.OK, json_response(True, {
-                    "count": 0 if self.acked else 1,
-                    "items": [] if self.acked else [self.item],
+                    "count": len(shown),
+                    "items": shown,
                 })
             if method == "claim":
                 if self.scenario == "failed-claim" and not self.claim_failed:
@@ -283,8 +287,49 @@ window.__ModuleLoader__ = {
 <script>
 (function boot() {
   const mode = window.__HARNESS__.mode;
-  const sessionId = 'fixture-session-1';
-  const conversationState = { draft: '' };
+  const sessionIds = ['fixture-session-1', 'fixture-session-2'];
+  const drafts = Object.fromEntries(sessionIds.map((id) => [id, '']));
+  const sessionListeners = new Set();
+  const sessionSnapshot = {
+    ids: sessionIds.slice(),
+    byId: Object.fromEntries(sessionIds.map((id) => [id, { id, title: id }])) ,
+    current: sessionIds[0],
+  };
+  const sessionList = {
+    getSnapshot: () => sessionSnapshot,
+    subscribe(listener) {
+      sessionListeners.add(listener);
+      return () => sessionListeners.delete(listener);
+    },
+  };
+  const sessionScope = (id) => sessionIds.includes(id) ? { sessionId: id } : undefined;
+  const openSession = (id) => {
+    if (!sessionIds.includes(id)) throw new Error('unknown fixture session: ' + id);
+    sessionSnapshot.current = id;
+    for (const listener of sessionListeners) listener();
+    window.__HARNESS__.currentSession = id;
+  };
+  const conversation = {
+    input: {
+      for(scope) {
+        const id = scope?.sessionId;
+        if (!sessionIds.includes(id)) throw new Error('unknown conversation scope');
+        return {
+          state: { getSnapshot: () => ({ draft: drafts[id] }) },
+          setDraft(value) {
+            drafts[id] = value;
+            window.__HARNESS__.drafts = { ...drafts };
+            window.__HARNESS__.draft = value;
+          },
+        };
+      },
+    },
+  };
+  window.__HARNESS__.drafts = { ...drafts };
+  window.__HARNESS__.currentSession = sessionSnapshot.current;
+  window.__HARNESS__.sessions = { list: sessionList, open: openSession, scope: sessionScope };
+  window.__HARNESS__.toolViews = new Map();
+  window.__HARNESS__.toolOwners = [];
   const sidebar = mode === 'sidebar' ? {
     tabs: new Map(),
     registerTab(descriptor) {
@@ -293,9 +338,23 @@ window.__ModuleLoader__ = {
       return () => this.tabs.delete(descriptor.id);
     },
   } : undefined;
-  const ctx = {
+  const slots = {
+    inject(_slot, factory) {
+      factory();
+      return () => {};
+    },
+    register(meta, component) {
+      const key = meta.key || meta.id || meta.name;
+      window.__HARNESS__.toolViews.set(key, { meta, component });
+      return () => window.__HARNESS__.toolViews.delete(key);
+    },
+  };
+  const pluginCtx = {
+    sessions: { list: sessionList, scope: sessionScope },
     get(name) {
       if (name === 'betterSidebar') return sidebar;
+      if (name === 'slots') return slots;
+      if (name === 'conversation') return conversation;
       return undefined;
     },
     effect(callback) {
@@ -303,43 +362,119 @@ window.__ModuleLoader__ = {
       window.__HARNESS__.dispose = dispose;
       return dispose;
     },
-    inject() { return () => {}; },
-    sessions: {
-      list: { getSnapshot: () => [{ id: sessionId }] },
-      scope: (id) => id === sessionId ? { id } : undefined,
-    },
-    get conversation() {
-      return {
-        input: {
-          for() {
-            return {
-              state: { getSnapshot: () => ({ draft: conversationState.draft }) },
-              setDraft(value) {
-                conversationState.draft = value;
-                window.__HARNESS__.draft = value;
-              },
-            };
-          },
-        },
-      };
+    inject(_deps, callback) {
+      callback({ betterSidebar: sidebar });
+      return () => {};
     },
   };
-  window.__HARNESS__.ctx = ctx;
+  const ownerCtx = {
+    sessions: { list: sessionList, scope: sessionScope },
+    get(name) {
+      if (name === 'conversation') return conversation;
+      return undefined;
+    },
+  };
+  window.__HARNESS__.ctx = pluginCtx;
+  window.__HARNESS__.ownerCtx = ownerCtx;
+  const mountSidebar = () => {
+    const descriptor = window.__HARNESS__.tab;
+    if (!descriptor) throw new Error('sidebar tab was not registered');
+    const root = window.ReactDOM.createRoot(document.getElementById('sidebar-panel'));
+    window.__HARNESS__.panelRoot = root;
+    root.render(descriptor.component({
+      ctx: ownerCtx,
+      store: { getState: () => ({}) },
+      scope: { sessionId: sessionSnapshot.current },
+      tab: { id: descriptor.id, title: descriptor.title },
+      visible: true,
+    }));
+  };
+  window.__HARNESS__.mountSidebar = mountSidebar;
+  window.__HARNESS__.renderToolCards = () => {
+    const root = window.ReactDOM.createRoot(document.getElementById('tool-cards'));
+    window.__HARNESS__.toolRoot = root;
+    const running = {
+      callId: 'fixture-call-running',
+      name: 'mcp__agent-mail__comm_inbox',
+      argsRaw: '{}',
+      turn: 1,
+      step: 1,
+      time: 1700000000000,
+      callView: null,
+      subCalls: [],
+    };
+    const success = {
+      kind: 'tool-result',
+      seq: 2,
+      time: 1700000000100,
+      callId: 'fixture-call-success',
+      call: { name: 'mcp__agent-mail__comm_send', argsRaw: '{}' },
+      callTime: 1700000000000,
+      content: [{ type: 'text', text: '{"id":"fixture-success"}' }],
+      isError: false,
+      error: null,
+      meta: null,
+      callView: null,
+      resultView: null,
+      subCalls: [],
+    };
+    const failure = {
+      kind: 'tool-result',
+      seq: 3,
+      time: 1700000000200,
+      callId: 'fixture-call-error',
+      call: { name: 'mcp__agent-mail__comm_send', argsRaw: '{}' },
+      callTime: 1700000000000,
+      content: [{ type: 'text', text: 'send failed' }],
+      isError: true,
+      error: { name: 'FixtureError', code: 'fixture-failed' },
+      meta: null,
+      callView: null,
+      resultView: null,
+      subCalls: [],
+    };
+    const cards = [
+      ['mcp__agent-mail__comm_inbox', running],
+      ['mcp__agent-mail__comm_send', success],
+      ['mcp__agent-mail__comm_send', failure],
+    ];
+    const views = cards.map(([toolName, block], index) => {
+      const view = window.__HARNESS__.toolViews.get(toolName);
+      if (!view) throw new Error('tool view was not registered: ' + toolName);
+      const owner = {
+        callId: block.callId,
+        toolName,
+        block,
+        cwd: '/fixture',
+        openFile() {},
+        inspect() {},
+      };
+      window.__HARNESS__.toolOwners.push(owner);
+      return window.React.createElement(
+        () => view.component(owner),
+        { key: index },
+      );
+    });
+    root.render(window.React.createElement('div', null, views));
+  };
   if (mode === 'sidebar') {
     const open = document.createElement('button');
     open.id = 'sidebar-open';
     open.type = 'button';
     open.textContent = 'Agent Mail';
-    open.addEventListener('click', () => {
-      const descriptor = window.__HARNESS__.tab;
-      if (!descriptor) throw new Error('sidebar tab was not registered');
-      const root = window.ReactDOM.createRoot(document.getElementById('sidebar-panel'));
-      window.__HARNESS__.panelRoot = root;
-      root.render(descriptor.component({ ctx, scope: { sessionId }, visible: true }));
-    });
+    open.addEventListener('click', mountSidebar);
     document.getElementById('fixture-shell').append(open);
   }
-  window.__HARNESS__.ui.apply(ctx);
+  const sessionTwo = document.createElement('button');
+  sessionTwo.id = 'session-two';
+  sessionTwo.type = 'button';
+  sessionTwo.textContent = 'Open session 2';
+  sessionTwo.addEventListener('click', () => openSession('fixture-session-2'));
+  document.getElementById('fixture-shell').append(sessionTwo);
+  const toolCards = document.createElement('div');
+  toolCards.id = 'tool-cards';
+  document.getElementById('fixture-shell').append(toolCards);
+  window.__HARNESS__.ui.apply(pluginCtx);
 })();
 </script></body></html>"""
     return html.encode("utf-8")
@@ -460,11 +595,25 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
     ack_call = wait_api_call(server.fixture, "ack")
     assert ack_call["payload"] == {"message_id": "fixture-message-1"}, ack_call
     wait_for(driver, lambda current: "No mail yet" in text_of(current), "acked inbox refresh")
+    checkbox = driver.find_element(By.CSS_SELECTOR, 'input[type="checkbox"]')
+    assert checkbox.is_selected(), "Unread only filter was not enabled initially"
+    checkbox.click()
+    wait_for(driver, lambda current: "Fixture task" in text_of(current), "all-mail acknowledged row")
+    wait_api_call(
+        server.fixture,
+        "inbox",
+        predicate=lambda call: call["payload"].get("unread_only") is False,
+    )
+    assert driver.execute_script("return window.__HARNESS__.tab.badge()") is None, (
+        "acknowledged all-mail row incorrectly contributes to unread badge"
+    )
     return {
         "surface": "sidebar",
         "tabId": tab_id,
         "donePayload": payload,
         "ackPayload": ack_call["payload"],
+        "allMailAcked": True,
+        "unreadBadge": None,
         "backend": "synthetic local HTTP fixture",
     }
 
@@ -481,10 +630,51 @@ def run_standalone(driver, server: FixtureServer) -> dict[str, object]:
     fab.click()
     wait_for(driver, lambda current: "Agent Mail" in text_of(current), "standalone panel")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "standalone fixture inbox")
+    click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
+    wait_for(driver, lambda current: "fixture-thread-1" in text_of(current), "standalone fixture thread")
+    click_button(driver, "Open session 2")
+    wait_for(
+        driver,
+        lambda current: current.execute_script("return window.__HARNESS__.currentSession") == "fixture-session-2",
+        "active session navigation while drawer is open",
+    )
+    click_button(driver, "Quote to chat")
+    quote = driver.execute_script("return window.__HARNESS__.drafts")
+    assert "message_id=fixture-message-1" in quote["fixture-session-2"], quote
+    assert quote["fixture-session-1"] == "", quote
     return {
         "surface": "standalone",
         "standaloneHost": True,
         "sidebarTab": False,
+        "activeSession": "fixture-session-2",
+        "quoteDraft": quote["fixture-session-2"],
+        "backend": "synthetic local HTTP fixture",
+    }
+
+
+def run_tool_cards(driver, server: FixtureServer) -> dict[str, object]:
+    driver.get(f"http://127.0.0.1:{server.server_port}/?mode=tool-cards&scenario=tool-cards")
+    wait_for(
+        driver,
+        lambda current: current.execute_script("return window.__HARNESS__.toolViews.size") >= 4,
+        "tool-card registrations",
+    )
+    driver.execute_script("window.__HARNESS__.renderToolCards()")
+    wait_for(driver, lambda current: "Running" in text_of(current), "running tool card")
+    wait_for(driver, lambda current: "Sent" in text_of(current), "successful tool card")
+    wait_for(driver, lambda current: "Send failed" in text_of(current), "failed tool card")
+    owners = driver.execute_script("return window.__HARNESS__.toolOwners")
+    assert len(owners) == 3, owners
+    assert all(owner.get("block") for owner in owners), owners
+    assert owners[0]["block"].get("kind") is None, owners[0]
+    assert owners[1]["block"].get("kind") == "tool-result", owners[1]
+    assert owners[2]["block"].get("isError") is True, owners[2]
+    return {
+        "surface": "fixture-tool-cards",
+        "running": True,
+        "success": True,
+        "error": True,
+        "ownerShape": "DSH ToolCallOwnerProps with block",
         "backend": "synthetic local HTTP fixture",
     }
 
@@ -517,20 +707,34 @@ def run_failed_claim(driver, server: FixtureServer) -> dict[str, object]:
     }
 
 
-def make_driver() -> webdriver.Firefox:
-    options = Options()
-    options.add_argument("-headless")
-    options.add_argument("--width=1200")
-    options.add_argument("--height=900")
-    firefox = os.environ.get("DSH_BROWSER_FIREFOX", "").strip()
-    # Let Selenium Manager resolve distro/snap Firefox by default.  On this
-    # host ``which firefox`` is a shell wrapper, which geckodriver correctly
-    # rejects as it is not the browser binary itself.
-    if firefox:
-        options.binary_location = firefox
-    gecko = os.environ.get("DSH_BROWSER_GECKODRIVER", "").strip() or shutil.which("geckodriver")
-    service = Service(executable_path=gecko) if gecko else Service()
-    return webdriver.Firefox(options=options, service=service)
+def make_driver(browser: str):
+    if browser == "firefox":
+        options = FirefoxOptions()
+        options.add_argument("-headless")
+        options.add_argument("--width=1200")
+        options.add_argument("--height=900")
+        firefox = os.environ.get("DSH_BROWSER_FIREFOX", "").strip()
+        # Let Selenium Manager resolve distro/snap Firefox by default.  On
+        # this host ``which firefox`` is a shell wrapper, which geckodriver
+        # correctly rejects as it is not the browser binary itself.
+        if firefox:
+            options.binary_location = firefox
+        gecko = os.environ.get("DSH_BROWSER_GECKODRIVER", "").strip() or shutil.which("geckodriver")
+        service = FirefoxService(executable_path=gecko) if gecko else FirefoxService()
+        return webdriver.Firefox(options=options, service=service)
+    options = ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--window-size=1200,900")
+    # The acceptance runner is commonly executed in a root-owned disposable
+    # CI/container account, where Chrome's setuid sandbox cannot initialize.
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    chrome = os.environ.get("DSH_BROWSER_CHROME", "").strip()
+    if chrome:
+        options.binary_location = chrome
+    chromedriver = os.environ.get("DSH_BROWSER_CHROMEDRIVER", "").strip() or shutil.which("chromedriver")
+    service = ChromeService(executable_path=chromedriver) if chromedriver else ChromeService()
+    return webdriver.Chrome(options=options, service=service)
 
 
 def main() -> int:
@@ -539,6 +743,12 @@ def main() -> int:
         "--json",
         action="store_true",
         help="emit only the final JSON report (diagnostics still go to stderr)",
+    )
+    parser.add_argument(
+        "--browser",
+        choices=("firefox", "chrome"),
+        default="firefox",
+        help="browser engine (default: firefox); Chrome paths may be set with DSH_BROWSER_CHROME and DSH_BROWSER_CHROMEDRIVER",
     )
     args = parser.parse_args()
     if not CLIENT_JS.is_file():
@@ -558,7 +768,7 @@ def main() -> int:
 
     try:
         server = start_server(Fixture("healthy"))
-        driver = make_driver()
+        driver = make_driver(args.browser)
         browser_capabilities = dict(driver.capabilities)
         results.append(run_sidebar_done_ack(driver, server))
         server.shutdown()
@@ -571,6 +781,11 @@ def main() -> int:
 
         server = start_server(Fixture("failed-claim"))
         results.append(run_failed_claim(driver, server))
+        server.shutdown()
+        server.server_close()
+
+        server = start_server(Fixture("tool-cards"))
+        results.append(run_tool_cards(driver, server))
     except WebDriverException as error:
         print(f"browser startup/transport failure: {error}", file=sys.stderr)
         return 2
@@ -584,9 +799,13 @@ def main() -> int:
         "status": "PASS",
         "tests": results,
         "generatedBundle": str(CLIENT_JS.relative_to(ROOT)),
-        "browser": "Firefox via Selenium",
+        "browser": f"{args.browser.capitalize()} via Selenium",
         "browserVersion": browser_capabilities.get("browserVersion", "unknown"),
-        "geckodriverVersion": browser_capabilities.get("moz:geckodriverVersion", "unknown"),
+        "driverVersion": (
+            browser_capabilities.get("moz:geckodriverVersion")
+            if args.browser == "firefox"
+            else browser_capabilities.get("chrome", {}).get("chromedriverVersion", "unknown")
+        ),
         "backend": "mocked local HTTP fixture; full DSH web/MCP acceptance is not established",
         "writes": "none: temporary browser profile and synthetic in-memory API only",
     }

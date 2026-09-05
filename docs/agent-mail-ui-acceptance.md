@@ -1,6 +1,9 @@
-# Agent Mail UI interaction acceptance
+# Agent Mail UI 0.1.3 interaction acceptance
 
 Date: 2026-09-05. Candidate: `@dff652/dsh-agent-mail-ui@0.1.3`.
+
+This historical record describes 0.1.3 bytes, not the current candidate. See
+[0.1.4 acceptance](agent-mail-ui-0.1.4-acceptance.md) for the follow-up.
 
 This records scoped interaction acceptance, not full release approval. The
 subsequent [full-range review and release plan](agent-mail-ui-release-plan.md)

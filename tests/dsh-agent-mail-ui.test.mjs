@@ -20,11 +20,15 @@ import {
   PROXY_TOOLS,
   TAB_ID,
   canAck,
+  currentSessionId,
   inboxItems,
   parseToolPayload,
   publicToolName,
   quoteComposerText,
+  sessionScope,
   threadMessages,
+  toolCardModel,
+  toolResultText,
   unreadBadge,
   validateSendPayload,
 } from '../packages/dsh-agent-mail-ui/view.js';
@@ -61,7 +65,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.3');
+  assert.equal(manifest.version, '0.1.4');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -115,6 +119,70 @@ test('UI helpers present inbox rows and composer quotes', () => {
   assert.equal(unreadBadge(items), 1);
   assert.match(quoteComposerText(items[0]), /message_id=m1/);
   assert.equal(TAB_ID, 'dsh-agent-mail:inbox');
+});
+
+test('unread state follows pending and claimed delivery, excluding acked all-mail rows', () => {
+  const items = inboxItems({
+    items: ['pending', 'claimed', 'acked'].map((delivery_status, index) => ({
+      message_id: `m${index}`,
+      delivery_status,
+      unread: true,
+    })),
+  });
+  assert.deepEqual(items.map((item) => item.unread), [true, true, false]);
+  assert.deepEqual(items.map((item) => item.claimed), [false, true, false]);
+  assert.equal(unreadBadge(items), 2);
+});
+
+test('standalone Quote scope follows current session navigation and rejects stale ids', () => {
+  const first = {
+    ids: ['session-a', 'session-b'],
+    byId: { 'session-a': { sessionId: 'session-a' }, 'session-b': { sessionId: 'session-b' } },
+    current: 'session-a',
+  };
+  const second = { ...first, current: 'session-b' };
+  assert.equal(currentSessionId(first), 'session-a');
+  assert.deepEqual(sessionScope(first), { sessionId: 'session-a' });
+  assert.equal(currentSessionId(second), 'session-b');
+  assert.deepEqual(sessionScope(second), { sessionId: 'session-b' });
+  assert.deepEqual(sessionScope({ ...second, current: 'session-stale' }), {});
+  assert.deepEqual(sessionScope({ ids: first.ids, byId: first.byId }), {});
+});
+
+test('tool cards consume DSH rc.2 owner.block lifecycle and preserve send failures', () => {
+  const toolName = publicToolName('comm_send');
+  const running = toolCardModel(toolName, {
+    callId: 'call-1',
+    name: 'comm_send',
+    argsRaw: '{}',
+    subCalls: [],
+  });
+  assert.equal(running.state, 'running');
+  assert.deepEqual(running.payload, {});
+
+  const successBlock = {
+    kind: 'tool-result',
+    callId: 'call-1',
+    call: { name: 'comm_send', argsRaw: '{}' },
+    content: [{ type: 'text', text: JSON.stringify({ message_id: 'm-1', thread_id: 't-1' }) }],
+    isError: false,
+    subCalls: [],
+  };
+  const success = toolCardModel(toolName, successBlock);
+  assert.equal(success.state, 'ok');
+  assert.equal(success.payload.message_id, 'm-1');
+  assert.match(toolResultText(successBlock), /message_id/);
+
+  const failedBlock = {
+    ...successBlock,
+    content: [{ type: 'text', text: JSON.stringify({ error: 'delivery rejected' }) }],
+    isError: true,
+    error: { name: 'McpError', code: 'mcp-tool-error' },
+  };
+  const failed = toolCardModel(toolName, failedBlock);
+  assert.equal(failed.state, 'error');
+  assert.equal(failed.payload.error, 'delivery rejected');
+  assert.notEqual(failed.state, 'ok', 'a failed send must never render as success');
 });
 
 test('task Ack stays disabled until an exact terminal task outcome is known', () => {
@@ -276,15 +344,20 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(client, /id: TAB_ID/);
   assert.match(client, /standalone/);
   assert.match(client, /ctx\.inject\(\['betterSidebar'\]/);
-  assert.match(client, /const inject = \[\];/);
+  assert.match(client, /const inject = \['sessions'\];/);
   assert.match(view, /dsh-agent-mail:inbox/);
   assert.doesNotMatch(client, /toggleCluster/);
   assert.doesNotMatch(client, /IconPanelRight/);
   assert.match(client, /Quote to chat/);
   assert.match(client, /human@local/);
   const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
+  assert.match(source, /export const inject = \['sessions'\];/);
   assert.match(source, /appendToDraft\(ctx, sessionId/);
   assert.match(source, /appendToDraft\(pluginCtx, sessionId/);
+  assert.match(source, /useSyncExternalStore/);
+  assert.match(source, /list\.subscribe/);
+  assert.match(source, /owner\?\.block/);
+  assert.doesNotMatch(source, /snap\?\.items\?\.\[0\]/);
   assert.match(source, /DEFAULT_DONE_BODY/);
   assert.match(source, /Ack is available after Done, Error, or Cancel/);
   assert.match(source, /Check & Ack/);

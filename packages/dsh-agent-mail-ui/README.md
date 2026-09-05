@@ -33,6 +33,12 @@ The task completion action is independent of the New message draft. Task
 acknowledgement requires a terminal task state; the panel explains that
 prerequisite. Claim failures are displayed instead of being silently ignored.
 
+Quote targets the currently selected conversation, including selection
+changes while the standalone drawer stays open. Tool cards distinguish
+running, failed and successful calls using the DSH tool-result contract.
+Unread counts use Agent Mail delivery status, so acknowledged messages in
+the all-mail view do not count as unread.
+
 ## Pinned combination
 
 | Item | Pin |
@@ -50,7 +56,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.3.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.4.tgz
 dsh --profile <profile> --dump-config
 ```
 

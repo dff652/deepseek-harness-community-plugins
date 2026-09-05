@@ -30,7 +30,7 @@ async function renderClientBundle() {
     '\tfactory: (require) => {',
     '\t\tvar module = { exports: {} };',
     '\t\tvar exports = module.exports;',
-    "\t\tconst { createElement: h, useCallback, useEffect, useMemo, useRef, useState } = require('react');",
+    "\t\tconst { createElement: h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } = require('react');",
     "\t\tconst { createRoot } = require('react-dom/client');",
     indent(view),
     indent(src),

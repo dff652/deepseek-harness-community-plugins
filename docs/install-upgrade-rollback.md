@@ -14,7 +14,7 @@ does not install provider products and does not authorize a live deployment.
 - Start in a disposable profile before considering a shared profile.
 
 The commands below use the current candidates: AIAH `0.1.2`, Agent Mail
-`0.1.1`, Agent Mail UI `0.1.3` and AgentMemory `0.1.1`. The previously published AIAH `0.1.1` and
+`0.1.1`, Agent Mail UI `0.1.4` and AgentMemory `0.1.1`. The previously published AIAH `0.1.1` and
 Agent Mail `0.1.0` artifacts remain immutable historical release bytes.
 
 ## AI Asset Hub
@@ -160,8 +160,8 @@ Without that sidebar it uses a standalone bottom-right drawer. The two hosts
 are exclusive.
 
 ```bash
-sha256sum dff652-dsh-agent-mail-ui-0.1.3.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.3.tgz
+sha256sum dff652-dsh-agent-mail-ui-0.1.4.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.4.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -198,7 +198,7 @@ The UI tag below is a planned name, not an existing Release.
 ```text
 dsh-ai-asset-hub-v0.1.1
 dsh-agent-mail-v0.1.0
-dsh-agent-mail-ui-v0.1.3
+dsh-agent-mail-ui-v0.1.4
 dsh-agentmemory-v0.1.0
 ```
 

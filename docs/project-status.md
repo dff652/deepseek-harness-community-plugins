@@ -5,9 +5,9 @@ Status date: 2026-09-05.
 The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.
 
-Agent Mail UI release/live upgrade is on hold after the broader unpushed
-review: see [findings and next steps](agent-mail-ui-release-plan.md). The
-targeted Done/Ack acceptance below does not cover every v1 feature.
+Agent Mail UI 0.1.4 closes the broader review findings and passes the local
+acceptance gates. See [next steps](agent-mail-ui-release-plan.md) for source
+push/CI, release and the separate live runtime migration.
 
 This matrix separates implementation, private deployment, public source,
 GitHub Release, npm publication, marketplace listing and live deployment.
@@ -20,7 +20,7 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
-| `@dff652/dsh-agent-mail-ui@0.1.3` | Local interaction fixes; see current acceptance note | Local, unpushed | Not tagged | Not published | Not submitted | Earlier 0.1.2 observed live; 0.1.3 not deployed |
+| `@dff652/dsh-agent-mail-ui@0.1.4` | Local v1 fixes; see current acceptance note | Local, unpushed | Not tagged | Not published | Not submitted | Earlier 0.1.2 observed live; 0.1.4 not deployed |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
@@ -167,7 +167,7 @@ relative to public `ca6601c` and is not edited from this repository.
 
 ## Agent Mail UI
 
-`@dff652/dsh-agent-mail-ui@0.1.3` is a separate host/client package. It
+`@dff652/dsh-agent-mail-ui@0.1.4` is a separate host/client package. It
 reuses the tools mounted by `@dff652/dsh-agent-mail`; the two installed
 packages are complementary and do not start duplicate MCP children.
 Approve/reject are not proxied, and automatic wake, push delivery and polling
@@ -175,22 +175,22 @@ remain outside v1.
 
 With `dsh-better-sidebar`, the client registers `dsh-agent-mail:inbox` in the
 existing right panel. Without it, the client provides a bottom-right drawer.
-The settings section is only an explanation of those entry points, not a
-second plugin or mailbox.
+The settings section explains those entry points; it is not another mailbox.
 
-The previous 0.1.2 package was observed in a running Web profile, with the UI
-status API reporting the existing MCP namespace as available. The owner's
-screenshots record prior Firefox GUI use. These observations supersede the
-older blanket statement that no live use had occurred, but do not establish
-browser acceptance for the new 0.1.3 bytes.
+The 0.1.4 follow-up fixes selected-session Quote, tool-result lifecycle and
+payload handling, and acknowledged-mail unread counts. It includes the
+previous Done/Ack fixes. See the [current acceptance record](agent-mail-ui-0.1.4-acceptance.md)
+for exact bytes, checks and their scope; [0.1.3 evidence](agent-mail-ui-acceptance.md)
+is historical and must not be used to qualify a new archive.
 
-The earlier 0.1.2 compatibility record's digest describes an older pack. A
-later local 0.1.2 pack matched the then-current eight source files but had a
-different digest. The new fixes therefore use version 0.1.3, with separate
-artifact and acceptance evidence in
-[Agent Mail UI acceptance](agent-mail-ui-acceptance.md).
+Read-only inspection found live DSH/MCP `0.1.0-rc.6`, Agent Mail bundle
+`0.1.1`, UI `0.1.2` and better-sidebar `0.12.2`. The status API reports existing
+MCP tools available. The selected new acceptance target is DSH/MCP
+`0.1.1-rc.2`, following the manifest pins. These are different combinations;
+a future live upgrade needs an explicit core/MCP migration and rollback.
 
-Commit `8187f7b` introduced the UI and `27a5a2e` fixed host registration and
-composer context. The remote main branch was checked at `df853b0` on
-2026-09-05. The current fixes remain local. Push, tag, GitHub Release, npm,
-marketplace submission and deploying 0.1.3 have not been performed.
+Commit `8187f7b` introduced the UI, `27a5a2e` fixed host registration and
+composer context, and `013ddd1` recorded 0.1.3 fixes and the full-range
+review findings. Remote main was checked at `df853b0` on 2026-09-05.
+The current follow-up remains local. Push, tag, GitHub Release, npm,
+marketplace submission and deploying 0.1.4 have not been performed.

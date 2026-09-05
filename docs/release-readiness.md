@@ -1,7 +1,8 @@
 # Public release readiness
 
-The current Agent Mail UI full-range review holds release/live upgrade on
-[three P2 findings and runtime compatibility](agent-mail-ui-release-plan.md).
+Agent Mail UI 0.1.4 closes the three P2 findings and passes local acceptance.
+[Push/CI, release and live runtime migration](agent-mail-ui-release-plan.md)
+remain separate gates.
 
 This document defines the gates for the independently versioned public bundle
 candidates. Passing one gate does not authorize the next state transition.
@@ -31,10 +32,10 @@ catalog.
 The previously published AIAH `0.1.1` and Agent Mail `0.1.0` artifacts remain
 the rc.6-compatible release bytes recorded below. HEAD now carries new,
 unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1`,
-Agent Mail UI `0.1.3` and AgentMemory `0.1.1`; their disposable evidence is
+Agent Mail UI `0.1.4` and AgentMemory `0.1.1`; their disposable evidence is
 recorded in
 [the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md); the newer UI
-fixes have a separate [acceptance record](./agent-mail-ui-acceptance.md).
+fixes have a separate [acceptance record](./agent-mail-ui-0.1.4-acceptance.md).
 The MCP candidate packages are configuration-only bridges: AIAH starts
 `DSH_AIAH_COMMAND mcp`, Agent Mail starts an independently installed
 `agent-mail-mcp` executable, and AgentMemory starts an externally installed
@@ -192,12 +193,14 @@ not stored in this repository.
 
 ## Agent Mail UI runtime gate
 
-Use the [current UI acceptance record](agent-mail-ui-acceptance.md) for the
-candidate and DSH digests, exact eight-file pack, no-MCP-spawn install/remove
-check, real dispatcher check and browser evidence. Resolve the
-[full-range review findings and runtime mismatch](agent-mail-ui-release-plan.md)
-before release or live upgrade. Chrome and real better-sidebar integration
-are still pending; the fixture browser test cannot replace those gates.
+Use the [current UI acceptance record](agent-mail-ui-0.1.4-acceptance.md) for
+the final digest, exact eight-file pack, activation, clean profiles, real MCP
+and browser evidence. Firefox and Chrome fixture regressions passed; the
+final bytes also passed real standalone checks in both browsers and real
+better-sidebar integration in Chrome. Tool-card owners are synthetic fixtures
+matching the actual DSH contract, not model-driven dispatch. Follow the
+[release plan](agent-mail-ui-release-plan.md) for remaining source/CI,
+publication and core/MCP migration gates.
 
 ## Evidence to record after verification
 

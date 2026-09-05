@@ -30,6 +30,8 @@ export const API_METHODS = [
 export const DEFAULT_DONE_BODY = 'done';
 export const TERMINAL_TASK_TYPES = ['done', 'error', 'cancel'];
 
+const UNREAD_DELIVERY_STATUSES = new Set(['pending', 'claimed']);
+
 export function publicToolName(rawName) {
   return `mcp__${SERVER_NAME}__${rawName}`;
 }
@@ -72,22 +74,45 @@ export function parseToolPayload(value) {
   return value;
 }
 
+/**
+ * Select the current DSH session from the rc.2 sessions.list snapshot.
+ * `current` may address a breadcrumb-only child that is absent from `ids`,
+ * but every usable current id is still present in `byId`.
+ */
+export function currentSessionId(snapshot) {
+  const current = snapshot?.current;
+  if (typeof current !== 'string' || current === '') return undefined;
+  if (snapshot?.byId == null || typeof snapshot.byId !== 'object') return undefined;
+  return Object.prototype.hasOwnProperty.call(snapshot.byId, current)
+    && snapshot.byId[current] != null
+    ? current
+    : undefined;
+}
+
+export function sessionScope(snapshot) {
+  const sessionId = currentSessionId(snapshot);
+  return sessionId ? { sessionId } : {};
+}
+
 export function inboxItems(payload) {
   const items = Array.isArray(payload?.items) ? payload.items : [];
-  return items.map((item) => ({
-    messageId: String(item.message_id ?? item.id ?? ''),
-    threadId: item.thread_id == null ? '' : String(item.thread_id),
-    taskId: item.task_id == null ? '' : String(item.task_id),
-    type: String(item.type ?? 'message'),
-    from: String(item.from ?? item.sender ?? ''),
-    to: String(item.to ?? ''),
-    body: String(item.body_md ?? item.body ?? item.text ?? ''),
-    effect: String(item.effect_level ?? item.effect ?? 'read'),
-    deliveryStatus: String(item.delivery_status ?? item.status ?? 'pending'),
-    unread: item.unread !== false,
-    claimed: item.delivery_status === 'claimed' || item.status === 'claimed' || item.claimed === true,
-    requiresHumanApproval: item.requires_human_approval === true,
-  })).filter((item) => item.messageId !== '');
+  return items.map((item) => {
+    const deliveryStatus = String(item.delivery_status ?? item.status ?? 'pending');
+    return {
+      messageId: String(item.message_id ?? item.id ?? ''),
+      threadId: item.thread_id == null ? '' : String(item.thread_id),
+      taskId: item.task_id == null ? '' : String(item.task_id),
+      type: String(item.type ?? 'message'),
+      from: String(item.from ?? item.sender ?? ''),
+      to: String(item.to ?? ''),
+      body: String(item.body_md ?? item.body ?? item.text ?? ''),
+      effect: String(item.effect_level ?? item.effect ?? 'read'),
+      deliveryStatus,
+      unread: UNREAD_DELIVERY_STATUSES.has(deliveryStatus),
+      claimed: deliveryStatus === 'claimed',
+      requiresHumanApproval: item.requires_human_approval === true,
+    };
+  }).filter((item) => item.messageId !== '');
 }
 
 export function threadMessages(payload) {
@@ -179,4 +204,55 @@ export function toolCardKind(toolName) {
   if (toolName === publicToolName('comm_approvals')) return 'approvals';
   if (toolName === publicToolName('comm_diagnose')) return 'diagnose';
   return 'generic';
+}
+
+function isToolResultBlock(block) {
+  return block != null && typeof block === 'object' && block.kind === 'tool-result';
+}
+
+/**
+ * Match DSH rc.2's resultText rule for a settled ToolResultNode: text content
+ * is kept verbatim and non-text content is displayed as pretty JSON. The
+ * error footer comes from the result node when a failed call has no content.
+ */
+export function toolResultText(block) {
+  if (!isToolResultBlock(block) || !Array.isArray(block.content)) return '';
+  const parts = [];
+  for (const content of block.content) {
+    if (content?.type === 'text' && typeof content.text === 'string') {
+      parts.push(content.text);
+    } else if (content != null && typeof content === 'object') {
+      parts.push(JSON.stringify(content, null, 2));
+    }
+  }
+  if (parts.length === 0 && block.error != null && typeof block.error === 'object') {
+    const name = typeof block.error.name === 'string' ? block.error.name : '';
+    const code = typeof block.error.code === 'string' ? block.error.code : '';
+    if (name || code) parts.push([name, code].filter(Boolean).join(': '));
+  }
+  return parts.join('\n');
+}
+
+/**
+ * Derive the UI state and payload from the actual tool-call owner block.
+ * RunningToolCall has no `kind`; ToolResultNode has `kind: 'tool-result'` and
+ * carries serialized MCP output in `content`.
+ */
+export function toolCardModel(toolName, block) {
+  const settled = isToolResultBlock(block);
+  const text = settled ? toolResultText(block) : '';
+  const state = !settled
+    ? 'running'
+    : block.error?.code === 'interrupted'
+      ? 'stopped'
+      : block.isError === true
+        ? 'error'
+        : 'ok';
+  return {
+    kind: toolCardKind(toolName),
+    state,
+    callId: String(block?.callId ?? ''),
+    payload: settled && text !== '' ? parseToolPayload(text) : {},
+    text,
+  };
 }

@@ -1,4 +1,12 @@
-import { createElement as h, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createElement as h,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   API_PREFIX,
@@ -10,12 +18,14 @@ import {
   inboxItems,
   publicToolName,
   quoteComposerText,
+  sessionScope,
   threadMessages,
-  toolCardKind,
+  toolCardModel,
   unreadBadge,
 } from './view.js';
 
-export const inject = [];
+// Sessions is a core DSH client service, independent of Agent Mail MCP.
+export const inject = ['sessions'];
 
 const CARD_TOOLS = [
   publicToolName('comm_inbox'),
@@ -34,7 +44,7 @@ export function apply(ctx) {
     try {
       slots.inject('tool.call.toolview', () => slots.register(
         { name: 'tool.call.toolview', key: toolName },
-        (props) => h(ToolCard, { toolName, props }),
+        (owner) => h(ToolCard, { toolName, owner }),
       ));
     } catch (error) {
       console.error('[dsh-agent-mail-ui] tool card failed', error);
@@ -120,6 +130,7 @@ function mountStandalone(ctx) {
 
 function StandaloneShell({ ctx }) {
   const [open, setOpen] = useState(false);
+  const scope = useCurrentScope(ctx, open);
   return h('div', null,
     h('button', {
       type: 'button',
@@ -128,20 +139,30 @@ function StandaloneShell({ ctx }) {
       onClick: () => setOpen((value) => !value),
     }, envelopeIcon(16), ' Mail'),
     open && h('div', { style: drawerStyle },
-      h(MailPanel, { pluginCtx: ctx, ctx, scope: currentScope(ctx), visible: true }),
+      h(MailPanel, { pluginCtx: ctx, ctx, scope, visible: true }),
     ),
   );
 }
 
 function currentScope(ctx) {
   try {
-    const snap = ctx.sessions?.list?.getSnapshot?.();
-    const first = Array.isArray(snap) ? snap[0] : snap?.items?.[0];
-    const sessionId = first?.id ?? first?.sessionId;
-    return sessionId ? { sessionId } : {};
+    return sessionScope(ctx?.sessions?.list?.getSnapshot?.());
   } catch {
     return {};
   }
+}
+
+function useCurrentScope(ctx, enabled) {
+  const list = ctx?.sessions?.list;
+  const subscribe = useCallback((listener) => {
+    if (!enabled || typeof list?.subscribe !== 'function') return () => {};
+    return list.subscribe(listener);
+  }, [enabled, list]);
+  const getSnapshot = useCallback(() => {
+    return currentScope(ctx).sessionId;
+  }, [ctx]);
+  const sessionId = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useMemo(() => (sessionId ? { sessionId } : {}), [sessionId]);
 }
 
 function MailPanel({ pluginCtx, ctx, scope, visible }) {
@@ -186,7 +207,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       setDiagnose(nextDiagnose);
       setItems(list);
       setAgents(agentList(nextAgents));
-      unreadCache.count = unreadOnly ? list.length : unreadBadge(list);
+      unreadCache.count = unreadBadge(list);
       notifyBadge();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -428,9 +449,22 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   );
 }
 
-function ToolCard({ toolName, props }) {
-  const kind = toolCardKind(toolName);
-  const payload = parseResult(props);
+function ToolCard({ toolName, owner }) {
+  const model = toolCardModel(toolName, owner?.block);
+  const { kind, payload } = model;
+  if (model.state === 'running') {
+    return h('div', { style: cardStyle },
+      h('div', { style: { fontWeight: 600 } }, 'Running'),
+      h('div', { style: snippetStyle }, model.callId || toolName),
+    );
+  }
+  if (model.state === 'error' || model.state === 'stopped') {
+    const title = model.state === 'stopped' ? 'Stopped' : `${kind[0].toUpperCase()}${kind.slice(1)} failed`;
+    return h('div', { style: cardStyle },
+      h('div', { style: { fontWeight: 600, color: 'var(--dsh-danger, #c44)' } }, title),
+      h('div', { style: snippetStyle }, model.text || 'Tool returned an error'),
+    );
+  }
   if (kind === 'inbox') {
     const list = inboxItems(payload);
     return h('div', { style: cardStyle },
@@ -461,12 +495,6 @@ function ToolCard({ toolName, props }) {
     h('div', { style: { fontWeight: 600 } }, 'Approvals'),
     h('div', { style: snippetStyle }, JSON.stringify(payload).slice(0, 240)),
   );
-}
-
-function parseResult(props) {
-  const value = props?.result ?? props?.value ?? props?.output ?? props;
-  if (value && typeof value === 'object' && value.structuredContent) return value.structuredContent;
-  return value && typeof value === 'object' ? value : {};
 }
 
 async function api(method, payload = {}) {
