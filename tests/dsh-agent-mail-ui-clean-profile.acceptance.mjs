@@ -3,7 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execFileAsync, resolveDsh, runDsh } from '../scripts/lib/agent-mail-host.mjs';
+import { execFileAsync, resolveDsh, runDsh, sha256File } from '../scripts/lib/agent-mail-host.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dshBin = resolveDsh('Agent Mail UI clean-profile acceptance');
@@ -17,6 +17,7 @@ try {
     { cwd: path.join(root, 'packages', 'dsh-agent-mail-ui') },
   );
   const tarball = path.join(work, JSON.parse(stdout)[0].filename);
+  console.log(`Agent Mail UI candidate SHA-256: ${await sha256File(tarball)}`);
   const env = { ...process.env, DSH_HOME: path.join(work, 'dsh-home') };
 
   for (const profile of ['web', 'headless']) {

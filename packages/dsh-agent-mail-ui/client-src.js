@@ -2,8 +2,10 @@ import { createElement as h, useCallback, useEffect, useMemo, useRef, useState }
 import { createRoot } from 'react-dom/client';
 import {
   API_PREFIX,
+  DEFAULT_DONE_BODY,
   TAB_ID,
   agentList,
+  canAck,
   diagnoseSummary,
   inboxItems,
   publicToolName,
@@ -153,14 +155,17 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const [error, setError] = useState('');
   const [composeOpen, setComposeOpen] = useState(false);
   const [draft, setDraft] = useState({ to: '', body: '', type: 'task' });
+  const [doneBody, setDoneBody] = useState(DEFAULT_DONE_BODY);
+  const [terminalTaskIds, setTerminalTaskIds] = useState(() => new Set());
+  const [claimReady, setClaimReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
 
   const summary = useMemo(() => (diagnose ? diagnoseSummary(diagnose) : null), [diagnose]);
 
-  const refresh = useCallback(async () => {
-    setBusy(true);
+  const refresh = useCallback(async (manageBusy = true) => {
+    if (manageBusy) setBusy(true);
     setError('');
     try {
       const nextStatus = await api('status');
@@ -186,7 +191,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBusy(false);
+      if (manageBusy) setBusy(false);
     }
   }, [unreadOnly]);
 
@@ -195,16 +200,16 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   }, [visible, refresh]);
 
   const openThread = async (item) => {
+    if (item.messageId !== selected?.messageId) setDoneBody(DEFAULT_DONE_BODY);
     setSelected(item);
+    setThread([]);
+    setClaimReady(false);
     setBusy(true);
     setError('');
     try {
-      if (item.messageId) {
-        try {
-          await api('claim', { message_id: item.messageId });
-        } catch {
-          // already claimed is not fatal
-        }
+      if (item.messageId && item.deliveryStatus !== 'outbound' && item.deliveryStatus !== 'acked') {
+        await api('claim', { message_id: item.messageId });
+        setClaimReady(true);
       }
       if (item.threadId) {
         const tailed = await api('tail', { thread_id: item.threadId });
@@ -224,7 +229,18 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setError('');
     try {
       await api(method, payload);
-      await refresh();
+      if (
+        method === 'send'
+        && payload.task_id
+        && ['done', 'error', 'cancel'].includes(payload.type)
+      ) {
+        setTerminalTaskIds((current) => new Set(current).add(payload.task_id));
+      }
+      if (method === 'ack') {
+        setClaimReady(false);
+        setSelected((current) => current ? { ...current, deliveryStatus: 'acked' } : current);
+      }
+      await refresh(false);
       if (selected?.threadId) {
         const tailed = await api('tail', { thread_id: selected.threadId });
         setThread(threadMessages(tailed));
@@ -253,7 +269,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       const sent = await api('send', { ...draft, effect: 'read' });
       setComposeOpen(false);
       setDraft({ to: '', body: '', type: 'task' });
-      await refresh();
+      await refresh(false);
       const created = {
         messageId: String(sent.id ?? sent.message_id ?? ''),
         threadId: String(sent.thread_id ?? ''),
@@ -262,6 +278,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         from: summary?.agentId ?? '',
         body: draft.body,
         effect: 'read',
+        deliveryStatus: 'outbound',
       };
       if (created.threadId || created.messageId) await openThread(created);
     } catch (err) {
@@ -275,6 +292,10 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
 
   const selfId = summary?.agentId ?? '';
   const recipients = agents.filter((id) => id && id !== selfId && id !== 'human@local');
+  const processable = Boolean(selected?.messageId && selected.deliveryStatus !== 'outbound' && claimReady);
+  const ackReady = processable && (canAck(selected, thread)
+    || Boolean(selected?.taskId && terminalTaskIds.has(selected.taskId)));
+  const checkCompletion = processable && selected.type === 'task' && !ackReady;
 
   return h('div', { style: panelStyle },
     h('div', { style: headerStyle },
@@ -324,6 +345,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         h('input', {
           type: 'checkbox',
           checked: unreadOnly,
+          disabled: busy,
           onChange: (event) => setUnreadOnly(event.target.checked),
         }),
         ' Unread only',
@@ -338,6 +360,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         key: item.messageId,
         type: 'button',
         style: rowStyle(selected?.messageId === item.messageId),
+        disabled: busy,
         onClick: () => void openThread(item),
       },
         h('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } },
@@ -359,21 +382,46 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           'Write effect waiting for human@local. This Harness identity cannot approve.',
         ),
       )),
+      selected.type === 'task' && processable && !ackReady && h('div', { style: noticeStyle },
+        'Ack is available after Done, Error, or Cancel completes the task. ',
+        checkCompletion
+          && 'For tasks completed elsewhere, Check & Ack asks Agent Mail to validate completion and acknowledge delivery.',
+      ),
+      selected.type === 'task' && processable && selected.threadId && h('textarea', {
+        style: { ...inputStyle, minHeight: 56 },
+        value: doneBody,
+        placeholder: `Completion summary (default: ${DEFAULT_DONE_BODY})`,
+        onChange: (event) => setDoneBody(event.target.value),
+      }),
       h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
-        selected.messageId && h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void runAction('ack', { message_id: selected.messageId }) }, 'Ack'),
-        selected.threadId && h('button', {
+        processable && h('button', {
           type: 'button',
           style: buttonStyle,
-          disabled: busy || !draft.body,
+          disabled: busy || !ackReady,
+          title: !ackReady && selected.type === 'task' ? 'Send Done, Error, or Cancel before Ack' : undefined,
+          onClick: () => void runAction('ack', { message_id: selected.messageId }),
+        }, 'Ack'),
+        processable && selected.type === 'task' && selected.threadId && selected.taskId && h('button', {
+          type: 'button',
+          style: buttonStyle,
+          disabled: busy || !doneBody.trim() || ackReady,
+          title: ackReady ? 'Task already has a terminal outcome' : undefined,
           onClick: () => void runAction('send', {
             to: selected.from || recipients[0],
             type: 'done',
-            body: draft.body || 'done',
+            body: doneBody.trim(),
             thread_id: selected.threadId,
             task_id: selected.taskId,
             effect: 'read',
           }),
         }, 'Done'),
+        checkCompletion && h('button', {
+          type: 'button',
+          style: buttonStyle,
+          disabled: busy,
+          title: 'Ask Agent Mail to validate the task before acknowledging it',
+          onClick: () => void runAction('ack', { message_id: selected.messageId }),
+        }, 'Check & Ack'),
         h('button', { type: 'button', style: buttonStyle, onClick: () => quote(selected) }, 'Quote to chat'),
       ),
     ),

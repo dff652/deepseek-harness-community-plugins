@@ -6,6 +6,10 @@ This note records the disposable install/config/remove check for the new HEAD
 bundle candidates. It does not change or replace the evidence for the already
 published AIAH `0.1.1` and Agent Mail `0.1.0` rc.6-compatible release bytes.
 
+The UI 0.1.2 row below is historical evidence for that exact pack, not the
+later live 0.1.2 pack or the current 0.1.3 candidate. See the
+[current UI acceptance record](agent-mail-ui-acceptance.md).
+
 ## Fixed test inputs
 
 | Item | Value |
@@ -31,7 +35,7 @@ dsh plugin --profile headless remove <package>
 dsh --profile headless --dump-config
 ```
 
-The first config dump contained the expected MCP row exactly once; the final
+The first config dump contained the expected plugin row exactly once; the final
 dump no longer contained that row.
 
 | Candidate | Candidate tarball SHA-256 | Result |

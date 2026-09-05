@@ -5,6 +5,11 @@ existing right-hand workbench. It does **not** start `agent-mail-mcp`, copy
 Agent Mail handlers, or wake sessions. Mail transport stays in
 `@dff652/dsh-agent-mail`.
 
+Seeing both packages in the installed list is expected: the MCP bundle
+provides communication tools; this optional UI provides the human mailbox.
+The Agent Mail settings section only explains where to open that mailbox.
+It is not another plugin or a second mailbox.
+
 ## What it adds
 
 - With `dsh-better-sidebar`: a tab named **Agent Mail**
@@ -24,6 +29,10 @@ Unread list, open thread (claim), ack, send a **read** task or `done`, and
 quote a message into the composer. Write-effect send is rejected unless the
 client sends `confirmWrite: true`; approve/reject are never proxied.
 
+The task completion action is independent of the New message draft. Task
+acknowledgement requires a terminal task state; the panel explains that
+prerequisite. Claim failures are displayed instead of being silently ignored.
+
 ## Pinned combination
 
 | Item | Pin |
@@ -41,7 +50,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.3.tgz
 dsh --profile <profile> --dump-config
 ```
 

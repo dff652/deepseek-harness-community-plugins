@@ -27,6 +27,9 @@ export const API_METHODS = [
   'approvals',
 ];
 
+export const DEFAULT_DONE_BODY = 'done';
+export const TERMINAL_TASK_TYPES = ['done', 'error', 'cancel'];
+
 export function publicToolName(rawName) {
   return `mcp__${SERVER_NAME}__${rawName}`;
 }
@@ -79,9 +82,10 @@ export function inboxItems(payload) {
     from: String(item.from ?? item.sender ?? ''),
     to: String(item.to ?? ''),
     body: String(item.body_md ?? item.body ?? item.text ?? ''),
-    effect: String(item.effect ?? 'read'),
+    effect: String(item.effect_level ?? item.effect ?? 'read'),
+    deliveryStatus: String(item.delivery_status ?? item.status ?? 'pending'),
     unread: item.unread !== false,
-    claimed: item.status === 'claimed' || item.claimed === true,
+    claimed: item.delivery_status === 'claimed' || item.status === 'claimed' || item.claimed === true,
     requiresHumanApproval: item.requires_human_approval === true,
   })).filter((item) => item.messageId !== '');
 }
@@ -101,9 +105,23 @@ export function threadMessages(payload) {
     type: String(item.type ?? 'message'),
     from: String(item.from ?? item.sender ?? ''),
     body: String(item.body_md ?? item.body ?? item.text ?? ''),
-    effect: String(item.effect ?? 'read'),
+    effect: String(item.effect_level ?? item.effect ?? 'read'),
     requiresHumanApproval: item.requires_human_approval === true,
   }));
+}
+
+export function hasTerminalTaskOutcome(item, messages = []) {
+  if (!item || item.type !== 'task') return true;
+  return messages.some((message) => (
+    TERMINAL_TASK_TYPES.includes(message?.type)
+    && Boolean(item.taskId)
+    && message.taskId === item.taskId
+  ));
+}
+
+export function canAck(item, messages = []) {
+  if (!item?.messageId) return false;
+  return hasTerminalTaskOutcome(item, messages);
 }
 
 export function diagnoseSummary(payload) {

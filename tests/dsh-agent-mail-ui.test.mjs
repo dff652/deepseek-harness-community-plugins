@@ -15,13 +15,16 @@ import {
 } from '../packages/dsh-agent-mail-ui/index.js';
 import {
   API_PREFIX,
+  DEFAULT_DONE_BODY,
   HUMAN_ONLY_TOOLS,
   PROXY_TOOLS,
   TAB_ID,
+  canAck,
   inboxItems,
   parseToolPayload,
   publicToolName,
   quoteComposerText,
+  threadMessages,
   unreadBadge,
   validateSendPayload,
 } from '../packages/dsh-agent-mail-ui/view.js';
@@ -58,7 +61,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.2');
+  assert.equal(manifest.version, '0.1.3');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -99,15 +102,44 @@ test('UI helpers present inbox rows and composer quotes', () => {
         type: 'task',
         from: 'codex@local',
         body_md: 'hello',
+        effect_level: 'read',
+        delivery_status: 'pending',
         unread: true,
       },
     ],
   });
   assert.equal(items.length, 1);
   assert.equal(items[0].messageId, 'm1');
+  assert.equal(items[0].effect, 'read');
+  assert.equal(items[0].deliveryStatus, 'pending');
   assert.equal(unreadBadge(items), 1);
   assert.match(quoteComposerText(items[0]), /message_id=m1/);
   assert.equal(TAB_ID, 'dsh-agent-mail:inbox');
+});
+
+test('task Ack stays disabled until an exact terminal task outcome is known', () => {
+  const [task] = inboxItems({
+    items: [{
+      message_id: 'm1',
+      thread_id: 't1',
+      task_id: 'k1',
+      type: 'task',
+      from: 'codex@local',
+      body_md: 'handle this',
+      delivery_status: 'claimed',
+    }],
+  });
+  assert.equal(task.deliveryStatus, 'claimed');
+  assert.equal(canAck(task, []), false);
+  assert.equal(
+    canAck(task, threadMessages({ messages: [{ id: 'm2', type: 'done', task_id: 'other' }] })),
+    false,
+  );
+  assert.equal(
+    canAck(task, threadMessages({ messages: [{ id: 'm2', type: 'done', task_id: 'k1' }] })),
+    true,
+  );
+  assert.equal(DEFAULT_DONE_BODY, 'done');
 });
 
 test('write send requires an explicit confirm flag', () => {
@@ -175,6 +207,21 @@ test('host reuses the registered MCP tool execute path', async () => {
   assert.equal(calls[0].aborted, false);
 });
 
+test('host turns raw MCP isError results into failed API calls', async () => {
+  const ctx = toolsCtx({
+    [publicToolName('comm_ack')]: async () => ({
+      isError: true,
+      content: [{ type: 'text', text: JSON.stringify({ error: 'task is not terminal' }) }],
+    }),
+  });
+  await assert.rejects(
+    () => invokeMailTool(ctx, 'comm_ack', { message_id: 'm1' }),
+    (error) => error?.code === 'mcp-tool-error'
+      && error?.status === 502
+      && /task is not terminal/.test(error.message),
+  );
+});
+
 test('host never proxies human-only approval tools', async () => {
   const ctx = toolsCtx({
     [publicToolName('comm_approve')]: async () => ({ ok: true }),
@@ -238,6 +285,11 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
   assert.match(source, /appendToDraft\(ctx, sessionId/);
   assert.match(source, /appendToDraft\(pluginCtx, sessionId/);
+  assert.match(source, /DEFAULT_DONE_BODY/);
+  assert.match(source, /Ack is available after Done, Error, or Cancel/);
+  assert.match(source, /Check & Ack/);
+  assert.match(source, /await refresh\(false\)/);
+  assert.doesNotMatch(source, /already claimed is not fatal/);
 });
 
 test('client.js factory stays generated from client-src.js', async () => {

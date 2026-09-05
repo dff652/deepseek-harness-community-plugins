@@ -123,6 +123,18 @@ export async function invokeMailTool(ctx, rawName, args) {
       deferContext() {},
       concludeTurn() {},
     });
+    if (value?.isError === true) {
+      const parsed = parseToolPayload(value);
+      const detail = parsed?.error;
+      const message = typeof detail === 'string'
+        ? detail
+        : detail?.message ?? parsed?.message ?? parsed?.text ?? 'tool returned an error';
+      throw apiError(
+        'mcp-tool-error',
+        `${publicToolName(rawName)} failed: ${message}`,
+        502,
+      );
+    }
     return parseToolPayload(value);
   } finally {
     clearTimeout(timer);

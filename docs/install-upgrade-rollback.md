@@ -13,8 +13,8 @@ does not install provider products and does not authorize a live deployment.
   whose digest differs from the reviewed release record.
 - Start in a disposable profile before considering a shared profile.
 
-The commands below use the current HEAD candidates: AIAH `0.1.2`, Agent Mail
-`0.1.1` and AgentMemory `0.1.1`. The previously published AIAH `0.1.1` and
+The commands below use the current candidates: AIAH `0.1.2`, Agent Mail
+`0.1.1`, Agent Mail UI `0.1.3` and AgentMemory `0.1.1`. The previously published AIAH `0.1.1` and
 Agent Mail `0.1.0` artifacts remain immutable historical release bytes.
 
 ## AI Asset Hub
@@ -148,6 +148,11 @@ AgentMemory service.
 
 ## Agent Mail UI
 
+For the current review findings, runtime compatibility gate, release order
+and live rollback requirements, first read the
+[UI release and upgrade plan](agent-mail-ui-release-plan.md). The commands
+below are not an instruction to upgrade the existing live installation.
+
 This package does not start `agent-mail-mcp`. It reuses an already registered
 `mcp__agent-mail__*` namespace. Missing MCP tools do not fail DSH startup; the
 panel reports offline. With `dsh-better-sidebar` it registers a mailbox tab.
@@ -155,8 +160,8 @@ Without that sidebar it uses a standalone bottom-right drawer. The two hosts
 are exclusive.
 
 ```bash
-sha256sum dff652-dsh-agent-mail-ui-0.1.2.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.2.tgz
+sha256sum dff652-dsh-agent-mail-ui-0.1.3.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.3.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -188,10 +193,12 @@ plugin rollback.
 
 This is a multi-package repository. Tags are package-specific:
 
+The UI tag below is a planned name, not an existing Release.
+
 ```text
 dsh-ai-asset-hub-v0.1.1
 dsh-agent-mail-v0.1.0
-dsh-agent-mail-ui-v0.1.0
+dsh-agent-mail-ui-v0.1.3
 dsh-agentmemory-v0.1.0
 ```
 

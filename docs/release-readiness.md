@@ -1,5 +1,8 @@
 # Public release readiness
 
+The current Agent Mail UI full-range review holds release/live upgrade on
+[three P2 findings and runtime compatibility](agent-mail-ui-release-plan.md).
+
 This document defines the gates for the independently versioned public bundle
 candidates. Passing one gate does not authorize the next state transition.
 
@@ -18,7 +21,8 @@ separate public-adapter implementation and disposable gates are complete
 locally, but that adapter has not been authorized for repository visibility,
 push, tag or Release. AgentMemory bundle Release and marketplace transitions
 therefore remain blocked on public, downloaded adapter bytes. No
-package is published to npm or deployed live by this repository. The AIAH
+package is published to npm. Current Agent Mail UI live-use evidence is
+tracked separately in [project status](./project-status.md). The AIAH
 marketplace entry originated in
 [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957).
 Both automated checks passed, the PR merged, and the entry is in the live
@@ -27,9 +31,10 @@ catalog.
 The previously published AIAH `0.1.1` and Agent Mail `0.1.0` artifacts remain
 the rc.6-compatible release bytes recorded below. HEAD now carries new,
 unreleased rc.2-compatible candidates: AIAH `0.1.2`, Agent Mail `0.1.1`,
-Agent Mail UI `0.1.2` and AgentMemory `0.1.1`; their disposable evidence is
+Agent Mail UI `0.1.3` and AgentMemory `0.1.1`; their disposable evidence is
 recorded in
-[the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md).
+[the rc.2 compatibility note](./dsh-0.1.1-rc.2-compatibility.md); the newer UI
+fixes have a separate [acceptance record](./agent-mail-ui-acceptance.md).
 The MCP candidate packages are configuration-only bridges: AIAH starts
 `DSH_AIAH_COMMAND mcp`, Agent Mail starts an independently installed
 `agent-mail-mcp` executable, and AgentMemory starts an externally installed
@@ -87,6 +92,19 @@ index.js
 cordis.patch.yml
 README.md
 LICENSE
+```
+
+The Agent Mail UI package allowlist is exactly:
+
+```text
+package.json
+index.js
+client.js
+view.js
+cordis.patch.yml
+README.md
+LICENSE
+NOTICE
 ```
 
 Each child package must declare `dsh.bundle.patch`, remain publishable, and keep
@@ -172,6 +190,15 @@ Run all acceptance work in disposable homes and profiles:
 Automatic session capture is not claimed. Live private observation IDs are
 not stored in this repository.
 
+## Agent Mail UI runtime gate
+
+Use the [current UI acceptance record](agent-mail-ui-acceptance.md) for the
+candidate and DSH digests, exact eight-file pack, no-MCP-spawn install/remove
+check, real dispatcher check and browser evidence. Resolve the
+[full-range review findings and runtime mismatch](agent-mail-ui-release-plan.md)
+before release or live upgrade. Chrome and real better-sidebar integration
+are still pending; the fixture browser test cannot replace those gates.
+
 ## Evidence to record after verification
 
 Before requesting a commit, fill the candidate record with:
@@ -181,12 +208,13 @@ Before requesting a commit, fill the candidate record with:
 | Node / npm | Exact versions used to pack |
 | DSH | Exact version and integrity |
 | MCP client | Exact version |
-| AIAH executable | Release tag, commit and SHA-256 |
+| Provider executable, where used | Release tag, commit and SHA-256 |
 | Plugin tarball | Filename and SHA-256 |
 | Decompressed tar | SHA-256 |
-| Packed files | Exact five-file allowlist |
+| Packed files | Exact package-specific allowlist (UI: eight files) |
 | Source checks | Test count and boundary scan result |
 | Runtime checks | Initialize, tools, calls, zero-write and lifecycle results |
+| UI checks, where used | Host/client activation, child reuse, browser/surface versions and limitations |
 
 Do not record secrets, internal topology, personal paths or provider output
 that may contain user data.
