@@ -19,6 +19,7 @@ import {
   HUMAN_ONLY_TOOLS,
   PROXY_TOOLS,
   TAB_ID,
+  agentList,
   canAck,
   currentSessionId,
   deliveryStatusLabel,
@@ -72,7 +73,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.5');
+  assert.equal(manifest.version, '0.1.6');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -139,6 +140,15 @@ test('unread state follows pending and claimed delivery, excluding acked all-mai
   assert.deepEqual(items.map((item) => item.unread), [true, true, false]);
   assert.deepEqual(items.map((item) => item.claimed), [false, true, false]);
   assert.equal(unreadBadge(items), 2);
+});
+
+test('recipient data uses only provider roster IDs and does not invent presence', () => {
+  const ids = agentList({
+    agents: ['ui-harness@local', 'peer-b@local', 'human@local'],
+  });
+  assert.deepEqual(ids, ['ui-harness@local', 'peer-b@local', 'human@local']);
+  assert.equal(ids.includes('online'), false);
+  assert.equal(ids.includes('connected'), false);
 });
 
 test('UI state labels keep mailbox delivery separate from client presence and task outcome', () => {

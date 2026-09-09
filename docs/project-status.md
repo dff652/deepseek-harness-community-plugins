@@ -8,6 +8,10 @@ delivery. It also records client connection and interface limitations, the
 merged Agent Mail marketplace PR, and the separate 0.1.5 improvement candidate.
 The [0.1.5 candidate record](agent-mail-ui-0.1.5-acceptance.md) keeps its local
 archive and checks separate from the released/live 0.1.4 baseline.
+The [0.1.6 P0 acceptance record](agent-mail-ui-0.1.6-acceptance.md) records
+the implemented visual/recipient/composer changes, final archive and primary
+plus independent review. The isolated preview now uses 0.1.6; the production
+UI remains 0.1.4. Enrollment and connection-management APIs are later scope.
 The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
 record full-provider versus bundle responsibilities, real Codex receipt and
 isolated model execution, and the remaining release and desktop-client
@@ -23,7 +27,7 @@ DSH UI-to-Codex model task: inbox, claim, terminal completion and acknowledgemen
 with independent mailbox verification. This local model check does not extend
 the cross-host transport result to cross-host model execution or automatic wake.
 The [recipient and connection design](agent-mail-recipient-design.md) records
-the accepted visual direction and proposes directory, enrollment and verification
+the accepted visual direction and the remaining enrollment and verification
 flows while keeping registration, connection evidence and message state distinct.
 
 The September 5 review refreshes Agent Mail UI only. Other package sections
@@ -47,7 +51,8 @@ requires owner authorization.
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; state rechecked September 9 | Public artifact not installed live; private companion 0.1.1 is separate |
 | `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Live with DSH/MCP rc.2, Agent Mail 0.1.1, private Memory 0.1.1, sidebar 0.12.2 and market 1.41.0; Graph temporarily excluded; browser/API/restart PASS |
-| `@dff652/dsh-agent-mail-ui@0.1.5` | Revised local candidate; 99 tests, real standalone/sidebar and uninstrumented workspace/Quote/tab remount PASS; exact digest recorded | Local candidate; not pushed | Not released | Not published | Not submitted | Existing isolated preview upgraded with verified backup and settings/session/mailbox preservation; production UI remains 0.1.4 |
+| `@dff652/dsh-agent-mail-ui@0.1.5` | Revised local candidate; 99 tests, real standalone/sidebar and uninstrumented workspace/Quote/tab remount PASS; exact digest recorded | Local candidate; not pushed | Not released | Not published | Not submitted | Historical preview candidate; superseded there by 0.1.6, with its archive/evidence retained |
+| `@dff652/dsh-agent-mail-ui@0.1.6` | P0 visual/recipient/composer implementation; 100 portable tests per Node version, 16 scenarios per fixture browser, real DSH and independent review PASS | Local candidate; not pushed | Not released | Not published | Not submitted | Isolated preview upgraded with verified backup; model settings, nine original session streams and mailbox counts preserved; production UI remains 0.1.4 |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub

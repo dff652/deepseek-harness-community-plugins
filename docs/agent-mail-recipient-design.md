@@ -5,6 +5,11 @@ claim that enrollment, presence or connection management is implemented in
 the DSH UI. The accepted visual direction is neutral surfaces, a restrained
 blue accent, balanced spacing and collapsible diagnostic details.
 
+The first delivery step is implemented in the
+[0.1.6 P0 candidate](agent-mail-ui-0.1.6-acceptance.md): mailbox/recipient views,
+a separate composer, unknown-presence wording and failure/retry feedback.
+The enrollment and connection-management design below remains later scope.
+
 ## Current capability
 
 The UI obtains recipient IDs through `comm_list_agents`, excludes its own
@@ -158,5 +163,5 @@ credentials automatically.
 Acceptance must include an empty directory, duplicate identity, unknown
 presence with queued delivery, expired pairing code, incorrect Hub identity,
 TLS/authentication failure and explicit test timeout. Public UI work must not
-bundle provider code, endpoints, homes or credentials. Existing candidate
-archives and acceptance evidence remain unchanged by this design document.
+bundle provider code, endpoints, homes or credentials. The earlier candidate archives and acceptance evidence retain their recorded
+scope; the linked 0.1.6 record covers the subsequent P0 implementation.

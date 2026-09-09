@@ -61,9 +61,11 @@ The [capability comparison and next steps](docs/agent-mail-capability-roadmap.md
 separate the full provider from its DSH bundles. The [peer acceptance record](docs/agent-mail-peer-acceptance-plan.md)
 now covers passing cross-host DSH-to-DSH and DSH-to-Codex app-server MCP
 transport checks; desktop task loading and automatic wake remain separate.
-The [revised UI 0.1.5 candidate](docs/agent-mail-ui-0.1.5-acceptance.md) also
-passed real sidebar and standalone browser checks after a claim-state fix.
-It has not been released or deployed.
+The [UI 0.1.6 P0 candidate](docs/agent-mail-ui-0.1.6-acceptance.md) adds the
+revised visual hierarchy, recipient directory and dedicated composer. It passes
+real sidebar/standalone and failure-recovery checks. The isolated evaluation
+preview uses this candidate; production remains on the released UI 0.1.4.
+The candidate has not been pushed or released.
 
 ## What you get
 
@@ -92,8 +94,8 @@ sha256sum dff652-dsh-agent-mail-0.1.1.tgz
 dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts
-sha256sum dff652-dsh-agent-mail-ui-0.1.4.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.4.tgz
+sha256sum dff652-dsh-agent-mail-ui-0.1.6.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.6.tgz
 
 npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
 sha256sum dff652-dsh-agentmemory-0.1.1.tgz
@@ -291,6 +293,7 @@ model-visible L5 use, or a live-profile change.
 | Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.1.0` GitHub Release; historical rc.6 evidence |
 | HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.1.1`; rc.2 compatibility evidence |
 | Published Agent Mail UI artifact | [`@dff652/dsh-agent-mail-ui@0.1.4`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4); rc.2 acceptance evidence |
+| HEAD Agent Mail UI candidate | `@dff652/dsh-agent-mail-ui@0.1.6`; P0 acceptance and isolated preview upgrade, not released |
 | HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.1`; rc.2 compatibility evidence |
 | DeepSeek Harness | `0.1.1-rc.2` for HEAD candidates |
 | MCP client | `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` for HEAD candidates |

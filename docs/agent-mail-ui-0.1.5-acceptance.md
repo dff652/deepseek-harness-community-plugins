@@ -1,7 +1,9 @@
 # Agent Mail UI 0.1.5 candidate acceptance
 
 Date: 2026-09-09. Status: local candidate, not released or installed live.
-The released/live UI baseline remains `0.1.4`.
+The released/live UI baseline remains `0.1.4`. The isolated preview upgrade
+below is historical: the preview now uses the separately verified
+[0.1.6 P0 candidate](agent-mail-ui-0.1.6-acceptance.md).
 
 ## Scope
 

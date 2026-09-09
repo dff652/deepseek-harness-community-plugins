@@ -23,6 +23,12 @@ It is not another plugin or a second mailbox.
 - A host JSON API that proxies those calls through the **already registered**
   `mcp__agent-mail__*` tools, so the live MCP child is reused.
 
+The 0.1.6 candidate applies the revised visual hierarchy to the mailbox and
+adds a **Recipients** view using the current provider roster. Selecting an
+identity opens a message draft addressed to it. Connection details are
+collapsible; warnings and operation failures remain visible. The panel follows
+the DSH color scheme and keeps registration distinct from client presence.
+
 ## v1 human actions
 
 Unread list, open thread (claim), ack, send a **read** task or `done`, and
@@ -56,7 +62,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.5.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.6.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -84,6 +90,17 @@ The panel uses manual refresh and shows the last refresh time. The **Sent**
 view is explicitly local to the current panel session: it contains sends that
 completed while this panel was open, because the provider does not expose a
 global sent-history API. Closing the panel clears this list.
+
+Recipient entries contain provider-supplied IDs, not inferred device locations
+or connectivity. The current identity and `human@local` are excluded from the
+send picker. An empty directory provides setup guidance; adding identities,
+pairing, credential management and network discovery are not UI capabilities
+of this candidate. A missing MCP namespace disables sending rather than
+reusing a stale recipient directory.
+
+Sending and refreshing are separate outcomes. A successful submission followed
+by a refresh failure must retain its sent record and explain the stale view.
+Retrying a read operation must not automatically submit the message again.
 
 When a thread is open, the divider between the inbox and detail panes sizes
 the inbox to its content. Drag it or focus it and use the arrow keys, Home,
