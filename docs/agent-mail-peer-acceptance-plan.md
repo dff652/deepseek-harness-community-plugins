@@ -60,11 +60,45 @@ between hosts.
 These results qualify stage 2 and the listed stage-4 cases for this DSH pair.
 They are bounded restart checks, not a network-partition or long-running soak
 qualification, and they do not prove automatic retries of a failed send,
-automatic wake, model execution or DSH-to-Codex communication. Stage 3 remains
-pending. Direct Hub negative tests validate the provider boundary; the
-positive round trips separately validate the installed DSH plugin path.
+automatic wake, model execution or DSH-to-Codex communication. The subsequent
+Codex run is recorded separately below. Direct Hub negative tests validate
+the provider boundary; positive round trips separately validate the installed
+DSH plugin path.
 Private execution reports and reproducible test scripts remain outside this
 public repository. They contain deployment-specific paths and topology.
+
+## Cross-host Codex execution, 2026-09-09
+
+Stage 3's measured **DSH-to-Codex transport path passed** on two Linux hosts.
+Host A ran the test TLS Hub and a real `codex-cli 0.153.4` app-server; Host B
+ran DSH `0.1.1-rc.2` with the same reviewed Agent Mail/UI package digests as
+stage 2. The primary agent executed the test and an independent reviewer
+checked the harness and resulting evidence.
+
+The Codex process used a temporary `CODEX_HOME`, a dedicated non-human
+identity and an ephemeral app-server thread. Its MCP inventory exposed the
+eight configured non-approval tools. Calls used the app-server's
+`mcpServer/tool/call` interface; DSH calls used its installed UI API and
+existing MCP child. Both providers reported remote mode, the same HTTPS Hub
+and their expected distinct identities. The test did not modify the owner's
+global Codex configuration.
+
+| Check | Observed result |
+|---|---|
+| DSH to Codex | PASS: DSH sent; Codex received the exact sender/recipient/body, claimed and acknowledged the message |
+| Codex to DSH | PASS: Codex sent through its loaded MCP server; DSH received, claimed and acknowledged the message |
+| Delivery and recipient isolation | PASS: both directions matched pending, claimed and acknowledged states; acknowledgement removed unread deliveries; senders did not see outbound deliveries in their inboxes |
+| Codex process restart | PASS: the first app-server exited; DSH sent while it was offline; a new process with a different PID and the same temporary configuration retrieved one matching delivery and claimed/acknowledged it |
+| Storage and artifact verification | PASS: all three canary IDs were acknowledged in the Hub; both client-local message/delivery tables remained empty; package digests matched on both hosts |
+| Cleanup | PASS: both app-server processes stopped; test DSH/Hub/tunnel stopped; temporary remote runtime, Codex configuration, profiles, stores and credentials removed; existing service listeners preserved |
+
+This qualifies the real Codex app-server MCP transport together with DSH's
+UI/MCP transport. It does not prove a model chose the tools, automatic wake,
+notification in an existing desktop task, or that the owner's current task
+reloaded its MCP catalog. No model turn was started. Desktop-session and
+model-driven workflows remain separate checks, as does the incomplete UI
+sidebar release gate. Private execution reports remain outside this public
+repository.
 
 ## Topology
 

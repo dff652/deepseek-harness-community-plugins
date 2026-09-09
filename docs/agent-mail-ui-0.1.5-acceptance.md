@@ -68,9 +68,10 @@ failure in the candidate UI itself.
 
 The later [peer acceptance plan](agent-mail-peer-acceptance-plan.md) records
 same-host and cross-host DSH-to-DSH passes, including TLS/authentication and
-bounded client/Hub restart checks. The Codex bidirectional gate remains
-separate and pending. Peer API checks do not supersede the incomplete sidebar
-browser gate.
+bounded client/Hub restart checks. The subsequent real Codex app-server to
+remote DSH bidirectional MCP transport and Codex restart checks also passed.
+These transport checks do not establish model execution, desktop task reload
+or completion of the sidebar browser gate.
 
 ## Separate receiving-client evidence
 

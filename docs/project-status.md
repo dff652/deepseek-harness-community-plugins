@@ -14,7 +14,9 @@ isolated model execution, and the remaining sidebar and client integration gates
 The owner's next integration priority is [DSH to DSH, then DSH to Codex](agent-mail-peer-acceptance-plan.md),
 with same-host and cross-host acceptance recorded separately. Both DSH peer
 gates now pass, including TLS identity checks and bounded client/Hub restart
-recovery. The next client gate is real DSH-to-Codex bidirectional acceptance.
+recovery. Real Codex app-server and remote DSH bidirectional MCP transport
+also passed, including Codex restart recovery. Current desktop task loading,
+automatic wake and model-driven execution remain separate from this result.
 
 The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.

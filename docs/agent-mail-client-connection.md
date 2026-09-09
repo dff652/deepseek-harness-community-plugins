@@ -91,3 +91,13 @@ MCP client. For a task-completion check, explicitly require `comm_send` with
 `comm_ack` for the original message. Text saying "done" in an ordinary
 `message` does not establish a terminal task outcome. Verify the original
 delivery state independently as well as the model's final response.
+
+## Measured cross-host Codex path
+
+The [peer acceptance record](agent-mail-peer-acceptance-plan.md#cross-host-codex-execution-2026-09-09)
+now includes a real Codex app-server `0.153.4` and a DSH instance on another
+host. Both directions passed through their respective MCP connections over
+a verified TLS Hub, including claim/ack and Codex process restart recovery.
+The test used a temporary Codex configuration and no model turn. It does not
+establish that an existing desktop task loaded a newly saved MCP entry or
+that a model or runner automatically responds to incoming messages.

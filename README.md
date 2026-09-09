@@ -58,8 +58,9 @@ steps.
 The [September 9 Agent Mail review](docs/agent-mail-2026-09-09-review.md)
 records current delivery evidence, client connection limits and UI follow-up.
 The [capability comparison and next steps](docs/agent-mail-capability-roadmap.md)
-separate the full provider from its DSH bundles and local receipt evidence
-from the still-unverified cross-machine client paths.
+separate the full provider from its DSH bundles. The [peer acceptance record](docs/agent-mail-peer-acceptance-plan.md)
+now covers passing cross-host DSH-to-DSH and DSH-to-Codex app-server MCP
+transport checks; desktop task loading and automatic wake remain separate.
 
 ## What you get
 
