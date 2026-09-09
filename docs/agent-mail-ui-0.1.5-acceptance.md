@@ -93,8 +93,8 @@ Its previously documented rc.6-family peer declaration remains an explicit
 compatibility exception; this is measured rc.2 behavior, not static peer
 contract compliance.
 
-All test profiles, provider stores and test listeners were removed. The
-existing preview and live profiles were preserved and were not upgraded.
+All disposable test profiles, provider stores and test listeners were removed.
+The existing preview and live profiles were preserved during these gates.
 
 The later [peer acceptance plan](agent-mail-peer-acceptance-plan.md) records
 same-host and cross-host DSH-to-DSH passes, including TLS/authentication and
@@ -103,6 +103,44 @@ remote DSH bidirectional MCP transport and Codex restart checks also passed.
 Those transport checks used the original candidate digest. They remain
 separate from the revised browser gate and do not establish model execution
 or desktop task reload.
+
+## Authorized preview upgrade
+
+After the browser gates, the owner authorized upgrading the existing isolated
+preview to the revised candidate digest above. The running profile was stopped
+before backup; file hashes and a SQLite backup with integrity and row-count
+checks verified the rollback copy. The profile was restored at its original
+location, then the exact archive was installed and its packaged files checked.
+
+Post-upgrade checks passed for status, diagnosis, inbox and agent-list APIs,
+plus a read-only Chrome smoke check opening the real sidebar.
+Model settings and credentials were unchanged, all nine original session event
+streams were preserved, and mailbox row counts matched. The preview remains
+available for owner evaluation. Protected backup and operational evidence stay
+outside this public repository. The production service remains on UI 0.1.4;
+this preview upgrade is not a release or production deployment.
+
+### DSH UI to Codex model completion
+
+The upgraded preview then sent one synthetic read-only task through its UI API
+to a real Codex app-server model turn. A temporary thread configuration pointed
+five non-human Agent Mail tools at the same isolated preview mailbox, using a
+distinct recipient identity. The existing account and default model were used;
+global client configuration was not edited.
+
+The manually started model called inbox, claim, send with `type: "done"`, and
+ack in that order, then completed its turn. The original delivery was `acked`.
+The sender UI API and a separate read-only SQLite check found exactly one
+completion with the expected body, sender, recipient, thread ID and task ID.
+The temporary app-server process was stopped; the preview remains running.
+
+The harness initially stopped on a client tool-confirmation request. In the
+completed run, each requested operation and its arguments were checked against
+the owner's synthetic-test authorization before a one-call confirmation was
+returned. No permanent tool approval was added. This passes a manually started,
+confirmation-assisted model workflow on the revised candidate. It does not
+establish automatic wake, unattended execution, model-to-model delegation,
+cross-host model execution, or tool availability in the current desktop task.
 
 ## Separate receiving-client evidence
 
