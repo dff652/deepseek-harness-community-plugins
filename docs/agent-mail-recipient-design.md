@@ -61,6 +61,57 @@ belongs to the provider/Hub management boundary, not ordinary mail tools.
 Remote credential provisioning must not put tokens into chat, message bodies,
 browser persistence or public configuration bundles.
 
+## Enrollment wizard interaction specification
+
+The entry point is **Connection → Join a Hub**. A recipient picker may link
+to it, but should not imply that editing a contact connects another device.
+The wizard configures the current DSH/provider profile; it must identify that
+target explicitly rather than assume the browser's machine is the client.
+
+| Screen | Input and primary action | Successful transition |
+|---|---|---|
+| 1. Connect Hub | Enter/select the administrator-provided HTTPS endpoint; verify endpoint and certificate trust | Advance to pairing with the verified Hub context visible; this is not yet authenticated client identity |
+| 2. Pair | Enter a short-lived code; explicitly redeem it | Clear the code from the view and show the returned identity; redemption consumes the code and may enroll/mint credentials |
+| 3. Confirm identity | Show Hub, returned client identity, verification result and destination profile; require explicit identity confirmation | Save the verified connection, then load the directory |
+| 4. Recipients | Show saved identity and directory entries; select a recipient for an explicit test | Submit one synthetic test and show awaiting handling; do not start a model or claim presence |
+
+Keep one primary action per screen. Disable duplicate requests while pending,
+allow exit, and ignore stale responses after cancellation or navigation.
+Allow returning from pairing to endpoint selection. After redemption, do not
+offer a misleading back action that silently consumes the code again.
+
+Errors stay beside the relevant input or action: unreachable endpoint,
+untrusted certificate, expired/invalid code, unexpected identity, failed
+credential verification, failed save and failed directory refresh. Retain
+non-sensitive input for correction. Do not expose tokens, retain a redeemed
+code, or use a single success badge for every stage.
+
+Save and directory refresh are separate results. A failed refresh after a
+successful save should leave the connection marked saved and offer directory
+retry. An empty directory is a successful empty result with enrollment
+guidance; it must not enable a test with an invented recipient.
+
+### Pairing and cancellation boundary
+
+Pairing is not a read-only connection probe. Redemption can register an
+identity and mint a token before the user saves the local connection. Exiting
+after redemption must not claim that nothing changed at the Hub. Display the
+cleanup result, preserve the prior active connection, and explain when an
+administrator must revoke an unused credential. A code revocation is not
+automatically equivalent to revoking the credential issued by that code.
+
+Before implementation, define a provider-owned pending-enrollment contract:
+short lifetime, credential custody outside browser persistence, idempotent
+commit, retry after local-save failure, and scoped cleanup of only the new
+enrollment. Existing identity credentials must not be overwritten or revoked
+as incidental cleanup. This contract is a requirement, not an assertion that
+the current pairing implementation already provides a complete wizard API.
+
+The interaction prototype uses only example data and simulated outcomes.
+It covers successful enrollment, untrusted certificates, expired codes,
+unexpected identity, save failure and an empty directory. Its controls do
+not make network requests, enroll identities or change the running profile.
+
 ## State model
 
 | State | What it establishes | Where to show it |
