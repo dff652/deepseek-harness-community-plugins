@@ -11,7 +11,10 @@ archive and checks separate from the released/live 0.1.4 baseline.
 The [0.1.6 P0 acceptance record](agent-mail-ui-0.1.6-acceptance.md) records
 the implemented visual/recipient/composer changes, final archive and primary
 plus independent review. The isolated preview now uses 0.1.6; the production
-UI remains 0.1.4. Enrollment and connection-management APIs are later scope.
+UI remains 0.1.4. The completed implementation is `054b795`. The next proposed
+increment is the [P1 Hub enrollment contract and wizard](agent-mail-recipient-design.md#next-delivery-p1-hub-enrollment),
+starting with provider/runtime verification and pending-enrollment semantics.
+P1 is not implemented; publication of the accepted P0 artifact is a separate track.
 The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
 record full-provider versus bundle responsibilities, real Codex receipt and
 isolated model execution, and the remaining release and desktop-client

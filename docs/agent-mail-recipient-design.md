@@ -165,3 +165,72 @@ presence with queued delivery, expired pairing code, incorrect Hub identity,
 TLS/authentication failure and explicit test timeout. Public UI work must not
 bundle provider code, endpoints, homes or credentials. The earlier candidate archives and acceptance evidence retain their recorded
 scope; the linked 0.1.6 record covers the subsequent P0 implementation.
+
+
+## Next delivery: P1 Hub enrollment
+
+The 0.1.6 P0 implementation and isolated preview upgrade are recorded at
+`054b795`. The next proposed increment is joining one existing HTTPS Hub from
+one DSH/provider profile. Use the existing ID directory and ordinary mailbox
+operations; federation, heartbeat presence, persistent sent history and
+automatic model wake remain separate work.
+
+### P1.1: establish the provider contract
+
+Start by rechecking the current provider source, version and runtime artifact.
+The older provider commit recorded in the roadmap is a baseline to verify,
+not permission to overwrite a newer checkout. Produce an operation matrix
+with existing entry points, missing behavior, authorization, request/result
+shapes, side effects and error semantics. Proposed operation names are not
+claims that the provider already implements them.
+
+The contract must cover:
+
+- Hub endpoint and certificate verification, followed by authenticated client
+  identity verification; return dated evidence without asserting presence.
+- Explicit pairing-code redemption under management authorization. Keep issued
+  credentials in protected provider/host custody and expose only an opaque,
+  expiring enrollment handle to the UI.
+- Idempotent commit to an explicitly identified profile, with retry after a
+  failed save. Define how the running MCP client activates or reloads the new
+  connection; a saved setting alone does not prove that remote routing changed.
+- Cancellation and expiry that affect only the newly pending enrollment.
+  Preserve the previous active connection; distinguish code revocation from
+  revocation of a credential already issued, and report incomplete cleanup.
+- Directory refresh as an independent read after save. Test-message submission
+  requires an explicitly selected recipient and is a separate mutation.
+
+This is the first implementation gate: review the matrix and pass provider
+contract tests before wiring real management actions into the UI.
+
+### P1.2: connect the approved interaction flow
+
+Implement **Hub → pairing → identity confirmation → save → recipients** using
+the reviewed contract. Keep failure and retry local to each step, suppress
+stale responses after cancellation, and retain only non-sensitive input.
+Show a required MCP restart/reload explicitly if activation cannot be automatic.
+
+Provider/host work and UI work may be assigned to separate bounded workers
+once their contract is stable. The primary agent reviews the combined diff
+and runs final acceptance. Do not split ownership of the same active profile
+or mailbox across workers.
+
+### Acceptance and completion
+
+Use disposable Hub/client profiles to verify successful enrollment, expired
+or reused codes, wrong identity, TLS/authentication failures, save failure,
+double submission, cancellation/expiry cleanup and restart/reload activation.
+Prove that retries do not create duplicate enrollment or overwrite/revoke an
+existing credential. A directory refresh failure after save must retain the
+saved connection and permit read-only retry; an empty directory is not failure.
+
+Finish with one explicit synthetic task round trip observed by an independent
+recipient: correct route/identity, claim, terminal completion and acknowledgement.
+If the recipient does not handle it within the bounded test, report timeout or
+awaiting handling rather than offline status. Preserve failure evidence without
+credentials or user message content in public documentation.
+
+P1 is proposed next work, not implemented by this documentation update.
+The 0.1.6 release track may proceed independently when authorized; it does not
+require including unfinished P1 features in the accepted P0 artifact. Push,
+release and production deployment remain separate decisions.
