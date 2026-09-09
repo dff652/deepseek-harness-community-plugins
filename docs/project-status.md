@@ -14,7 +14,10 @@ plus independent review. The isolated preview now uses 0.1.6; the production
 UI remains 0.1.4. The completed implementation is `054b795`. The next proposed
 increment is the [P1 Hub enrollment contract and wizard](agent-mail-recipient-design.md#next-delivery-p1-hub-enrollment),
 starting with provider/runtime verification and pending-enrollment semantics.
-P1 is not implemented; publication of the accepted P0 artifact is a separate track.
+The [P1.1 assessment and proposed contract](agent-mail-p11-enrollment-contract.md)
+are complete, with 28 existing provider tests and isolated runtime probes.
+Provider management endpoints and wizard integration remain unimplemented;
+publication of the accepted P0 artifact is a separate track.
 The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
 record full-provider versus bundle responsibilities, real Codex receipt and
 isolated model execution, and the remaining release and desktop-client

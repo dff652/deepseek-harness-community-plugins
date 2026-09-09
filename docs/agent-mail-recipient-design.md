@@ -175,6 +175,12 @@ one DSH/provider profile. Use the existing ID directory and ordinary mailbox
 operations; federation, heartbeat presence, persistent sent history and
 automatic model wake remain separate work.
 
+The [P1.1 operation matrix and proposed contract](agent-mail-p11-enrollment-contract.md)
+now record source/runtime checks, 28 existing tests and isolated behavior
+probes. The first implementation is new-identity enrollment only: the existing
+redemption path can replace old credentials and must not be wired directly
+into the wizard. New P1 contract tests and endpoints remain to be implemented.
+
 ### P1.1: establish the provider contract
 
 Start by rechecking the current provider source, version and runtime artifact.
