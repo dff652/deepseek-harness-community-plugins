@@ -67,9 +67,10 @@ does not supersede the passing sidebar fixture scenarios or establish a
 failure in the candidate UI itself.
 
 The later [peer acceptance plan](agent-mail-peer-acceptance-plan.md) records
-the same-host DSH-to-DSH result and keeps the next cross-host and Codex gates
-separate. Peer API checks do not supersede the incomplete sidebar browser
-gate.
+same-host and cross-host DSH-to-DSH passes, including TLS/authentication and
+bounded client/Hub restart checks. The Codex bidirectional gate remains
+separate and pending. Peer API checks do not supersede the incomplete sidebar
+browser gate.
 
 ## Separate receiving-client evidence
 

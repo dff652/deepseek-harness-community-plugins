@@ -21,7 +21,8 @@ That model test does not qualify a second machine's AI client or mailbox.
 | DSH model reading and replying | Passed in the separate candidate preview and isolated mailbox; the model reply was independently observed at the recipient |
 | Model task completion and acknowledgement | Passed after a corrective prompt explicitly set `type: "done"`; the first ordinary reply correctly failed the terminal-task acknowledgement guard |
 | Other local AI clients | Require their own identity and actual CLI/MCP connection to the intended mailbox; a roster entry is not connection evidence |
-| AI clients on another machine | Remote provider routes require deployment and per-client acceptance; no real cross-machine client round trip was established in this review |
+| DSH peers on another machine | Two-host TLS Hub round trips passed through both installed DSH plugins, including claim/ack, identity checks, client restart and Hub recovery; see the [peer record](agent-mail-peer-acceptance-plan.md#cross-host-execution-2026-09-09) |
+| Other AI clients on another machine | Still require their own real-client acceptance; the DSH pair does not qualify Codex or other clients |
 | Automatic notification or execution | Not enabled by installing these bundles; UI status explicitly reports no automatic wake and unknown client presence |
 
 See the [delivery review](agent-mail-2026-09-09-review.md),
@@ -119,7 +120,7 @@ support or automatic wake.
 
 | Priority | Task and owner | Completion evidence |
 |---|---|---|
-| P0 | Integration worker, primary-reviewed: qualify DSH to DSH first | Same-host two-instance round trip, then real cross-host Hub round trip, identity/auth checks, claim and acknowledgement, plus reconnect acceptance |
+| P0 | Integration worker, primary-reviewed: qualify DSH to DSH first | Same-host and cross-host TLS Hub round trips, identity/auth checks, claim/ack and bounded client/Hub restart checks passed; retain these gates for future changes |
 | P0 | Integration worker, primary-reviewed: qualify DSH to Codex second | A real Codex runtime loads its connection and exchanges uniquely marked mail with DSH in both directions; distinguish configured, connected, notified and executed states |
 | P0 release gate | Primary agent: finish exact 0.1.5 real sidebar acceptance in a reproducible disposable DSH environment | Resolve the startup dependency failure, rerun the corrected browser harness against the frozen digest, verify send/receive, task guards, refresh, Quote, layout and cleanup; record a full PASS or an actionable product defect |
 | Before provider edits | Primary agent: preserve the located provider-source baseline | Public checkout `main` at reviewed `ca6601c` located; verify the exact runtime/artifact before changes and preserve the supplied archived checkout |

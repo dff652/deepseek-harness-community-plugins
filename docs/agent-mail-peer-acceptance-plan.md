@@ -24,10 +24,47 @@ The tested package SHA-256 values were:
 - UI bundle: `811e175ded3db51f0b2bc502904210b93760f3e63a1cc9ee2ad4fa34dd01e6a8`
 
 Both runs removed their own DSH profiles and test store. Existing preview and
-live services were preserved. Stages 2-4 remain unqualified by these results;
-they do not establish cross-host delivery or DSH-to-Codex bidirectional
-acceptance. The earlier manually corrected model flow is separate evidence
+live services were preserved. Those same-host runs alone did not qualify
+cross-host delivery or DSH-to-Codex bidirectional acceptance. The earlier
+manually corrected model flow is separate evidence
 in the [0.1.5 record](agent-mail-ui-0.1.5-acceptance.md).
+
+## Cross-host execution, 2026-09-09
+
+Stage 2 subsequently **passed** on two separate Linux hosts, using DSH
+`0.1.1-rc.2`, Agent Mail bundle `0.1.1` and UI bundle `0.1.5`. Both hosts used
+the package digests recorded above. The primary agent ran the acceptance;
+a separate reviewer inspected the harness and results. Host B used an
+isolated Node 24 runtime without changing its system Node or model service.
+
+Each DSH had its own profile, provider home and identity-bound token file.
+Both provider diagnostics reported `remote: true`, `remote_mail_api`, the
+same HTTPS Hub and the expected distinct identity. Certificate verification
+remained enabled. Client Web listeners were loopback-only; an SSH tunnel
+carried the test controller's HTTP calls to Host B, while Host B's provider
+connected directly to the Hub over TLS. No mailbox database was shared
+between hosts.
+
+| Check | Observed result |
+|---|---|
+| DSH-A to DSH-B and reverse | PASS: each DSH UI API sent a unique message; recipient verified sender, recipient and body through pending, claimed and acknowledged states |
+| Recipient inbox isolation | PASS: acknowledged messages left unread views; outbound deliveries did not appear in the sender's all-mail view |
+| Actual remote storage | PASS: Hub records matched the canary IDs and final acknowledged states; both client-local message/delivery tables remained empty |
+| Distinct credentials | PASS: separate tokens returned the expected identities from the Hub identity endpoint |
+| Authentication and identity negatives | PASS: missing/invalid token returned 401; forged sender returned 403; wrong-recipient claim/ack returned 409 without changing the recipient's pending delivery |
+| Certificate trust | PASS: a client without the test trust anchor rejected the TLS certificate |
+| Client restart and queued delivery | PASS: Host B's test DSH stopped; A sent while B was unavailable; a new B process using the same profile retrieved one matching delivery and claimed/acknowledged it |
+| Hub outage and recovery | PASS: while the test Hub was stopped, both DSH inbox calls reported connection failure; after Hub restart, the existing DSH processes completed another bidirectional round trip |
+| Cleanup | PASS: test processes/listeners, remote runtime directory, client profiles, test stores and credentials removed; existing preview/live DSH and model-service listeners preserved |
+
+These results qualify stage 2 and the listed stage-4 cases for this DSH pair.
+They are bounded restart checks, not a network-partition or long-running soak
+qualification, and they do not prove automatic retries of a failed send,
+automatic wake, model execution or DSH-to-Codex communication. Stage 3 remains
+pending. Direct Hub negative tests validate the provider boundary; the
+positive round trips separately validate the installed DSH plugin path.
+Private execution reports and reproducible test scripts remain outside this
+public repository. They contain deployment-specific paths and topology.
 
 ## Topology
 
