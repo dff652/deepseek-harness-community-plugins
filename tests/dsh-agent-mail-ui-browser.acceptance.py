@@ -39,11 +39,12 @@ try:
     from selenium import webdriver
     from selenium.common.exceptions import WebDriverException
     from selenium.webdriver.common.by import By
+    from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.chrome.options import Options as ChromeOptions
     from selenium.webdriver.chrome.service import Service as ChromeService
     from selenium.webdriver.firefox.options import Options as FirefoxOptions
     from selenium.webdriver.firefox.service import Service as FirefoxService
-    from selenium.webdriver.support.ui import WebDriverWait
+    from selenium.webdriver.support.ui import Select, WebDriverWait
 except ModuleNotFoundError as error:  # pragma: no cover - optional local gate
     print(
         f"SKIP: Selenium is not installed ({error}). "
@@ -88,11 +89,12 @@ class Fixture:
         self.claimed = False
         self.done = False
         self.acked = False
+        self.external_ack = False
         self.calls: list[dict[str, object]] = []
 
     @property
     def item(self) -> dict[str, object]:
-        delivery_status = "acked" if self.acked else "claimed" if self.claimed else "pending"
+        delivery_status = "acked" if self.acked or self.external_ack else "claimed" if self.claimed else "pending"
         return {
             "message_id": "fixture-message-1",
             "thread_id": "fixture-thread-1",
@@ -139,6 +141,9 @@ class Fixture:
                     "missing": [],
                     "proxy": "existing-mcp-child",
                     "autoWake": False,
+                    "clientPresence": "unknown",
+                    "deliveryReceipts": "unavailable",
+                    "manualRefresh": True,
                 })
             if method == "diagnose":
                 return HTTPStatus.OK, json_response(True, {
@@ -155,7 +160,7 @@ class Fixture:
                 })
             if method == "inbox":
                 unread_only = payload.get("unread_only", True) is not False
-                shown = [] if self.acked and unread_only else [self.item]
+                shown = [] if (self.acked or self.external_ack) and unread_only else [self.item]
                 return HTTPStatus.OK, json_response(True, {
                     "count": len(shown),
                     "items": shown,
@@ -562,16 +567,60 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
     assert tab_id == "dsh-agent-mail:inbox", tab_id
     click_button(driver, "Agent Mail")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "fixture inbox")
-    assert not driver.find_elements(By.CSS_SELECTOR, 'textarea[placeholder="Read-only task body"]'), (
+    wait_for(driver, lambda current: "客户端连接：未知" in text_of(current), "presence status")
+    wait_for(driver, lambda current: "自动唤醒：关闭" in text_of(current), "auto-wake status")
+    wait_for(driver, lambda current: "最后刷新：" in text_of(current), "refresh timestamp")
+    assert not driver.find_elements(By.CSS_SELECTOR, 'textarea[placeholder="请输入只读任务内容"]'), (
         "new-message composer unexpectedly opened"
     )
+
+    click_button(driver, "写消息")
+    wait_for(driver, lambda current: bool(current.find_elements(By.CSS_SELECTOR, 'textarea[placeholder="请输入只读任务内容"]')), "message composer")
+    selects = driver.find_elements(By.TAG_NAME, "select")
+    assert len(selects) == 2, "composer did not render recipient and type controls"
+    Select(selects[0]).select_by_value("worker@local")
+    Select(selects[1]).select_by_value("message")
+    wait_for(driver, lambda current: bool(current.find_elements(By.CSS_SELECTOR, 'textarea[placeholder="请输入消息内容"]')), "message type label")
+    composer = driver.find_element(By.CSS_SELECTOR, 'textarea[placeholder="请输入消息内容"]')
+    composer.send_keys("Fixture message: roster presence is unknown.")
+    click_button(driver, "发送消息")
+    message_call = wait_api_call(
+        server.fixture,
+        "send",
+        predicate=lambda call: call["payload"].get("type") == "message",
+    )
+    assert message_call["payload"] == {
+        "to": "worker@local",
+        "type": "message",
+        "body": "Fixture message: roster presence is unknown.",
+        "effect": "read",
+    }, message_call
+    wait_for(driver, lambda current: "已发送（本次面板：1）" in text_of(current), "local sent record")
+    wait_for(driver, lambda current: "已提交到邮箱" in text_of(current), "outbound state")
+    assert "签收状态未知" in text_of(driver), "outbound record claimed a receipt"
+    click_button(driver, "收件箱")
+    wait_for(driver, lambda current: "Fixture task" in text_of(current), "inbox after local send")
+
     click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
-    wait_for(driver, lambda current: "fixture-thread-1" in text_of(current), "fixture thread")
+    wait_for(driver, lambda current: "Fixture task: verify the Agent Mail UI." in text_of(current), "fixture thread")
     wait_api_call(server.fixture, "claim")
 
-    ack = button_with_text(driver, "Ack")
+    separator = driver.find_element(By.CSS_SELECTOR, '[role="separator"]')
+    assert separator.get_attribute("tabindex") == "0", "resize separator is not keyboard focusable"
+    assert separator.get_attribute("aria-orientation") == "horizontal", separator.get_attribute("outerHTML")
+    separator.send_keys(Keys.ARROW_DOWN)
+    wait_for(driver, lambda current: current.find_element(By.CSS_SELECTOR, '[role="separator"]').get_attribute("aria-valuenow") is not None, "keyboard resize")
+    separator = driver.find_element(By.CSS_SELECTOR, '[role="separator"]')
+    separator.send_keys(Keys.ESCAPE)
+    wait_for(driver, lambda current: current.find_element(By.CSS_SELECTOR, '[role="separator"]').get_attribute("aria-valuenow") is None, "automatic resize reset")
+    details = driver.find_element(By.TAG_NAME, "details")
+    assert details.get_attribute("open") is None, "internal IDs should be collapsed initially"
+    details.find_element(By.TAG_NAME, "summary").click()
+    wait_for(driver, lambda current: "thread_id：fixture-thread-1" in text_of(current), "expanded message IDs")
+
+    ack = button_with_text(driver, "确认收悉")
     assert button_disabled(ack), "Ack was enabled before the task became terminal"
-    done = button_with_text(driver, "Done")
+    done = button_with_text(driver, "标记完成")
     assert not button_disabled(done), "Done is coupled to the new-message draft"
     done.click()
     done_call = wait_api_call(
@@ -589,12 +638,12 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
         "effect": "read",
     }, payload
     wait_for(driver, lambda current: "done" in text_of(current), "terminal done row")
-    ack = button_with_text(driver, "Ack")
+    ack = button_with_text(driver, "确认收悉")
     assert not button_disabled(ack), "Ack stayed disabled after Done"
     ack.click()
     ack_call = wait_api_call(server.fixture, "ack")
     assert ack_call["payload"] == {"message_id": "fixture-message-1"}, ack_call
-    wait_for(driver, lambda current: "No mail yet" in text_of(current), "acked inbox refresh")
+    wait_for(driver, lambda current: "暂无邮件" in text_of(current), "acked inbox refresh")
     checkbox = driver.find_element(By.CSS_SELECTOR, 'input[type="checkbox"]')
     assert checkbox.is_selected(), "Unread only filter was not enabled initially"
     checkbox.click()
@@ -618,6 +667,32 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
     }
 
 
+def run_external_ack_refresh(driver, server: FixtureServer) -> dict[str, object]:
+    driver.get(f"http://127.0.0.1:{server.server_port}/?mode=sidebar&scenario=external-ack")
+    wait_for(driver, lambda current: current.execute_script("return Boolean(window.__HARNESS__.tab)"), "external-ack sidebar")
+    click_button(driver, "Agent Mail")
+    wait_for(driver, lambda current: "Fixture task" in text_of(current), "external-ack inbox")
+    click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
+    wait_for(driver, lambda current: "已领取" in text_of(current), "claimed state")
+    wait_api_call(server.fixture, "claim")
+
+    with server.fixture.lock:
+        server.fixture.external_ack = True
+    click_button(driver, "手动刷新")
+    wait_for(driver, lambda current: "暂无邮件" in text_of(current), "externally acknowledged inbox")
+    wait_for(driver, lambda current: "投递/签收：已确认收悉" in text_of(current), "refreshed acknowledgement state")
+    assert not driver.find_elements(By.XPATH, "//button[normalize-space()='确认收悉']"), (
+        "confirmation action remained available after external acknowledgement"
+    )
+    return {
+        "surface": "sidebar",
+        "externalAck": True,
+        "manualRefreshSyncedSelectedState": True,
+        "ackActionHidden": True,
+        "backend": "synthetic local HTTP fixture",
+    }
+
+
 def run_standalone(driver, server: FixtureServer) -> dict[str, object]:
     driver.get(f"http://127.0.0.1:{server.server_port}/?mode=standalone&scenario=healthy")
     wait_for(
@@ -631,14 +706,14 @@ def run_standalone(driver, server: FixtureServer) -> dict[str, object]:
     wait_for(driver, lambda current: "Agent Mail" in text_of(current), "standalone panel")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "standalone fixture inbox")
     click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
-    wait_for(driver, lambda current: "fixture-thread-1" in text_of(current), "standalone fixture thread")
+    wait_for(driver, lambda current: "参与者：worker@local、ui-harness@local" in text_of(current), "standalone fixture thread")
     click_button(driver, "Open session 2")
     wait_for(
         driver,
         lambda current: current.execute_script("return window.__HARNESS__.currentSession") == "fixture-session-2",
         "active session navigation while drawer is open",
     )
-    click_button(driver, "Quote to chat")
+    click_button(driver, "引用到对话")
     quote = driver.execute_script("return window.__HARNESS__.drafts")
     assert "message_id=fixture-message-1" in quote["fixture-session-2"], quote
     assert quote["fixture-session-1"] == "", quote
@@ -660,9 +735,9 @@ def run_tool_cards(driver, server: FixtureServer) -> dict[str, object]:
         "tool-card registrations",
     )
     driver.execute_script("window.__HARNESS__.renderToolCards()")
-    wait_for(driver, lambda current: "Running" in text_of(current), "running tool card")
-    wait_for(driver, lambda current: "Sent" in text_of(current), "successful tool card")
-    wait_for(driver, lambda current: "Send failed" in text_of(current), "failed tool card")
+    wait_for(driver, lambda current: "执行中" in text_of(current), "running tool card")
+    wait_for(driver, lambda current: "已提交到邮箱" in text_of(current), "successful tool card")
+    wait_for(driver, lambda current: "发送失败" in text_of(current), "failed tool card")
     owners = driver.execute_script("return window.__HARNESS__.toolOwners")
     assert len(owners) == 3, owners
     assert all(owner.get("block") for owner in owners), owners
@@ -692,7 +767,7 @@ def run_failed_claim(driver, server: FixtureServer) -> dict[str, object]:
         return "claim" in body and ("failure" in body or "failed" in body or "error" in body)
 
     wait_for(driver, visible_claim_error, "claim failure message")
-    ack_buttons = driver.find_elements(By.XPATH, "//button[normalize-space()='Ack']")
+    ack_buttons = driver.find_elements(By.XPATH, "//button[normalize-space()='确认收悉']")
     assert not ack_buttons or all(button_disabled(button) for button in ack_buttons), (
         "Ack was enabled after claim failed"
     )
@@ -771,6 +846,11 @@ def main() -> int:
         driver = make_driver(args.browser)
         browser_capabilities = dict(driver.capabilities)
         results.append(run_sidebar_done_ack(driver, server))
+        server.shutdown()
+        server.server_close()
+
+        server = start_server(Fixture("external-ack"))
+        results.append(run_external_ack_refresh(driver, server))
         server.shutdown()
         server.server_close()
 

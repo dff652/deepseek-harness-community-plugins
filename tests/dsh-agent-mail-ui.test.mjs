@@ -21,11 +21,18 @@ import {
   TAB_ID,
   canAck,
   currentSessionId,
+  deliveryStatusLabel,
+  firstLine,
   inboxItems,
+  messageTypeLabel,
   parseToolPayload,
   publicToolName,
   quoteComposerText,
   sessionScope,
+  taskOutcome,
+  taskOutcomeLabel,
+  threadParticipants,
+  threadSubject,
   threadMessages,
   toolCardModel,
   toolResultText,
@@ -65,7 +72,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.4');
+  assert.equal(manifest.version, '0.1.5');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -132,6 +139,40 @@ test('unread state follows pending and claimed delivery, excluding acked all-mai
   assert.deepEqual(items.map((item) => item.unread), [true, true, false]);
   assert.deepEqual(items.map((item) => item.claimed), [false, true, false]);
   assert.equal(unreadBadge(items), 2);
+});
+
+test('UI state labels keep mailbox delivery separate from client presence and task outcome', () => {
+  assert.equal(messageTypeLabel('task'), '任务');
+  assert.equal(messageTypeLabel('message'), '消息');
+  assert.equal(deliveryStatusLabel('outbound'), '已提交到邮箱 · 签收状态未知');
+  assert.equal(deliveryStatusLabel(''), '状态未知');
+  assert.equal(firstLine('first line\nsecond line'), 'first line');
+
+  const [task] = inboxItems({
+    items: [{
+      message_id: 'm-state',
+      thread_id: 't-state',
+      task_id: 'k-state',
+      type: 'task',
+      from: 'worker@local',
+      to: 'ui@local',
+      body_md: 'Handle the first line\nwith more context',
+      delivery_status: 'claimed',
+    }],
+  });
+  const tailed = threadMessages({ messages: [
+    { id: 'm-state', type: 'task', from: 'worker@local', to: 'ui@local', body_md: task.body },
+    { id: 'm-done', type: 'done', from: 'ui@local', to: 'worker@local', body_md: 'done' },
+  ] });
+  assert.equal(tailed[1].deliveryStatus, '');
+  assert.equal(taskOutcome(task, []), 'unknown');
+  assert.equal(taskOutcome({ ...task, deliveryStatus: 'acked' }, []), 'acked');
+  assert.equal(taskOutcome(task, tailed), 'unknown', 'tail without task_id cannot prove completion');
+  assert.equal(taskOutcome(task, tailed, new Set(['k-state'])), 'done');
+  assert.equal(taskOutcomeLabel('unknown'), '完成状态未知（待核实）');
+  assert.equal(taskOutcomeLabel('acked'), '已结束（已签收）');
+  assert.equal(threadSubject({ ...task, body: 'done' }, tailed), 'Handle the first line');
+  assert.deepEqual(threadParticipants(task, tailed), ['worker@local', 'ui@local']);
 });
 
 test('standalone Quote scope follows current session navigation and rejects stale ids', () => {
@@ -215,6 +256,10 @@ test('write send requires an explicit confirm flag', () => {
   assert.deepEqual(
     validateSendPayload({ to: 'codex@local', body: 'x', effect: 'read' }).args,
     { to: 'codex@local', type: 'task', body: 'x', effect: 'read' },
+  );
+  assert.deepEqual(
+    validateSendPayload({ to: 'codex@local', type: 'message', body: 'x', effect: 'read' }).args,
+    { to: 'codex@local', type: 'message', body: 'x', effect: 'read' },
   );
 });
 
@@ -305,6 +350,9 @@ test('status is offline when the MCP namespace is missing and does not throw', (
   const status = mailStatus({ get() { return undefined; } });
   assert.equal(status.live, false);
   assert.equal(status.autoWake, false);
+  assert.equal(status.clientPresence, 'unknown');
+  assert.equal(status.deliveryReceipts, 'unavailable');
+  assert.equal(status.manualRefresh, true);
   assert.equal(status.proxy, 'existing-mcp-child');
   assert.ok(status.missing.includes(publicToolName('comm_inbox')));
 });
@@ -348,7 +396,7 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(view, /dsh-agent-mail:inbox/);
   assert.doesNotMatch(client, /toggleCluster/);
   assert.doesNotMatch(client, /IconPanelRight/);
-  assert.match(client, /Quote to chat/);
+  assert.match(client, /引用到对话/);
   assert.match(client, /human@local/);
   const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
   assert.match(source, /export const inject = \['sessions'\];/);
@@ -359,8 +407,11 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(source, /owner\?\.block/);
   assert.doesNotMatch(source, /snap\?\.items\?\.\[0\]/);
   assert.match(source, /DEFAULT_DONE_BODY/);
-  assert.match(source, /Ack is available after Done, Error, or Cancel/);
-  assert.match(source, /Check & Ack/);
+  assert.match(source, /任务完成、报错或取消后才可以确认收悉/);
+  assert.match(source, /检查并确认收悉/);
+  assert.match(source, /'aria-label': '调整收件箱与详情高度'/);
+  assert.match(source, /客户端连接：未知/);
+  assert.match(source, /仅显示本次面板打开期间的本地发送记录/);
   assert.match(source, /await refresh\(false\)/);
   assert.doesNotMatch(source, /already claimed is not fatal/);
 });

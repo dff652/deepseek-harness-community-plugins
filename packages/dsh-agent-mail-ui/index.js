@@ -100,6 +100,9 @@ export function mailStatus(ctx) {
     missing,
     proxy: 'existing-mcp-child',
     autoWake: false,
+    clientPresence: 'unknown',
+    deliveryReceipts: 'unavailable',
+    manualRefresh: true,
   };
 }
 

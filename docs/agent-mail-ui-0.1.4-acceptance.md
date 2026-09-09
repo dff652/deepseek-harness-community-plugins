@@ -2,6 +2,10 @@
 
 Date: 2026-09-05. Release: `@dff652/dsh-agent-mail-ui@0.1.4`.
 
+This is the historical artifact acceptance record. Its pre-cutover live-state
+notes below were superseded by the [completed migration](agent-mail-ui-release-plan.md)
+and [September 9 live review](agent-mail-2026-09-09-review.md).
+
 ## Scope and target
 
 This candidate addresses three P2 findings from the complete unpushed review:

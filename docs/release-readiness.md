@@ -4,6 +4,12 @@ Agent Mail UI 0.1.4 closes the three P2 findings and passes local acceptance.
 The approved [live runtime migration](agent-mail-ui-release-plan.md) is
 complete; source push, CI and the reviewed GitHub Release are also complete.
 
+The later [0.1.5 candidate](agent-mail-ui-0.1.5-acceptance.md) is separate:
+source review and recorded local gates passed, but full real sidebar browser
+acceptance remains incomplete. Its source changes do not update the live UI.
+The [ordered follow-up checklist](agent-mail-capability-roadmap.md#ordered-follow-up-checklist)
+also separates per-client connectivity from release and deployment.
+
 This document defines the gates for the independently versioned public bundle
 candidates. Passing one gate does not authorize the next state transition.
 
@@ -374,8 +380,8 @@ not by itself authorize any external transition.
 - Marketplace PR [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
   adds only the Agent Mail YAML and generated README rows. Local generation,
   lint, site build and submission gate PASS; remote `PR check` and
-  `Submission gate` PASS. The PR is open, so a live catalog listing is not yet
-  claimed.
+  `Submission gate` PASS. The PR merged on 2026-08-24, rechecked September 9.
+  A new marketplace installation was not part of that status check.
 - npm publication, literal browser interaction, model-visible L5 use and
   live-profile deployment remain separate and were not performed.
 

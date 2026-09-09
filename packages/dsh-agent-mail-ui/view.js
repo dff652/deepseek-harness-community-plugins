@@ -32,6 +32,22 @@ export const TERMINAL_TASK_TYPES = ['done', 'error', 'cancel'];
 
 const UNREAD_DELIVERY_STATUSES = new Set(['pending', 'claimed']);
 
+const DELIVERY_STATUS_LABELS = new Map([
+  ['pending', '待领取'],
+  ['claimed', '已领取（未确认收悉）'],
+  ['acked', '已确认收悉'],
+  ['outbound', '已提交到邮箱 · 签收状态未知'],
+]);
+
+const TASK_OUTCOME_LABELS = new Map([
+  ['unknown', '完成状态未知（待核实）'],
+  ['acked', '已结束（已签收）'],
+  ['done', '已完成'],
+  ['error', '执行失败'],
+  ['cancel', '已取消'],
+  ['message', '消息'],
+]);
+
 export function publicToolName(rawName) {
   return `mcp__${SERVER_NAME}__${rawName}`;
 }
@@ -97,7 +113,9 @@ export function sessionScope(snapshot) {
 export function inboxItems(payload) {
   const items = Array.isArray(payload?.items) ? payload.items : [];
   return items.map((item) => {
-    const deliveryStatus = String(item.delivery_status ?? item.status ?? 'pending');
+    const deliveryStatus = item.delivery_status == null && item.status == null
+      ? ''
+      : String(item.delivery_status ?? item.status);
     return {
       messageId: String(item.message_id ?? item.id ?? ''),
       threadId: item.thread_id == null ? '' : String(item.thread_id),
@@ -129,10 +147,77 @@ export function threadMessages(payload) {
     taskId: item.task_id == null ? '' : String(item.task_id),
     type: String(item.type ?? 'message'),
     from: String(item.from ?? item.sender ?? ''),
+    to: String(item.to ?? ''),
     body: String(item.body_md ?? item.body ?? item.text ?? ''),
     effect: String(item.effect_level ?? item.effect ?? 'read'),
+    // comm_tail in the current provider contract omits delivery status. An
+    // empty value keeps the UI from inventing a pending/claimed state.
+    deliveryStatus: item.delivery_status == null ? '' : String(item.delivery_status),
     requiresHumanApproval: item.requires_human_approval === true,
   }));
+}
+
+export function messageTypeLabel(type) {
+  const value = String(type ?? 'message');
+  if (value === 'task') return '任务';
+  if (value === 'message') return '消息';
+  if (value === 'done') return '完成';
+  if (value === 'error') return '错误';
+  if (value === 'cancel') return '取消';
+  return value;
+}
+
+export function firstLine(value) {
+  const line = String(value ?? '').split(/\r?\n/, 1)[0].trim();
+  return line || '无主题';
+}
+
+export function threadSubject(item, messages = []) {
+  const task = messages.find((message) => (
+    message?.type === 'task' && String(message?.body ?? '').trim() !== ''
+  ));
+  const bodies = [task?.body, item?.body, ...messages
+    .filter((message) => !TERMINAL_TASK_TYPES.includes(message?.type))
+    .map((message) => message?.body)];
+  const body = bodies.find((candidate) => String(candidate ?? '').trim() !== '');
+  return firstLine(body);
+}
+
+export function threadParticipants(item, messages = []) {
+  const values = [];
+  const add = (value) => {
+    const participant = String(value ?? '').trim();
+    if (participant && !values.includes(participant)) values.push(participant);
+  };
+  add(item?.from);
+  add(item?.to);
+  for (const message of messages) {
+    add(message?.from);
+    add(message?.to);
+  }
+  return values;
+}
+
+export function deliveryStatusLabel(status) {
+  const value = String(status ?? '').trim();
+  return DELIVERY_STATUS_LABELS.get(value) ?? '状态未知';
+}
+
+export function taskOutcome(item, messages = [], terminalTaskIds = new Set()) {
+  if (!item || item.type !== 'task') return 'message';
+  const terminal = messages.find((message) => (
+    TERMINAL_TASK_TYPES.includes(message?.type)
+    && Boolean(item.taskId)
+    && message.taskId === item.taskId
+  ));
+  if (terminal) return terminal.type;
+  if (item.taskId && terminalTaskIds?.has?.(item.taskId)) return 'done';
+  if (item.deliveryStatus === 'acked') return 'acked';
+  return 'unknown';
+}
+
+export function taskOutcomeLabel(outcome) {
+  return TASK_OUTCOME_LABELS.get(String(outcome ?? '')) ?? '状态未知';
 }
 
 export function hasTerminalTaskOutcome(item, messages = []) {

@@ -56,7 +56,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.4.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.5.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -70,6 +70,25 @@ dsh --profile <profile> --dump-config
 The composed config must contain `id: dsh-agent-mail-ui` exactly once. The
 patch is a plain insert and can hot-mount; the companion MCP bundle still
 requires a restart when it is first added.
+
+## Mailbox states and UI limits
+
+The panel reports Agent Mail mailbox state separately from client presence.
+The recipient roster comes from `comm_list_agents`; it does not prove that a
+client is connected. A successful send means the message was submitted to the
+mailbox. It does not prove that the recipient client was notified, is online,
+or has read the message. Automatic wake and delivery receipts are not
+provided.
+
+The panel uses manual refresh and shows the last refresh time. The **Sent**
+view is explicitly local to the current panel session: it contains sends that
+completed while this panel was open, because the provider does not expose a
+global sent-history API. Closing the panel clears this list.
+
+When a thread is open, the divider between the inbox and detail panes sizes
+the inbox to its content. Drag it or focus it and use the arrow keys, Home,
+End, or Escape to adjust or restore automatic sizing. Message and task state,
+mailbox delivery state, and confirmation are displayed as separate values.
 
 ## Identity
 

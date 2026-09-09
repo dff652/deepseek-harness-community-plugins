@@ -19,9 +19,9 @@ package is a small configuration bundle with its own version and allowlist.
 > [!IMPORTANT]
 > `@dff652/dsh-ai-asset-hub@0.1.1` has a reviewed GitHub Release with an exact
 > tarball and `SHA256SUMS`. `@dff652/dsh-agent-mail@0.1.0` now has the same
-> reviewed Release boundary; its marketplace submission is open as
+> reviewed Release boundary; its marketplace submission was merged as
 > [awesome-dsh-plugin#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
-> with both automated checks passing. A separate clean-room
+> (status rechecked September 9). A separate clean-room
 > `@dff652/agentmemory-mcp-adapter@0.1.0` local source candidate now passes its
 > security, exact-pack, AgentMemory 0.9.28 and disposable DSH gates. It is not
 > yet a public repository or Release, so `@dff652/dsh-agentmemory@0.1.0`
@@ -54,6 +54,12 @@ with newer UI evidence in [UI acceptance](docs/agent-mail-ui-0.1.4-acceptance.md
 The [full-range UI review and release plan](docs/agent-mail-ui-release-plan.md)
 records the completed local and live gates, current observations and rollback
 steps.
+
+The [September 9 Agent Mail review](docs/agent-mail-2026-09-09-review.md)
+records current delivery evidence, client connection limits and UI follow-up.
+The [capability comparison and next steps](docs/agent-mail-capability-roadmap.md)
+separate the full provider from its DSH bundles and local receipt evidence
+from the still-unverified cross-machine client paths.
 
 ## What you get
 
@@ -303,7 +309,7 @@ CI runs the portable contract on Node 22.19 and 24.19.
 | Agent Mail UI GitHub Release | [`dsh-agent-mail-ui-v0.1.4`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4); exact tarball and `SHA256SUMS` verified |
 | AgentMemory GitHub Release | Adapter implementation/real acceptance complete locally; blocked pending separately authorized adapter repository publication and Release |
 | npm publication | Not published |
-| Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) open with both checks passing; AgentMemory waits for public adapter bytes and bundle Release |
+| Marketplace listing | AIAH listed after merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957); Agent Mail [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; AgentMemory waits for public adapter bytes and bundle Release |
 | Model-visible L5 acceptance | Not claimed |
 | Live-profile deployment | Not part of this repository |
 

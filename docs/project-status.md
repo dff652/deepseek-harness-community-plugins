@@ -1,6 +1,16 @@
 # Project status
 
-Status date: 2026-09-05.
+Status date: 2026-09-09.
+
+The [September 9 delivery and UI review](agent-mail-2026-09-09-review.md)
+confirms the live 0.1.4 mailbox and authorized browser-to-recipient-MCP
+delivery. It also records client connection and interface limitations, the
+merged Agent Mail marketplace PR, and the separate 0.1.5 improvement candidate.
+The [0.1.5 candidate record](agent-mail-ui-0.1.5-acceptance.md) keeps its local
+archive and checks separate from the released/live 0.1.4 baseline.
+The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
+record full-provider versus bundle responsibilities, real Codex receipt and
+isolated model execution, and the remaining sidebar and cross-machine gates.
 
 The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.
@@ -21,8 +31,9 @@ requires owner authorization.
 | Bundle | Implementation | Public source | GitHub Release | npm | Marketplace | Live use |
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
-| `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | Submitted as [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988); checks PASS, merge pending | Not installed by this project |
+| `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; state rechecked September 9 | Public artifact not installed live; private companion 0.1.1 is separate |
 | `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Live with DSH/MCP rc.2, Agent Mail 0.1.1, private Memory 0.1.1, sidebar 0.12.2 and market 1.41.0; Graph temporarily excluded; browser/API/restart PASS |
+| `@dff652/dsh-agent-mail-ui@0.1.5` | Local candidate; source review, 99 tests, real standalone and corrected model flow PASS; full real sidebar gate incomplete | Local candidate; not pushed | Not released | Not published | Not submitted | Separate disposable preview only; live UI remains 0.1.4 |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub
@@ -159,9 +170,9 @@ denial, fail-closed activation, reconnect, cleanup, clean-profile
 install/remove and AIAH coexistence passed. The anonymously downloaded Release
 tarball matched the recorded SHA-256 and passed the same disposable lifecycle.
 Marketplace PR [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988)
-is open and mergeable with both automated checks passing; this is a submission,
-not a live catalog listing. npm publication and live-profile installation were
-not performed.
+is merged (2026-08-24), as rechecked on September 9. This corrects the stale
+pending status; it is not a new marketplace installation acceptance. npm
+publication and live installation of this public artifact were not performed.
 
 Native automatic wake and session injection are not part of the
 configuration-only candidate. The provider `MIGRATION-REPORT.md` is stale
