@@ -1,16 +1,26 @@
-# Agent Mail management host prerequisite
+# Agent Mail management host status
 
 Date: 2026-09-09. Inspected DSH version: `0.1.1-rc.2`.
-This is a source/API assessment, not a change to the accepted UI 0.1.6.
+This records the source candidate status for provider `1.0.0-alpha.6` and UI
+`0.1.7`; it is not production or deployment acceptance.
 
 ## Finding
 
-The current DSH web carrier does not supply the authenticated management
+The raw DSH web carrier still does not supply the authenticated management
 principal, CSRF validation, per-profile permission or controlled process
 activation required by the [enrollment contract](agent-mail-p11-enrollment-contract.md).
 Registering a new route or generic RPC channel does not establish those
-permissions. The provider's guarded API therefore cannot yet be mounted as a
-working enrollment wizard in the current bundle.
+permissions. The optional provider alpha.6 `agent-mail/dsh-management` module
+now supplies that boundary when a DSH host explicitly mounts it with a private
+configuration file. The companion UI 0.1.7 includes the user-facing
+connection wizard and remains inert when the management host is unavailable.
+
+The provider's [authenticated management guide](https://github.com/dff652/agent-mail/blob/main/docs/guides/dsh-management.md)
+is authoritative for the private registry, password file, mount and activation
+steps. The UI bundle contains no provider implementation, protected homes or
+credentials. Exact packed-artifact and browser integration results are recorded
+in [P1.2 acceptance](agent-mail-p12-management-acceptance.md); this status does
+not claim that a provider or DSH deployment has been upgraded.
 
 The inspected DSH CLI archive has SHA-256
 `47ec05f45ada5ab87779ae18a90456b5ebff5421dc0ff5c179677d65e1c16057`.
@@ -33,8 +43,10 @@ paths. The findings are grounded in the declared interfaces and implementations.
 The bundle itself follows the raw web-carrier interface:
 `packages/dsh-agent-mail-ui/index.js` registers a request/response handler and
 checks Host, Origin and Fetch Metadata. It does not have an authenticated
-management principal. Ordinary mailbox access must not implicitly grant token
-issuance, connection replacement or process restart permission.
+management principal. UI 0.1.7 adds a separate client-side wizard that calls
+the provider management routes only after the host session reports an
+authenticated principal. Ordinary mailbox access must not implicitly grant
+token issuance, connection replacement or process restart permission.
 
 ## Required integration
 
@@ -57,15 +69,29 @@ The provider's `createConnectionManagementListener` accepts the host's
 authorization callback and server-owned profile registry, and rejects requests
 when those decisions are absent. It is not a login service or restart manager.
 
+## User-facing workflow
+
+The operator explicitly mounts the private provider adapter, installs UI 0.1.7
+and opens the Agent Mail panel. After management login, the wizard selects an
+allowed profile and Hub, verifies TLS, accepts a one-time code, confirms the
+returned new identity and saves the connection. `restart_required` means the
+selected DSH provider process must be restarted explicitly before the operator
+runs activation verification.
+
+If a mutation response is lost, the wizard reconciles the existing enrollment
+with its opaque handle and does not consume another code. Closing the page or
+clearing browser recovery metadata does not cancel a pending Hub enrollment;
+the operator must cancel it explicitly. Neither the wizard nor the mailbox UI
+wakes a model or proves recipient presence.
+
 ## Delivery choices
 
-The provider API and its tests can be delivered independently while the UI
-remains at 0.1.6. Continuing the wizard requires either a separately implemented
-authenticated management host with explicit activation handling, or reviewed
-native DSH interfaces providing equivalent guarantees. A reverse proxy by
-itself does not supply the complete CSRF and profile-policy contract. The
-missing automatic restart API does not prevent a correctly authorized wizard
-from exposing the separate `restart_required` state.
+The provider API, authenticated host adapter and UI wizard are implemented as
+an opt-in source candidate. A reverse proxy by itself does not supply the
+complete CSRF and profile-policy contract. The missing automatic restart API
+does not prevent a correctly authorized wizard from exposing the separate
+`restart_required` state. See the linked P1.2 record for exact artifact and
+browser acceptance.
 
-No new management service, production provider upgrade or wizard deployment
-is performed by this assessment. Those integration choices remain explicit.
+No management service is mounted, provider is upgraded, or wizard is deployed
+by this document. Those integration choices remain explicit.

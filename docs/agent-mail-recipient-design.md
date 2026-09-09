@@ -1,14 +1,15 @@
 # Agent Mail recipients and connection design
 
-Date: 2026-09-09. Status: design proposal grounded in current source; not a
-claim that enrollment, presence or connection management is implemented in
-the DSH UI. The accepted visual direction is neutral surfaces, a restrained
-blue accent, balanced spacing and collapsible diagnostic details.
+Date: 2026-09-09. Status: design and local implementation tracking. The
+linked P0 and P1.2 records define the accepted scope; presence remains planned.
+The accepted visual direction is neutral surfaces, a restrained blue accent,
+balanced spacing and collapsible diagnostic details.
 
 The first delivery step is implemented in the
 [0.1.6 P0 candidate](agent-mail-ui-0.1.6-acceptance.md): mailbox/recipient views,
 a separate composer, unknown-presence wording and failure/retry feedback.
-The enrollment and connection-management design below remains later scope.
+The enrollment and connection-management design below is implemented by the
+[P1.2 candidate](agent-mail-p12-management-acceptance.md); presence remains later scope.
 
 ## Current capability
 
@@ -181,8 +182,9 @@ probes. The first implementation is new-identity enrollment only: the existing
 redemption path can replace old credentials and must not be wired directly
 into the wizard. The provider increment and contract tests are now implemented
 and locally validated; see [backend acceptance](agent-mail-p11-backend-acceptance.md).
-The [DSH management host gap](agent-mail-management-host-gap.md) must be resolved
-before the browser wizard performs real enrollment operations.
+The [optional management host](agent-mail-management-host-gap.md) now supplies
+the authenticated boundary. The alpha.6 / UI 0.1.7 candidate connects the wizard;
+see [P1.2 acceptance](agent-mail-p12-management-acceptance.md) for its exact gates.
 
 ### P1.1: establish the provider contract
 
@@ -239,8 +241,8 @@ If the recipient does not handle it within the bounded test, report timeout or
 awaiting handling rather than offline status. Preserve failure evidence without
 credentials or user message content in public documentation.
 
-The provider portion of P1 is locally implemented; the DSH wizard, its
-authenticated host adapter and actual browser acceptance remain incomplete.
-The 0.1.6 release track may proceed independently when authorized; it does not
-require including unfinished P1 features in the accepted P0 artifact. Push,
-release and production deployment remain separate decisions.
+The provider, authenticated host adapter and browser wizard are locally
+implemented in the alpha.6 / UI 0.1.7 candidate. The linked P1.2 record separates
+contract/fixture checks from real DSH acceptance. The existing 0.1.6 preview
+and 0.1.4 production installation remain separate from this isolated candidate.
+Push, release and production deployment remain separate decisions.

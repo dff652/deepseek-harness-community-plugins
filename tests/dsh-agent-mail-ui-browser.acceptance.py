@@ -79,6 +79,13 @@ def json_response(ok: bool, value: object = None, error: str = "") -> bytes:
     return json.dumps(body, separators=(",", ":")).encode("utf-8")
 
 
+def json_error(code: str, message: str) -> bytes:
+    return json.dumps(
+        {"ok": False, "error": {"code": code, "message": message}},
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
 class Fixture:
     """Deterministic Agent Mail API responses for one browser scenario."""
 
@@ -97,6 +104,116 @@ class Fixture:
         self.acked = False
         self.external_ack = False
         self.calls: list[dict[str, object]] = []
+        self.management_authenticated = False
+        self.management_csrf = "fixture-management-csrf"
+        self.management_profile = "fixture-alpha-profile"
+        self.management_endpoint = "https://hub.fixture.test"
+        self.management_context = "fixture-context-1"
+        self.management_enrollment = "fixture-enrollment-1"
+        self.management_revision = "fixture-revision-1"
+        self.management_saved_revision = "fixture-revision-2"
+        self.management_agent = "joined-alpha@fixture"
+        self.management_state = "none"
+        self.management_calls: list[dict[str, object]] = []
+
+    def management_session(self) -> dict[str, object]:
+        if not self.management_authenticated:
+            return {"authenticated": False}
+        return {
+            "authenticated": True,
+            "csrf_token": self.management_csrf,
+            "expires_at": "2099-01-01T00:00:00.000Z",
+            "profiles": [{
+                "handle": self.management_profile,
+                "label": "Fixture Alpha profile",
+                "endpoints": [self.management_endpoint],
+            }],
+        }
+
+    def management_enrollment_status(self) -> dict[str, object]:
+        value: dict[str, object] = {"state": self.management_state}
+        if self.management_state not in {"none", "context_ready"}:
+            value.update({
+                "enrollment_handle": self.management_enrollment,
+                "agent_id": self.management_agent,
+                "expires_at": "2099-01-01T00:00:00.000Z",
+                "save_state": "saved" if self.management_state in {"saved", "active"} else "unsaved",
+                "activation_state": "active" if self.management_state == "active" else "restart_required" if self.management_state == "saved" else "pending",
+                "config_revision": self.management_saved_revision if self.management_state in {"saved", "active"} else self.management_revision,
+                "commit_id": "fixture-commit-1" if self.management_state in {"saved", "active"} else "",
+            })
+        return value
+
+    def handle_management(self, path: str, payload: dict[str, object], csrf: str | None) -> tuple[int, bytes]:
+        with self.lock:
+            self.management_calls.append({"path": path, "payload": payload, "csrf": csrf})
+            if path == "management-session/status":
+                return HTTPStatus.OK, json_response(True, self.management_session())
+            if path == "management-session/login":
+                if payload.get("password") != "fixture-admin-password":
+                    return HTTPStatus.UNAUTHORIZED, json_error("management_denied", "invalid management password")
+                self.management_authenticated = True
+                return HTTPStatus.OK, json_response(True, self.management_session())
+            if path == "management-session/logout":
+                if not self.management_authenticated or csrf != self.management_csrf:
+                    return HTTPStatus.FORBIDDEN, json_error("csrf_missing", "management session is not valid")
+                self.management_authenticated = False
+                return HTTPStatus.OK, json_response(True, {"authenticated": False})
+            if not path.startswith("connection-management/"):
+                return HTTPStatus.NOT_FOUND, json_error("management_unavailable", "unknown management fixture path")
+            if not self.management_authenticated:
+                return HTTPStatus.UNAUTHORIZED, json_error("management_denied", "management login required")
+            if csrf != self.management_csrf:
+                return HTTPStatus.FORBIDDEN, json_error("csrf_missing", "missing CSRF")
+            operation = path[len("connection-management/"):]
+            if operation == "begin":
+                if payload.get("profile_handle") != self.management_profile or payload.get("endpoint") != self.management_endpoint:
+                    return HTTPStatus.FORBIDDEN, json_error("target_not_allowed", "target is not allowed")
+                self.management_state = "context_ready"
+                return HTTPStatus.OK, json_response(True, {
+                    "context_handle": self.management_context,
+                    "observed_config_revision": self.management_revision,
+                    "expires_at": "2099-01-01T00:00:00.000Z",
+                    "target_label": "Fixture Alpha profile",
+                    "endpoint": self.management_endpoint,
+                })
+            if operation == "redeem":
+                if self.management_state != "context_ready" or payload.get("context_handle") != self.management_context:
+                    return HTTPStatus.CONFLICT, json_error("context_expired", "context is not ready")
+                if payload.get("code") != "PAIR-ALPHA-6":
+                    return HTTPStatus.BAD_REQUEST, json_error("code_invalid_or_expired", "invalid pairing code")
+                self.management_state = "pending_save"
+                return HTTPStatus.OK, json_response(True, {
+                    "state": "pending_save",
+                    "enrollment_handle": self.management_enrollment,
+                    "agent_id": self.management_agent,
+                    "expires_at": "2099-01-01T00:00:00.000Z",
+                    "save_state": "unsaved",
+                    "activation_state": "pending",
+                })
+            if operation == "status":
+                handle = payload.get("enrollment_handle")
+                if handle not in {self.management_context, self.management_enrollment}:
+                    return HTTPStatus.FORBIDDEN, json_error("management_denied", "unknown enrollment")
+                return HTTPStatus.OK, json_response(True, self.management_enrollment_status())
+            if operation == "commit":
+                if self.management_state != "pending_save" or payload.get("enrollment_handle") != self.management_enrollment:
+                    return HTTPStatus.CONFLICT, json_error("config_conflict", "enrollment is not pending save")
+                if payload.get("profile_handle") != self.management_profile or payload.get("expected_config_revision") != self.management_revision or payload.get("confirmed_agent_id") != self.management_agent:
+                    return HTTPStatus.CONFLICT, json_error("config_conflict", "commit confirmation does not match")
+                self.management_state = "saved"
+                return HTTPStatus.OK, json_response(True, self.management_enrollment_status())
+            if operation == "activate":
+                if self.management_state != "saved" or payload.get("enrollment_handle") != self.management_enrollment:
+                    return HTTPStatus.CONFLICT, json_error("activation_failed", "activation is not ready")
+                if payload.get("profile_handle") != self.management_profile:
+                    return HTTPStatus.FORBIDDEN, json_error("target_not_allowed", "target is not allowed")
+                self.management_state = "active"
+                return HTTPStatus.OK, json_response(True, self.management_enrollment_status())
+            if operation == "cancel":
+                self.management_state = "cancelled"
+                return HTTPStatus.OK, json_response(True, {"state": "cancelled"})
+            return HTTPStatus.NOT_FOUND, json_error("management_unavailable", "unknown management operation")
 
     @property
     def item(self) -> dict[str, object]:
@@ -175,6 +292,14 @@ class Fixture:
                 self.diagnose_calls += 1
                 if self.scenario == "identity-loss" and self.diagnose_calls == 2:
                     return HTTPStatus.SERVICE_UNAVAILABLE, json_response(False, error="diagnostic fixture failure")
+                if self.scenario == "management" and self.management_state == "active":
+                    return HTTPStatus.OK, json_response(True, {
+                        "remote": True,
+                        "mode": "remote_mail_api",
+                        "hub_url": "https://hub.fixture.test",
+                        "agent_id": "ui-harness@local",
+                        "implementation": "synthetic-browser-api",
+                    })
                 return HTTPStatus.OK, json_response(True, {
                     "agent_id_env": "ui-harness@local",
                     "version": "fixture",
@@ -266,7 +391,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         path = urlparse(self.path).path
         prefix = "/agent-mail-ui/api/"
-        if not path.startswith(prefix):
+        management_prefixes = ("/v1/management-session/", "/v1/connection-management/")
+        if path.startswith(management_prefixes):
+            management_path = path[len("/v1/"):]
+        elif path.startswith(prefix):
+            management_path = None
+        else:
             self._send(HTTPStatus.NOT_FOUND, json_response(False, error="unknown fixture path"), "application/json")
             return
         try:
@@ -277,7 +407,14 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError) as error:
             self._send(HTTPStatus.BAD_REQUEST, json_response(False, error=str(error)), "application/json")
             return
-        status, body = self.server.fixture.handle(path[len(prefix):], payload)
+        if management_path is not None:
+            status, body = self.server.fixture.handle_management(
+                management_path,
+                payload,
+                self.headers.get("X-Agent-Mail-CSRF"),
+            )
+        else:
+            status, body = self.server.fixture.handle(path[len(prefix):], payload)
         self._send(status, body, "application/json")
 
     def _send(self, status: int, body: bytes, content_type: str) -> None:
@@ -578,6 +715,104 @@ def click_button_containing(driver, fragment: str) -> None:
         return False
 
     wait_for(driver, find, f"button containing {fragment!r}").click()
+
+
+def action_button(driver, action: str, *, enabled: bool = True):
+    selector = f'[data-agent-mail-action="{action}"]'
+
+    def find(current):
+        elements = current.find_elements(By.CSS_SELECTOR, selector)
+        for element in elements:
+            if not enabled or not button_disabled(element):
+                return element
+        return False
+
+    return wait_for(driver, find, f"action button {action!r}")
+
+
+def management_element(driver, selector: str, label: str, *, enabled: bool = False):
+    """Find a management control, scroll its real overflow parent, and verify visibility."""
+    def find(current):
+        elements = current.find_elements(By.CSS_SELECTOR, selector)
+        for element in elements:
+            if enabled and button_disabled(element):
+                continue
+            return element
+        return False
+
+    element = wait_for(driver, find, f"management element {label!r}")
+    before = driver.execute_script(
+        """
+        const element = arguments[0];
+        const connection = document.querySelector('[data-agent-mail-connection]');
+        const rect = element.getBoundingClientRect();
+        const container = connection?.getBoundingClientRect();
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          containerTop: container?.top ?? null,
+          containerBottom: container?.bottom ?? null,
+          scrollTop: connection?.scrollTop ?? 0,
+          scrollHeight: connection?.scrollHeight ?? 0,
+          clientHeight: connection?.clientHeight ?? 0,
+          displayed: rect.width > 0 && rect.height > 0,
+        };
+        """,
+        element,
+    )
+    driver.execute_script(
+        "arguments[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });",
+        element,
+    )
+    element = wait_for(driver, find, f"visible management element {label!r}")
+    after = driver.execute_script(
+        """
+        const element = arguments[0];
+        const connection = document.querySelector('[data-agent-mail-connection]');
+        const rect = element.getBoundingClientRect();
+        const container = connection?.getBoundingClientRect();
+        const visible = rect.width > 0 && rect.height > 0
+          && (!container || (rect.top >= container.top - 1 && rect.bottom <= container.bottom + 1));
+        return {
+          top: rect.top,
+          bottom: rect.bottom,
+          containerTop: container?.top ?? null,
+          containerBottom: container?.bottom ?? null,
+          scrollTop: connection?.scrollTop ?? 0,
+          scrollHeight: connection?.scrollHeight ?? 0,
+          clientHeight: connection?.clientHeight ?? 0,
+          displayed: rect.width > 0 && rect.height > 0,
+          visible,
+        };
+        """,
+        element,
+    )
+    assert element.is_displayed(), f"{label} remained clipped after scrolling: {after}"
+    assert after["visible"], f"{label} is outside the management overflow viewport: {after}"
+    return element, {"before": before, "after": after}
+
+
+def constrain_management_host(driver) -> dict[str, object]:
+    """Mirror a DSH fixed-height sidebar host for the real rendered panel."""
+    driver.set_window_size(900, 760)
+    return driver.execute_script(
+        """
+        const host = document.querySelector('#sidebar-panel');
+        if (!host) throw new Error('sidebar host is missing');
+        host.style.height = 'min(70vh, 700px)';
+        host.style.maxHeight = 'min(70vh, 700px)';
+        host.style.overflow = 'hidden';
+        host.dataset.managementFixture = 'fixed-70vh-700px';
+        const rect = host.getBoundingClientRect();
+        return {
+          viewportWidth: document.documentElement.clientWidth,
+          viewportHeight: document.documentElement.clientHeight,
+          hostWidth: rect.width,
+          hostHeight: rect.height,
+          hostOverflow: getComputedStyle(host).overflowY,
+        };
+        """,
+    )
 
 
 def button_containing(driver, fragment: str):
@@ -1298,6 +1533,261 @@ def run_offline_clears_recipients(driver, server: FixtureServer) -> dict[str, ob
     }
 
 
+def run_management_enrollment(driver, server: FixtureServer) -> dict[str, object]:
+    driver.set_window_size(900, 760)
+    driver.get(f"http://127.0.0.1:{server.server_port}/?mode=sidebar&scenario=management")
+    wait_for(driver, lambda current: current.execute_script("return Boolean(window.__HARNESS__.tab)"), "management sidebar")
+    layout = constrain_management_host(driver)
+    assert layout["hostOverflow"] == "hidden", layout
+    assert layout["hostHeight"] <= min(layout["viewportHeight"] * 0.7, 700) + 1, layout
+    click_button(driver, "Agent Mail")
+    action_button(driver, "connection-management").click()
+    wait_for(
+        driver,
+        lambda current: current.execute_script(
+            """
+            const connection = document.querySelector('[data-agent-mail-connection]');
+            if (!connection) return false;
+            const style = getComputedStyle(connection);
+            return style.overflowY in { auto: true, scroll: true };
+            """
+        ),
+        "scrollable management connection region",
+    )
+    reachability: dict[str, dict[str, object]] = {}
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-management-state="unauthenticated"]'),
+        "management login state",
+    )
+
+    password_field, reachability["login"] = management_element(
+        driver,
+        '[data-agent-mail-field="management-password"]',
+        "management password",
+    )
+    password_field.send_keys("fixture-admin-password")
+    login, reachability["loginAction"] = management_element(
+        driver,
+        '[data-agent-mail-action="login"]',
+        "management login",
+        enabled=True,
+    )
+    login.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-management-state="authenticated"]')
+        and current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-field="profile"]'),
+        "authenticated management state",
+    )
+    wait_for(
+        driver,
+        lambda current: current.execute_script(
+            """
+            const connection = document.querySelector('[data-agent-mail-connection]');
+            return Boolean(connection && connection.scrollHeight > connection.clientHeight);
+            """
+        ),
+        "management content overflowing its fixed-height connection region",
+    )
+    assert driver.find_element(By.CSS_SELECTOR, '[data-agent-mail-field="profile"]').get_attribute("value") == "fixture-alpha-profile"
+    assert driver.find_element(By.CSS_SELECTOR, '[data-agent-mail-field="endpoint"]').get_attribute("value") == "https://hub.fixture.test"
+
+    begin, reachability["begin"] = management_element(
+        driver,
+        '[data-agent-mail-action="begin-enrollment"]',
+        "begin enrollment",
+        enabled=True,
+    )
+    begin.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-enrollment-phase="context_ready"]'),
+        "pairing context",
+    )
+    pairing_code, reachability["pairingCode"] = management_element(
+        driver,
+        '[data-agent-mail-field="pairing-code"]',
+        "pairing code",
+    )
+    pairing_code.send_keys("PAIR-ALPHA-6")
+    redeem, reachability["redeem"] = management_element(
+        driver,
+        '[data-agent-mail-action="redeem"]',
+        "redeem pairing code",
+        enabled=True,
+    )
+    redeem.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-enrollment-phase="pending_save"]'),
+        "pending save identity",
+    )
+    assert not driver.find_elements(By.CSS_SELECTOR, '[data-agent-mail-field="pairing-code"]'), "pairing code remained visible after redeem"
+    recovery_raw = driver.execute_script("return sessionStorage.getItem('dsh-agent-mail-ui.enrollment.v1')")
+    recovery = json.loads(recovery_raw)
+    assert set(recovery) == {
+        "profile_handle",
+        "context_handle",
+        "enrollment_handle",
+        "request_id",
+        "observed_config_revision",
+    }, recovery
+    assert "PAIR-ALPHA-6" not in recovery_raw
+    assert "fixture-management-csrf" not in recovery_raw
+    assert "password" not in recovery_raw
+    assert "agent_id" not in recovery
+    assert "joined-alpha@fixture" in text_of(driver)
+
+    confirm, reachability["identityConfirm"] = management_element(
+        driver,
+        '[data-agent-mail-field="confirm-identity"]',
+        "identity confirmation",
+    )
+    confirm.click()
+    commit, reachability["commit"] = management_element(
+        driver,
+        '[data-agent-mail-action="commit"]',
+        "commit enrollment",
+        enabled=True,
+    )
+    commit.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-enrollment-phase="saved"]')
+        and "连接已保存" in text_of(current),
+        "saved connection awaiting activation",
+    )
+    with server.fixture.lock:
+        activation_calls_before_reload = [
+            call for call in server.fixture.management_calls
+            if call["path"] == "connection-management/activate"
+        ]
+    assert not activation_calls_before_reload, activation_calls_before_reload
+
+    # A page reload creates a fresh controller.  The checked-in recovery
+    # metadata must recover the saved enrollment after a new login.
+    with server.fixture.lock:
+        server.fixture.management_authenticated = False
+    driver.refresh()
+    layout_after_reload = constrain_management_host(driver)
+    click_button(driver, "Agent Mail")
+    action_button(driver, "connection-management").click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-field="management-password"]'),
+        "re-login form after reload",
+    )
+    password_field, reachability["relogin"] = management_element(
+        driver,
+        '[data-agent-mail-field="management-password"]',
+        "re-login password",
+    )
+    password_field.send_keys("fixture-admin-password")
+    login, reachability["reloginAction"] = management_element(
+        driver,
+        '[data-agent-mail-action="login"]',
+        "re-login",
+        enabled=True,
+    )
+    login.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-enrollment-phase="saved"]')
+        and "连接已保存" in text_of(current),
+        "restored saved enrollment",
+    )
+    activate, reachability["activate"] = management_element(
+        driver,
+        '[data-agent-mail-action="activate"]',
+        "activate enrollment",
+        enabled=True,
+    )
+    activate.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-enrollment-phase="active"]')
+        and "连接已激活" in text_of(current),
+        "active connection",
+    )
+    wait_for(
+        driver,
+        lambda current: len(api_calls(server.fixture, "diagnose")) >= 2
+        and len(api_calls(server.fixture, "agents")) >= 2
+        and len(api_calls(server.fixture, "inbox")) >= 2,
+        "post-activation mailbox refresh",
+    )
+
+    open_recipients, reachability["openRecipients"] = management_element(
+        driver,
+        '[data-agent-mail-action="open-recipients"]',
+        "open recipients",
+        enabled=True,
+    )
+    open_recipients.click()
+    recipient = wait_for(
+        driver,
+        lambda current: next(
+            (
+                element for element in current.find_elements(By.CSS_SELECTOR, '[data-recipient-id="worker@local"]')
+                if not button_disabled(element)
+            ),
+            False,
+        ),
+        "active recipient directory",
+    )
+    recipient.click()
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-agent-mail-field="recipient"]')
+        and current.execute_script(
+            """return document.querySelector('[data-agent-mail-field="recipient"]')?.value"""
+        ) == "worker@local",
+        "test-task composer",
+    )
+    body = driver.find_element(By.CSS_SELECTOR, '[data-agent-mail-field="message-body"]')
+    body.send_keys("Fixture explicit read-only test task after activation.")
+    action_button(driver, "send-mail").click()
+    sent_call = wait_api_call(
+        server.fixture,
+        "send",
+        predicate=lambda call: call["payload"].get("type") == "task",
+    )
+    assert sent_call["payload"]["effect"] == "read", sent_call
+    assert sent_call["payload"]["to"] == "worker@local", sent_call
+    wait_for(driver, lambda current: "已提交到邮箱" in text_of(current) and "已发送" in text_of(current), "explicit test task result")
+    with server.fixture.lock:
+        activation_calls = [
+            call for call in server.fixture.management_calls
+            if call["path"] == "connection-management/activate"
+        ]
+    assert len(activation_calls) == 1, activation_calls
+    assert driver.execute_script("return sessionStorage.getItem('dsh-agent-mail-ui.enrollment.v1')") is None
+    return {
+        "surface": "sidebar",
+        "login": True,
+        "pairingCodeRedeemed": True,
+        "identityConfirmed": True,
+        "savedBeforeActivation": True,
+        "reloadRecovery": True,
+        "activation": True,
+        "mailRefreshAfterActivation": True,
+        "explicitReadOnlyTestTask": True,
+        "fixedManagementHost": {
+            "hostHeight": layout["hostHeight"],
+            "viewportHeight": layout["viewportHeight"],
+            "cssHeight": "min(70vh, 700px)",
+            "overflow": layout["hostOverflow"],
+        },
+        "fixedManagementHostAfterReload": {
+            "hostHeight": layout_after_reload["hostHeight"],
+            "viewportHeight": layout_after_reload["viewportHeight"],
+        },
+        "managementControlsReachableAfterScroll": reachability,
+        "backend": "synthetic local HTTP fixture",
+    }
+
+
 def run_theme_and_narrow_geometry(driver, server: FixtureServer) -> dict[str, object]:
     driver.set_window_size(380, 800)
     try:
@@ -1408,6 +1898,11 @@ def main() -> int:
         driver = make_driver(args.browser)
         browser_capabilities = dict(driver.capabilities)
         results.append(run_sidebar_done_ack(driver, server))
+        server.shutdown()
+        server.server_close()
+
+        server = start_server(Fixture("management"))
+        results.append(run_management_enrollment(driver, server))
         server.shutdown()
         server.server_close()
 

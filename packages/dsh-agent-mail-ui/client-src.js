@@ -29,6 +29,11 @@ import {
   toolCardModel,
   unreadBadge,
 } from './view.js';
+import {
+  enrollmentPhaseLabel,
+  getManagementController,
+  isEnrollmentPending,
+} from './management-view.js';
 
 // Sessions is a core DSH client service, independent of Agent Mail MCP.
 export const inject = ['sessions'];
@@ -45,6 +50,10 @@ let localSentSequence = 0;
 
 export function apply(ctx) {
   ctx.effect(() => bindSurfaces(ctx));
+  ctx.effect(() => {
+    const controller = getManagementController(ctx);
+    return () => controller.dispose();
+  });
   const slots = ctx.get?.('slots');
   if (!slots?.inject) return;
   for (const toolName of CARD_TOOLS) {
@@ -143,6 +152,7 @@ function StandaloneShell({ ctx }) {
       type: 'button',
       style: fabStyle,
       title: 'Agent Mail',
+      'data-agent-mail-action': 'open-mail',
       onClick: () => setOpen((value) => !value),
     }, envelopeIcon(16), ' Mail'),
     open && h('div', { style: drawerStyle },
@@ -193,6 +203,16 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const [lastAgentsRefresh, setLastAgentsRefresh] = useState(null);
   const [listPaneSize, setListPaneSize] = useState(null);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const [managementOpen, setManagementOpen] = useState(false);
+  const managementController = useMemo(
+    () => getManagementController(pluginCtx),
+    [pluginCtx],
+  );
+  const managementSnapshot = useSyncExternalStore(
+    useCallback((listener) => managementController.subscribe(listener), [managementController]),
+    () => managementController.getSnapshot(),
+    () => managementController.getSnapshot(),
+  );
   const listRef = useRef(null);
   const resizeRef = useRef(null);
   const selectedRef = useRef(selected);
@@ -339,6 +359,10 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     if (visible) void refresh();
   }, [visible, refresh]);
 
+  useEffect(() => {
+    if (visible) void managementController.ensureStatus();
+  }, [visible, managementController]);
+
   const openThread = async (item) => {
     if (!beginOperation()) return;
     if (item.messageId !== selected?.messageId) setDoneBody(DEFAULT_DONE_BODY);
@@ -481,12 +505,23 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   };
 
   const openComposer = (recipient = '') => {
+    setManagementOpen(false);
     if (operationRef.current || status?.live !== true) return;
     if (panelView !== 'compose') setComposeReturnView(panelView);
     if (recipient) setDraft((current) => ({ ...current, to: recipient }));
     setPanelView('compose');
     setError('');
   };
+
+  const openRecipientsForTest = () => {
+    if (operationRef.current) return;
+    setManagementOpen(false);
+    chooseView('recipients');
+  };
+
+  const refreshAfterActivation = useCallback(() => {
+    void refresh();
+  }, [refresh]);
 
   const refreshRecipients = async () => {
     if (operationRef.current || refreshInFlightRef.current || status?.live !== true) return;
@@ -578,6 +613,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: viewButtonStyle(panelView === 'inbox'),
         'aria-pressed': panelView === 'inbox',
         disabled: busy,
+        'data-agent-mail-action': 'mail-inbox',
         onClick: () => chooseView('inbox'),
       }, '收件箱'),
       h('button', {
@@ -585,6 +621,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: viewButtonStyle(panelView === 'sent'),
         'aria-pressed': panelView === 'sent',
         disabled: busy,
+        'data-agent-mail-action': 'mail-sent',
         onClick: () => chooseView('sent'),
       }, `已发送（本次面板：${sentRecords.length}）`),
       h('button', {
@@ -592,6 +629,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: viewButtonStyle(panelView === 'recipients'),
         'aria-pressed': panelView === 'recipients',
         disabled: busy,
+        'data-agent-mail-action': 'mail-recipients',
         onClick: () => chooseView('recipients'),
       }, '收件人'),
     ),
@@ -606,6 +644,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
             type: 'button',
             style: buttonStyle,
             disabled: busy || status?.live !== true,
+            'data-agent-mail-action': 'recipient-refresh',
             onClick: () => void refreshRecipients(),
           }, '刷新收件人'),
         ),
@@ -779,6 +818,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         type: 'button',
         style: buttonStyle,
         disabled: busy,
+        'data-agent-mail-action': 'compose-back',
         onClick: () => {
           if (operationRef.current) return;
           setPanelView(composeReturnView);
@@ -794,6 +834,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: inputStyle,
         value: draft.to,
         disabled: busy || status?.live !== true,
+        'data-agent-mail-field': 'recipient',
         onChange: (event) => setDraft((current) => ({ ...current, to: event.target.value })),
       },
         h('option', { value: '' }, '选择收件人'),
@@ -806,6 +847,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: inputStyle,
         value: draft.type,
         disabled: busy || status?.live !== true,
+        'data-agent-mail-field': 'message-type',
         onChange: (event) => setDraft((current) => ({ ...current, type: event.target.value })),
       },
         h('option', { value: 'task' }, '任务'),
@@ -818,6 +860,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         style: { ...inputStyle, minHeight: 96, resize: 'vertical' },
         value: draft.body,
         disabled: busy || status?.live !== true,
+        'data-agent-mail-field': 'message-body',
         placeholder: draft.type === 'task' ? '请输入只读任务内容' : '请输入消息内容',
         onChange: (event) => setDraft((current) => ({ ...current, body: event.target.value })),
       }),
@@ -828,6 +871,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         type: 'button',
         style: primaryButtonStyle,
         disabled: busy || !sendReady,
+        'data-agent-mail-action': 'send-mail',
         onClick: () => void sendDraft(),
       }, draft.type === 'task' ? '发送只读任务' : '发送消息'),
     ),
@@ -859,12 +903,14 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           type: 'button',
           style: buttonStyle,
           disabled: busy,
+          'data-agent-mail-action': 'mail-refresh',
           onClick: () => void refresh(),
         }, '手动刷新'),
         !isCompose && h('button', {
           type: 'button',
           style: primaryButtonStyle,
           disabled: busy || status?.live !== true,
+          'data-agent-mail-action': 'open-composer',
           onClick: () => openComposer(),
         }, '写消息'),
       ),
@@ -873,14 +919,28 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       h('span', null, `当前邮箱：${selfId || '未知'}`),
       h('span', null, `${lastRefresh?.ok ? '最后刷新' : lastRefresh ? '最近尝试' : '最后刷新'}：${formatRefreshTime(lastRefresh?.at)}`),
     ),
-    h('div', { style: connectionStyle },
+    h('div', { style: managementOpen ? { ...connectionStyle, flex: '1 1 auto', minHeight: 0, overflow: 'auto' } : connectionStyle, 'data-agent-mail-connection': true },
       h('button', {
         type: 'button',
         style: connectionButtonStyle,
         'aria-expanded': diagnosticsOpen,
+        'data-agent-mail-action': 'diagnostics',
         onClick: () => setDiagnosticsOpen((open) => !open),
       }, diagnosticsOpen ? '收起连接详情' : '连接详情 · 状态按需查看'),
       diagnostics,
+      h('button', {
+        type: 'button',
+        style: connectionButtonStyle,
+        'aria-expanded': managementOpen,
+        'data-agent-mail-action': 'connection-management',
+        onClick: () => setManagementOpen((open) => !open),
+      }, managementOpen ? '收起连接管理' : '连接管理'),
+      managementOpen && h(ManagementPanel, {
+        controller: managementController,
+        snapshot: managementSnapshot,
+        onActivated: refreshAfterActivation,
+        onOpenRecipients: openRecipientsForTest,
+      }),
     ),
     busy && h('div', { style: loadingStyle, role: 'status' }, status === null
       ? '正在读取 Agent Mail…'
@@ -894,8 +954,452 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       h('span', null, error),
       h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refresh() }, '重试'),
     ),
-    isCompose ? renderCompose() : renderMailbox(),
+    !managementOpen && (isCompose ? renderCompose() : renderMailbox()),
     h('div', { style: footerStyle }, '发送只写入 Agent Mail 邮箱，不会自动唤醒客户端。'),
+  );
+}
+
+function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }) {
+  const [password, setPassword] = useState('');
+  const [pairingCode, setPairingCode] = useState('');
+  const [identityConfirmed, setIdentityConfirmed] = useState(false);
+  const [clearRecoveryArmed, setClearRecoveryArmed] = useState(false);
+  const activatedGeneration = useRef(null);
+  const enrollment = snapshot.enrollment;
+  const phase = enrollment?.phase ?? '';
+  const pending = isEnrollmentPending(enrollment);
+  const busy = Boolean(snapshot.authBusy || snapshot.enrollmentBusy);
+  const profile = snapshot.profiles.find((entry) => entry.handle === snapshot.selectedProfileHandle);
+  const endpoint = snapshot.selectedEndpoint;
+
+  useEffect(() => {
+    if (phase !== 'pending_save') setIdentityConfirmed(false);
+  }, [phase]);
+
+  useEffect(() => {
+    const generation = enrollment?.generation;
+    if (phase === 'active' && generation != null && activatedGeneration.current !== generation) {
+      activatedGeneration.current = generation;
+      onActivated?.();
+    }
+  }, [enrollment?.generation, onActivated, phase]);
+
+  const submitLogin = async (event) => {
+    event.preventDefault();
+    const secret = password;
+    setPassword('');
+    await controller.login(secret);
+  };
+
+  const submitRedeem = async (event) => {
+    event.preventDefault();
+    const secret = pairingCode.trim();
+    setPairingCode('');
+    await controller.redeem(secret);
+  };
+
+  const submitCommit = async (event) => {
+    event.preventDefault();
+    await controller.commit(identityConfirmed);
+  };
+
+  const logout = async () => {
+    setPassword('');
+    setPairingCode('');
+    setIdentityConfirmed(false);
+    await controller.logout();
+  };
+
+  const statusLabel = {
+    checking: '正在检查管理会话',
+    unconfigured: '管理宿主未配置',
+    unauthenticated: '未登录',
+    authenticated: '已登录',
+    error: '状态未知',
+  }[snapshot.managementStatus] ?? '状态未知';
+
+  const header = h('div', { style: managementHeaderStyle },
+    h('div', { style: managementTitleStyle },
+      h('strong', null, '连接管理'),
+      h('span', {
+        style: pillStyle(snapshot.managementStatus === 'authenticated'),
+        'data-agent-mail-management-status': snapshot.managementStatus,
+      }, statusLabel),
+    ),
+    h('div', { style: managementHelperStyle },
+      '配对、保存和激活由受保护的管理宿主执行；普通 Agent Mail 工具不会获得这些权限。',
+    ),
+  );
+
+  const notices = [];
+  if (snapshot.error) {
+    notices.push(h('div', {
+      key: 'management-error',
+      role: 'alert',
+      style: errorStyle,
+      'data-agent-mail-error': 'management',
+    }, snapshot.error));
+  }
+  if (snapshot.notice) {
+    notices.push(h('div', {
+      key: 'management-notice',
+      role: 'status',
+      style: noticeStyle,
+      'data-agent-mail-notice': 'management',
+    }, snapshot.notice));
+  }
+
+  const clearRecoveryControls = h('div', { style: actionsStyle },
+    !clearRecoveryArmed && h('button', {
+      type: 'button',
+      style: buttonStyle,
+      disabled: busy,
+      'data-agent-mail-action': 'clear-recovery',
+      onClick: () => setClearRecoveryArmed(true),
+    }, '清除本地恢复信息'),
+    clearRecoveryArmed && h('span', { style: managementWarningStyle },
+      '这只清除浏览器恢复句柄，不会取消 Hub 上的 pending enrollment。',
+    ),
+    clearRecoveryArmed && h('button', {
+      type: 'button',
+      style: buttonStyle,
+      disabled: busy,
+      'data-agent-mail-action': 'clear-recovery-confirm',
+      onClick: () => {
+        controller.clearRecoveryMetadata();
+        setClearRecoveryArmed(false);
+      },
+    }, '确认清除恢复信息'),
+    clearRecoveryArmed && h('button', {
+      type: 'button',
+      style: buttonStyle,
+      disabled: busy,
+      'data-agent-mail-action': 'clear-recovery-cancel',
+      onClick: () => setClearRecoveryArmed(false),
+    }, '保留恢复信息'),
+  );
+
+  if (snapshot.managementStatus === 'checking') {
+    return h('section', {
+      style: managementPanelStyle,
+      'data-agent-mail-management': 'true',
+      'data-agent-mail-management-state': snapshot.managementStatus,
+      'aria-label': '连接管理',
+    }, header, ...notices, h('div', { style: loadingStyle, role: 'status' }, '正在检查管理宿主…'));
+  }
+
+  if (snapshot.managementStatus === 'unconfigured') {
+    return h('section', {
+      style: managementPanelStyle,
+      'data-agent-mail-management': 'true',
+      'data-agent-mail-management-state': snapshot.managementStatus,
+      'aria-label': '连接管理',
+    }, header, ...notices,
+    h('div', { style: emptyStyle, role: 'status' },
+      '当前 DSH 没有配置受保护的管理宿主；连接管理向导暂不可用。',
+    ));
+  }
+
+  if (snapshot.managementStatus !== 'authenticated' || snapshot.authenticated !== true) {
+    return h('section', {
+      style: managementPanelStyle,
+      'data-agent-mail-management': 'true',
+      'data-agent-mail-management-state': snapshot.managementStatus,
+      'aria-label': '连接管理',
+    }, header, ...notices,
+    h('form', {
+      style: managementFormStyle,
+      'data-agent-mail-form': 'login',
+      onSubmit: submitLogin,
+    },
+    h('label', { style: fieldStyle },
+      h('span', null, '管理密码'),
+      h('input', {
+        type: 'password',
+        style: inputStyle,
+        autoComplete: 'current-password',
+        value: password,
+        disabled: busy,
+        'data-agent-mail-field': 'management-password',
+        onChange: (event) => setPassword(event.target.value),
+      }),
+    ),
+    h('button', {
+      type: 'submit',
+      style: primaryButtonStyle,
+      disabled: busy || !password,
+      'data-agent-mail-action': 'login',
+    }, '登录管理宿主'),
+    ));
+  }
+
+  const profileOptions = snapshot.profiles.map((entry) => h('option', {
+    key: entry.handle,
+    value: entry.handle,
+  }, entry.label));
+  const endpointOptions = (profile?.endpoints ?? []).map((entry) => h('option', {
+    key: entry,
+    value: entry,
+  }, entry));
+  const profileControls = h('div', { style: managementFormStyle },
+    h('label', { style: fieldStyle },
+      h('span', null, '目标 DSH 配置'),
+      h('select', {
+        style: inputStyle,
+        value: snapshot.selectedProfileHandle,
+        disabled: busy || pending,
+        'data-agent-mail-field': 'profile',
+        onChange: (event) => controller.selectProfile(event.target.value),
+      }, profileOptions),
+    ),
+    profile && h('label', { style: fieldStyle },
+      h('span', null, 'Hub 地址'),
+      h('select', {
+        style: inputStyle,
+        value: endpoint,
+        disabled: busy || pending,
+        'data-agent-mail-field': 'endpoint',
+        onChange: (event) => controller.selectEndpoint(event.target.value),
+      }, endpointOptions),
+    ),
+    (!profile || profile.endpoints.length === 0) && h('div', { style: warningStyle, role: 'status' },
+      '当前账号没有可用的连接配置或 Hub 地址。',
+    ),
+  );
+
+  const sessionControls = h('div', { style: actionsStyle },
+    h('button', {
+      type: 'button',
+      style: buttonStyle,
+      disabled: busy,
+      'data-agent-mail-action': 'logout',
+      onClick: () => void logout(),
+    }, '退出管理'),
+    clearRecoveryControls,
+  );
+
+  const enrollmentStatus = enrollment && h('div', {
+    style: managementEnrollmentStyle,
+    'data-agent-mail-enrollment': 'true',
+    'data-agent-mail-enrollment-phase': phase,
+  },
+    h('div', { style: managementStatusRowStyle },
+      h('strong', null, '配对状态'),
+      h('span', { style: pillStyle(phase === 'active') }, enrollmentPhaseLabel(enrollment)),
+    ),
+    enrollment.profileLabel && h('div', null, `目标：${enrollment.profileLabel}`),
+    enrollment.endpoint && h('div', null, `Hub：${enrollment.endpoint}`),
+    enrollment.agentId && h('div', { 'data-agent-mail-enrollment-agent': enrollment.agentId }, `Hub 返回身份：${enrollment.agentId}`),
+    enrollment.expiresAt && h('div', null, `有效期至：${formatRefreshTime(enrollment.expiresAt)}`),
+    enrollment.error && h('div', { style: errorStyle, role: 'alert', 'data-agent-mail-error': 'enrollment' }, enrollment.error),
+  );
+
+  let enrollmentControls;
+  if (!enrollment || ['error', 'cancelled', 'expired'].includes(phase)) {
+    const startLabel = enrollment?.phase === 'error' ? '重新开始配对' : enrollment?.phase ? '开始新的连接' : '开始配对';
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('button', {
+        type: 'button',
+        style: primaryButtonStyle,
+        disabled: busy || !profile || !endpoint,
+        'data-agent-mail-action': 'begin-enrollment',
+        onClick: () => void controller.begin(),
+      }, startLabel),
+    );
+  } else if (phase === 'context_ready') {
+    enrollmentControls = h('form', {
+      style: managementFormStyle,
+      'data-agent-mail-form': 'redeem',
+      onSubmit: submitRedeem,
+    },
+    h('label', { style: fieldStyle },
+      h('span', null, 'Hub 配对码'),
+      h('input', {
+        type: 'password',
+        style: inputStyle,
+        autoComplete: 'one-time-code',
+        value: pairingCode,
+        disabled: busy,
+        'data-agent-mail-field': 'pairing-code',
+        onChange: (event) => setPairingCode(event.target.value),
+      }),
+    ),
+    h('div', { style: actionsStyle },
+      h('button', {
+        type: 'submit',
+        style: primaryButtonStyle,
+        disabled: busy || !pairingCode.trim(),
+        'data-agent-mail-action': 'redeem',
+      }, '验证配对码'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'cancel-enrollment',
+        onClick: () => void controller.cancel(),
+      }, '取消配对'),
+    ),
+    );
+  } else if (phase === 'pending_save') {
+    enrollmentControls = h('form', {
+      style: managementFormStyle,
+      'data-agent-mail-form': 'commit',
+      onSubmit: submitCommit,
+    },
+    h('label', { style: confirmationLabelStyle },
+      h('input', {
+        type: 'checkbox',
+        checked: identityConfirmed,
+        disabled: busy,
+        'data-agent-mail-field': 'confirm-identity',
+        onChange: (event) => setIdentityConfirmed(event.target.checked),
+      }),
+      '我确认 Hub 返回的身份与本次新连接目标一致。',
+    ),
+    h('div', { style: helperStyle }, '保存后请重启所选 DSH 配置，再检查连接是否生效。'),
+    h('div', { style: actionsStyle },
+      h('button', {
+        type: 'submit',
+        style: primaryButtonStyle,
+        disabled: busy || !identityConfirmed,
+        'data-agent-mail-action': 'commit',
+      }, '保存连接'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'cancel-enrollment',
+        onClick: () => void controller.cancel(),
+      }, '取消配对'),
+    ),
+    );
+  } else if (['beginning', 'redeeming', 'recovering', 'committing', 'activating', 'cancelling'].includes(phase)) {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('div', { style: loadingStyle, role: 'status' }, enrollmentPhaseLabel(enrollment)),
+      !['committing', 'activating'].includes(phase) && h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'cancel-enrollment',
+        onClick: () => void controller.cancel(),
+      }, '取消配对'),
+    );
+  } else if (phase === 'unknown') {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('div', { style: warningStyle, role: 'status' }, '结果未知；刷新状态不会再次提交配对码。'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'refresh-enrollment',
+        onClick: () => void controller.refreshEnrollment(),
+      }, '刷新状态'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'cancel-enrollment',
+        onClick: () => void controller.cancel(),
+      }, '取消配对'),
+    );
+  } else if (phase === 'saved') {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('div', { style: enrollment.activationState === 'error' ? warningStyle : noticeStyle, role: 'status' },
+        enrollment.activationState === 'restart_required'
+          ? '连接已保存，等待 DSH 重启后检查激活。'
+          : enrollment.activationState === 'error'
+            ? '连接已保存，但激活检查未通过。'
+            : '连接已保存。',
+      ),
+      h('button', {
+        type: 'button',
+        style: primaryButtonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'activate',
+        onClick: () => void controller.activate(),
+      }, '检查激活'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'refresh-enrollment',
+        onClick: () => void controller.refreshEnrollment(),
+      }, '刷新状态'),
+    );
+  } else if (phase === 'active') {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('div', { style: noticeStyle, role: 'status' }, '连接已激活；正在读取收件人和连接状态。'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'refresh-enrollment',
+        onClick: () => void controller.refreshEnrollment(),
+      }, '刷新状态'),
+      h('button', {
+        type: 'button',
+        style: primaryButtonStyle,
+        disabled: busy || !onOpenRecipients,
+        'data-agent-mail-action': 'open-recipients',
+        onClick: onOpenRecipients,
+      }, '查看收件人并发送只读测试任务'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy || !profile || !endpoint,
+        'data-agent-mail-action': 'begin-enrollment',
+        onClick: () => void controller.begin(),
+      }, '开始新的连接'),
+    );
+  } else if (['cleanup_pending', 'cleanup_conflict'].includes(phase)) {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('div', { style: warningStyle, role: 'status' }, enrollmentPhaseLabel(enrollment)),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'refresh-enrollment',
+        onClick: () => void controller.refreshEnrollment(),
+      }, '刷新状态'),
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'cancel-enrollment',
+        onClick: () => void controller.cancel(),
+      }, '重试取消'),
+    );
+  } else {
+    enrollmentControls = h('div', { style: actionsStyle },
+      h('button', {
+        type: 'button',
+        style: buttonStyle,
+        disabled: busy,
+        'data-agent-mail-action': 'refresh-enrollment',
+        onClick: () => void controller.refreshEnrollment(),
+      }, '刷新状态'),
+    );
+  }
+
+  return h('section', {
+    style: managementPanelStyle,
+    'data-agent-mail-management': 'true',
+    'data-agent-mail-management-state': snapshot.managementStatus,
+    'aria-label': '连接管理',
+  },
+  header,
+  ...notices,
+  h('div', { style: managementSessionStyle },
+    h('div', { style: noticeStyle }, '管理会话已登录。'),
+    profileControls,
+    sessionControls,
+  ),
+  snapshot.profiles.length === 0
+    ? h('div', { style: emptyStyle, role: 'status' }, '当前管理账号没有可管理的 DSH 配置。')
+    : h('div', { style: managementEnrollmentStyle },
+      enrollmentStatus,
+      enrollmentControls,
+    ),
   );
 }
 
@@ -1125,6 +1629,16 @@ const warningStyle = { ...noticeStyle, color: 'var(--dsh-warning, currentColor)'
 const loadingStyle = { ...noticeStyle, opacity: 0.72 };
 const errorStyle = { ...noticeStyle, color: 'var(--dsh-danger, currentColor)', background: 'color-mix(in srgb, currentColor 6%, transparent)' };
 const footerStyle = { padding: '8px 16px', borderTop: '1px solid color-mix(in srgb, currentColor 10%, transparent)', fontSize: 12, opacity: 0.68 };
+const managementPanelStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, padding: '10px 0 2px', borderTop: '1px solid color-mix(in srgb, currentColor 10%, transparent)' };
+const managementHeaderStyle = { display: 'flex', flexDirection: 'column', gap: 4 };
+const managementTitleStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14 };
+const managementHelperStyle = { fontSize: 12, lineHeight: 1.45, opacity: 0.78 };
+const managementFormStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
+const managementSessionStyle = { display: 'flex', flexDirection: 'column', gap: 8 };
+const managementEnrollmentStyle = { display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 0 0', borderTop: '1px solid color-mix(in srgb, currentColor 10%, transparent)' };
+const managementStatusRowStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 };
+const managementWarningStyle = { fontSize: 12, lineHeight: 1.45, color: 'var(--dsh-warning, currentColor)' };
+const confirmationLabelStyle = { display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 12, lineHeight: 1.45 };
 const threadHeaderStyle = { display: 'flex', flexDirection: 'column', gap: 6, paddingBottom: 4 };
 const subjectStyle = { fontSize: 15, fontWeight: 600, lineHeight: 1.35, overflowWrap: 'anywhere' };
 const participantStyle = { fontSize: 12, opacity: 0.78, overflowWrap: 'anywhere' };

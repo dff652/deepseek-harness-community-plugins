@@ -23,6 +23,7 @@ import {
   canAck,
   currentSessionId,
   deliveryStatusLabel,
+  diagnoseSummary,
   firstLine,
   inboxItems,
   messageTypeLabel,
@@ -40,6 +41,10 @@ import {
   unreadBadge,
   validateSendPayload,
 } from '../packages/dsh-agent-mail-ui/view.js';
+import {
+  ManagementController,
+  RECOVERY_STORAGE_KEY,
+} from '../packages/dsh-agent-mail-ui/management-view.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageDir = path.join(root, 'packages', 'dsh-agent-mail-ui');
@@ -73,7 +78,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.6');
+  assert.equal(manifest.version, '0.1.7');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -426,6 +431,151 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.doesNotMatch(source, /already claimed is not fatal/);
 });
 
+test('management controller pairs, persists safe recovery metadata, restores, and activates', async () => {
+  const calls = [];
+  const storageData = new Map();
+  const storage = {
+    getItem(key) { return storageData.get(key) ?? null; },
+    setItem(key, value) { storageData.set(key, value); },
+    removeItem(key) { storageData.delete(key); },
+  };
+  let authenticated = false;
+  let state = 'context_ready';
+  const profile = {
+    handle: 'profile-alpha',
+    label: 'Alpha profile',
+    endpoints: ['https://hub.fixture.test'],
+  };
+  const session = () => authenticated
+    ? {
+      authenticated: true,
+      csrf_token: 'csrf-only-in-memory',
+      expires_at: '2099-01-01T00:00:00.000Z',
+      profiles: [profile],
+    }
+    : { authenticated: false };
+  const enrollment = () => ({
+    state,
+    enrollment_handle: state === 'context_ready' ? undefined : 'enrollment-1',
+    agent_id: state === 'context_ready' ? undefined : 'joined-alpha@fixture',
+    expires_at: '2099-01-01T00:00:00.000Z',
+    save_state: state === 'saved' || state === 'active' ? 'saved' : 'unsaved',
+    activation_state: state === 'active' ? 'active' : state === 'saved' ? 'restart_required' : 'pending',
+    config_revision: state === 'saved' || state === 'active' ? 'revision-2' : 'revision-1',
+    commit_id: state === 'saved' || state === 'active' ? 'commit-1' : undefined,
+  });
+  const fetchImpl = async (path, options) => {
+    const payload = JSON.parse(options.body);
+    calls.push({ path, payload, headers: options.headers });
+    if (path === '/v1/management-session/status') {
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: session() }) };
+    }
+    if (path === '/v1/management-session/login') {
+      assert.equal(payload.password, 'fixture-password');
+      authenticated = true;
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: session() }) };
+    }
+    assert.equal(options.headers['X-Agent-Mail-CSRF'], 'csrf-only-in-memory');
+    if (path.endsWith('/begin')) {
+      assert.deepEqual(payload, { profile_handle: 'profile-alpha', endpoint: 'https://hub.fixture.test' });
+      state = 'context_ready';
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: {
+        context_handle: 'context-1',
+        observed_config_revision: 'revision-1',
+        expires_at: '2099-01-01T00:00:00.000Z',
+        target_label: 'Alpha profile',
+        endpoint: 'https://hub.fixture.test',
+      } }) };
+    }
+    if (path.endsWith('/redeem')) {
+      assert.equal(payload.code, 'PAIR-ALPHA-6');
+      state = 'pending_save';
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: enrollment() }) };
+    }
+    if (path.endsWith('/status')) {
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: enrollment() }) };
+    }
+    if (path.endsWith('/commit')) {
+      assert.deepEqual(payload, {
+        profile_handle: 'profile-alpha',
+        enrollment_handle: 'enrollment-1',
+        expected_config_revision: 'revision-1',
+        confirmed_agent_id: 'joined-alpha@fixture',
+      });
+      state = 'saved';
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: enrollment() }) };
+    }
+    if (path.endsWith('/activate')) {
+      state = 'active';
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: enrollment() }) };
+    }
+    throw new Error(`unexpected management request: ${path}`);
+  };
+
+  const controller = new ManagementController({ fetchImpl, storage });
+  await controller.status();
+  assert.equal(controller.getSnapshot().managementStatus, 'unauthenticated');
+  assert.equal(await controller.login('fixture-password'), true);
+  assert.equal(await controller.begin(), true);
+  assert.equal(controller.getSnapshot().enrollment.phase, 'context_ready');
+  assert.equal(await controller.redeem('PAIR-ALPHA-6'), true);
+  assert.equal(controller.getSnapshot().enrollment.phase, 'pending_save');
+  const recovery = JSON.parse(storageData.get(RECOVERY_STORAGE_KEY));
+  assert.deepEqual(Object.keys(recovery).sort(), [
+    'context_handle',
+    'enrollment_handle',
+    'observed_config_revision',
+    'profile_handle',
+    'request_id',
+  ]);
+  assert.equal('password' in recovery, false);
+  assert.equal('code' in recovery, false);
+  assert.equal('csrf_token' in recovery, false);
+  assert.equal('agent_id' in recovery, false);
+
+  assert.equal(await controller.commit(true), true);
+  assert.equal(controller.getSnapshot().enrollment.phase, 'saved');
+  assert.equal(controller.getSnapshot().enrollment.activationState, 'restart_required');
+
+  const restored = new ManagementController({ fetchImpl, storage });
+  await restored.status();
+  await restored.login('fixture-password');
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(restored.getSnapshot().enrollment.phase, 'saved');
+  assert.equal(restored.getSnapshot().enrollment.agentId, 'joined-alpha@fixture');
+  assert.equal(await restored.activate(), true);
+  assert.equal(restored.getSnapshot().enrollment.phase, 'active');
+  assert.equal(storageData.has(RECOVERY_STORAGE_KEY), false);
+  assert.equal(calls.some((call) => call.path.endsWith('/redeem')), true);
+  assert.equal(calls.filter((call) => call.path.endsWith('/redeem')).length, 1);
+});
+
+test('management UI source exposes stable connection and enrollment selectors', async () => {
+  const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
+  for (const action of [
+    'connection-management',
+    'login',
+    'begin-enrollment',
+    'redeem',
+    'commit',
+    'activate',
+    'refresh-enrollment',
+    'cancel-enrollment',
+    'open-recipients',
+  ]) {
+    assert.match(source, new RegExp(`data-agent-mail-action.*${action}`));
+  }
+  for (const field of ['management-password', 'profile', 'endpoint', 'pairing-code', 'confirm-identity']) {
+    assert.match(source, new RegExp(`data-agent-mail-field.*${field}`));
+  }
+  assert.match(source, /登录管理宿主/);
+  assert.match(source, /开始配对/);
+  assert.match(source, /验证配对码/);
+  assert.match(source, /保存连接/);
+  assert.match(source, /检查激活/);
+  assert.match(source, /查看收件人并发送只读测试任务/);
+});
+
 test('client.js factory stays generated from client-src.js', async () => {
   await execFileAsync('node', [path.join(packageDir, 'build-client.mjs'), '--check']);
 });
@@ -454,4 +604,12 @@ test('npm pack dry-run ships only the declared allowlist', async () => {
   } finally {
     await rm(cache, { recursive: true, force: true });
   }
+});
+
+
+test('remote diagnosis uses the Hub-authenticated identity and never a local environment fallback', () => {
+  assert.equal(diagnoseSummary({ agent_id_env: 'local@fixture' }).agentId, 'local@fixture');
+  assert.equal(diagnoseSummary({ remote: true, mode: 'remote_mail_api', agent_id: 'remote@fixture', agent_id_env: 'stale@fixture' }).agentId, 'remote@fixture');
+  assert.equal(diagnoseSummary({ remote: true, agent_id_env: 'stale@fixture' }).agentId, '');
+  assert.equal(diagnoseSummary({ remote: true, agent_id: '' }).agentId, '');
 });

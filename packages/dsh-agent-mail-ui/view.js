@@ -237,9 +237,10 @@ export function canAck(item, messages = []) {
 export function diagnoseSummary(payload) {
   const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
   const agents = Array.isArray(payload?.agents) ? payload.agents.map(String) : [];
+  const agentId = payload?.remote === true ? payload?.agent_id : payload?.agent_id_env;
   return {
     ok: warnings.length === 0 && payload?.home_exists !== false,
-    agentId: payload?.agent_id_env == null ? '' : String(payload.agent_id_env),
+    agentId: agentId == null ? '' : String(agentId),
     version: payload?.version == null ? '' : String(payload.version),
     implementation: payload?.implementation == null ? '' : String(payload.implementation),
     agents,

@@ -19,10 +19,12 @@ function indent(source) {
 
 async function renderClientBundle() {
   const view = stripExports(await readFile(path.join(dir, 'view.js'), 'utf8')).trimEnd();
+  const management = stripExports(await readFile(path.join(dir, 'management-view.js'), 'utf8')).trimEnd();
   let src = await readFile(path.join(dir, 'client-src.js'), 'utf8');
   src = src.replace(/^import[\s\S]*?from 'react';\n/, '');
   src = src.replace(/^import[\s\S]*?from 'react-dom\/client';\n/, '');
   src = src.replace(/^import[\s\S]*?from '\.\/view\.js';\n+/, '');
+  src = src.replace(/^import[\s\S]*?from '\.\/management-view\.js';\n+/, '');
   src = stripExports(src).trimEnd();
   return [
     'window.__ModuleLoader__.load({',
@@ -33,6 +35,7 @@ async function renderClientBundle() {
     "\t\tconst { createElement: h, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } = require('react');",
     "\t\tconst { createRoot } = require('react-dom/client');",
     indent(view),
+    indent(management),
     indent(src),
     '\t\texports.apply = apply;',
     '\t\texports.inject = inject;',

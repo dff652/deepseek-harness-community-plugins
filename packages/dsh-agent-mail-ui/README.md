@@ -5,6 +5,11 @@ existing right-hand workbench. It does **not** start `agent-mail-mcp`, copy
 Agent Mail handlers, or wake sessions. Mail transport stays in
 `@dff652/dsh-agent-mail`.
 
+UI `0.1.7` also includes an optional connection-management wizard. The wizard
+is usable only when a provider `1.0.0-alpha.6` management host has been
+explicitly mounted with its private configuration; it does not bundle or
+discover that host.
+
 Seeing both packages in the installed list is expected: the MCP bundle
 provides communication tools; this optional UI provides the human mailbox.
 The Agent Mail settings section only explains where to open that mailbox.
@@ -23,11 +28,18 @@ It is not another plugin or a second mailbox.
 - A host JSON API that proxies those calls through the **already registered**
   `mcp__agent-mail__*` tools, so the live MCP child is reused.
 
-The 0.1.6 candidate applies the revised visual hierarchy to the mailbox and
+The 0.1.6 candidate applied the revised visual hierarchy to the mailbox and
 adds a **Recipients** view using the current provider roster. Selecting an
 identity opens a message draft addressed to it. Connection details are
 collapsible; warnings and operation failures remain visible. The panel follows
 the DSH color scheme and keeps registration distinct from client presence.
+
+The `0.1.7` candidate keeps those mailbox behaviors and adds a **Connection
+management** panel. It logs in to the mounted provider host, lists only the
+server-authorized DSH profiles and Hub allowlist, and walks the operator
+through TLS verification, one-time code redemption, identity confirmation,
+save and activation checks. Without the host routes, the panel reports that
+management is unconfigured and the mailbox remains available.
 
 ## v1 human actions
 
@@ -51,10 +63,37 @@ the all-mail view do not count as unread.
 |---|---|
 | DeepSeek Harness MCP client peer | `0.1.1-rc.2` |
 | Companion MCP bundle | `@dff652/dsh-agent-mail` |
+| UI candidate | `0.1.7` |
 | Auto-wake | not provided |
 
 The UI package activates even when the MCP namespace is missing. The panel
 then shows an offline diagnostic instead of failing DSH startup.
+
+## Optional connection wizard
+
+The provider's [authenticated management guide](https://github.com/dff652/agent-mail/blob/main/docs/guides/dsh-management.md)
+defines the private password file, profile registry and DSH mount. Configure
+those on the management host, explicitly mount `agent-mail/dsh-management`,
+install this UI, and restart DSH when the host or MCP child requires it. Keep
+homes, CA files, Hub credentials and management passwords out of this package
+and out of browser storage.
+
+The operator then logs in, chooses an allowed profile and Hub, enters the Hub
+one-time code, confirms the returned new identity and saves the connection. A
+`restart_required` result means the selected provider process must be
+restarted explicitly before selecting **检查激活**. The UI does not execute
+arbitrary restart commands.
+
+If a mutation response is lost, **刷新状态** reconciles the existing
+enrollment and does not consume another code. Closing the panel or clearing
+its local recovery metadata does not cancel a pending Hub enrollment; use the
+explicit cancel action when cancellation is intended. The wizard does not
+wake a model or infer recipient presence.
+
+Exact packed-file and browser evidence is recorded in the [P1.2 acceptance
+document](../../docs/agent-mail-p12-management-acceptance.md); a source
+checkout alone is not release acceptance. Installing a candidate tarball is
+not a production upgrade claim.
 
 ## Install
 
@@ -62,7 +101,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.6.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.7.tgz
 dsh --profile <profile> --dump-config
 ```
 
