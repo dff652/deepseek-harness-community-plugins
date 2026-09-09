@@ -22,6 +22,9 @@ The revised preview separately passed a manually started, confirmation-assisted
 DSH UI-to-Codex model task: inbox, claim, terminal completion and acknowledgement,
 with independent mailbox verification. This local model check does not extend
 the cross-host transport result to cross-host model execution or automatic wake.
+The [recipient and connection design](agent-mail-recipient-design.md) records
+the accepted visual direction and proposes directory, enrollment and verification
+flows while keeping registration, connection evidence and message state distinct.
 
 The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.
