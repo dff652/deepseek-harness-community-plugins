@@ -604,6 +604,15 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
     click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
     wait_for(driver, lambda current: "Fixture task: verify the Agent Mail UI." in text_of(current), "fixture thread")
     wait_api_call(server.fixture, "claim")
+    wait_for(
+        driver,
+        lambda current: any(
+            "Fixture task: verify the Agent Mail UI." in button.text
+            and "已领取" in button.text and "待领取" not in button.text
+            for button in current.find_elements(By.TAG_NAME, "button")
+        ),
+        "inbox row synchronized after claim",
+    )
 
     separator = driver.find_element(By.CSS_SELECTOR, '[role="separator"]')
     assert separator.get_attribute("tabindex") == "0", "resize separator is not keyboard focusable"

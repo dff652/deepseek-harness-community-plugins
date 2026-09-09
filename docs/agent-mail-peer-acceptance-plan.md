@@ -96,9 +96,9 @@ This qualifies the real Codex app-server MCP transport together with DSH's
 UI/MCP transport. It does not prove a model chose the tools, automatic wake,
 notification in an existing desktop task, or that the owner's current task
 reloaded its MCP catalog. No model turn was started. Desktop-session and
-model-driven workflows remain separate checks, as does the incomplete UI
-sidebar release gate. Private execution reports remain outside this public
-repository.
+model-driven workflows remain separate checks. The UI sidebar release gate
+is recorded independently in the candidate acceptance document. Private
+execution reports remain outside this public repository.
 
 ## Topology
 
@@ -149,10 +149,11 @@ runner CLI wiring remain separate limitations. See the
 
 ## Relationship to the UI release
 
-The exact 0.1.5 sidebar browser gate still needs completion before treating
-the candidate as fully accepted for release. Peer transport tests complement
-that gate; they do not replace layout, refresh and selected-conversation
-interaction checks. Keep the reviewed artifact digest, per-stage results and
+The [revised 0.1.5 candidate](agent-mail-ui-0.1.5-acceptance.md) passed the
+local sidebar browser gate after a claim-row synchronization fix. The peer
+transport results above retain the earlier artifact digest; they do not
+replace the repeated layout, refresh and selected-conversation checks for
+the revised package. Keep the reviewed artifact digest, per-stage results and
 cleanup evidence together. Installation into a temporary test profile is
 separate from a live-profile upgrade.
 

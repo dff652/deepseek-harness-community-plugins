@@ -61,6 +61,9 @@ The [capability comparison and next steps](docs/agent-mail-capability-roadmap.md
 separate the full provider from its DSH bundles. The [peer acceptance record](docs/agent-mail-peer-acceptance-plan.md)
 now covers passing cross-host DSH-to-DSH and DSH-to-Codex app-server MCP
 transport checks; desktop task loading and automatic wake remain separate.
+The [revised UI 0.1.5 candidate](docs/agent-mail-ui-0.1.5-acceptance.md) also
+passed real sidebar and standalone browser checks after a claim-state fix.
+It has not been released or deployed.
 
 ## What you get
 

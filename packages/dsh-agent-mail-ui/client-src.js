@@ -277,6 +277,11 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       if (item.messageId && item.deliveryStatus !== 'outbound' && item.deliveryStatus !== 'acked') {
         await api('claim', { message_id: item.messageId });
         setClaimReady(true);
+        setItems((current) => current.map((currentItem) => (
+          currentItem.messageId === item.messageId
+            ? { ...currentItem, deliveryStatus: 'claimed', claimed: true }
+            : currentItem
+        )));
         setSelected((current) => current
           ? { ...current, deliveryStatus: 'claimed', claimed: true }
           : current);
