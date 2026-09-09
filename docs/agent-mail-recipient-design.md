@@ -179,7 +179,10 @@ The [P1.1 operation matrix and proposed contract](agent-mail-p11-enrollment-cont
 now record source/runtime checks, 28 existing tests and isolated behavior
 probes. The first implementation is new-identity enrollment only: the existing
 redemption path can replace old credentials and must not be wired directly
-into the wizard. New P1 contract tests and endpoints remain to be implemented.
+into the wizard. The provider increment and contract tests are now implemented
+and locally validated; see [backend acceptance](agent-mail-p11-backend-acceptance.md).
+The [DSH management host gap](agent-mail-management-host-gap.md) must be resolved
+before the browser wizard performs real enrollment operations.
 
 ### P1.1: establish the provider contract
 
@@ -236,7 +239,8 @@ If the recipient does not handle it within the bounded test, report timeout or
 awaiting handling rather than offline status. Preserve failure evidence without
 credentials or user message content in public documentation.
 
-P1 is proposed next work, not implemented by this documentation update.
+The provider portion of P1 is locally implemented; the DSH wizard, its
+authenticated host adapter and actual browser acceptance remain incomplete.
 The 0.1.6 release track may proceed independently when authorized; it does not
 require including unfinished P1 features in the accepted P0 artifact. Push,
 release and production deployment remain separate decisions.

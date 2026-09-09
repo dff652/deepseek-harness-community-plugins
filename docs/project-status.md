@@ -11,13 +11,15 @@ archive and checks separate from the released/live 0.1.4 baseline.
 The [0.1.6 P0 acceptance record](agent-mail-ui-0.1.6-acceptance.md) records
 the implemented visual/recipient/composer changes, final archive and primary
 plus independent review. The isolated preview now uses 0.1.6; the production
-UI remains 0.1.4. The completed implementation is `054b795`. The next proposed
-increment is the [P1 Hub enrollment contract and wizard](agent-mail-recipient-design.md#next-delivery-p1-hub-enrollment),
-starting with provider/runtime verification and pending-enrollment semantics.
-The [P1.1 assessment and proposed contract](agent-mail-p11-enrollment-contract.md)
-are complete, with 28 existing provider tests and isolated runtime probes.
-Provider management endpoints and wizard integration remain unimplemented;
-publication of the accepted P0 artifact is a separate track.
+UI remains 0.1.4. The completed UI implementation is `054b795`.
+The [P1.1 assessment and contract](agent-mail-p11-enrollment-contract.md)
+now have a locally validated provider implementation in `agent-mail@1.0.0-alpha.5`.
+The [backend acceptance record](agent-mail-p11-backend-acceptance.md) records
+298 passing tests and independent installation of the exact packed artifact,
+including real TLS Hub/MCP handling, restart and explicit restore checks.
+The DSH enrollment wizard is still pending the
+[authenticated management host prerequisite](agent-mail-management-host-gap.md).
+Publication of the accepted P0 UI artifact remains a separate track.
 The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
 record full-provider versus bundle responsibilities, real Codex receipt and
 isolated model execution, and the remaining release and desktop-client

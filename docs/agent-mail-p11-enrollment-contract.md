@@ -1,8 +1,11 @@
 # Agent Mail P1.1 enrollment contract and gap assessment
 
-Date: 2026-09-09. Status: source/runtime assessment complete; proposed contract
-ready for implementation review. No P1 management endpoints are implemented
-by this document. UI 0.1.6 remains the accepted P0 artifact.
+Date: 2026-09-09. Status: the assessment below is retained as the design baseline.
+The provider increment is now implemented and locally validated as
+`agent-mail@1.0.0-alpha.5`; see the [backend acceptance record](agent-mail-p11-backend-acceptance.md)
+for concrete routes and completed gates. The DSH wizard still requires the
+[management host prerequisite](agent-mail-management-host-gap.md).
+UI 0.1.6 remains the accepted P0 artifact.
 
 ## Decision
 
@@ -178,7 +181,9 @@ Connection evidence must show its timestamp and remain separate from presence.
 
 ## Implementation acceptance gate
 
-These are required future tests, not the 28 existing tests above:
+These are the design acceptance requirements, distinct from the 28 baseline
+tests above. The linked backend acceptance record identifies the implemented
+provider checks and the remaining DSH/browser gates:
 
 | Case | Required assertion |
 |---|---|
