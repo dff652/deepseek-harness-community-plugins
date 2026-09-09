@@ -11,6 +11,8 @@ archive and checks separate from the released/live 0.1.4 baseline.
 The [capability comparison and ordered checklist](agent-mail-capability-roadmap.md)
 record full-provider versus bundle responsibilities, real Codex receipt and
 isolated model execution, and the remaining sidebar and cross-machine gates.
+The owner's next integration priority is [DSH to DSH, then DSH to Codex](agent-mail-peer-acceptance-plan.md),
+with same-host and cross-host acceptance recorded separately.
 
 The September 5 review refreshes Agent Mail UI only. Other package sections
 retain their previously recorded evidence and are not a new release audit.

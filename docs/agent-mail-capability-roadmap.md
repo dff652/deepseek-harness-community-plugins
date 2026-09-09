@@ -54,6 +54,13 @@ archived checkout. Matching version strings do not establish identical
 source or runtime bytes. Locate the maintained provider checkout before
 planning changes to its implementation.
 
+A subsequent local source lookup found the public provider checkout on
+`main` at the reviewed `ca6601c95eeda2d5d558cca37179be1412b75a8d` commit.
+Its MCP server, CLI and wake bridge match the inspected archived source;
+connection and remote-client differences are header comments. This locates
+the source corresponding to the reviewed runtime identity without modifying
+the archive or asserting that a remote repository was freshly fetched.
+
 The following provider implementation findings apply to that inspected
 snapshot; they are not a fresh acceptance of every provider subsystem.
 
@@ -105,12 +112,17 @@ evidence, not in this public document.
 
 ## Ordered follow-up checklist
 
+The owner subsequently set the client order to **DSH to DSH, then DSH to
+Codex**. The [peer acceptance plan](agent-mail-peer-acceptance-plan.md)
+defines same-host, cross-host and reliability gates before broader client
+support or automatic wake.
+
 | Priority | Task and owner | Completion evidence |
 |---|---|---|
-| P0 | Primary agent: finish exact 0.1.5 real sidebar acceptance in a reproducible disposable DSH environment | Resolve the startup dependency failure, rerun the corrected browser harness against the frozen digest, verify send/receive, task guards, refresh, Quote, layout and cleanup; record a full PASS or an actionable product defect |
-| P0 | Primary agent: locate the maintained provider source before provider changes | Identify the active checkout, branch and commit, compare them to the reviewed runtime digest, and preserve the supplied archived checkout |
-| P0 | Owner selects the intended remote client/Hub topology; integration worker implements one bounded client connection | One real cross-machine bidirectional canary, identity/auth checks, claim and acknowledgement, plus reconnect acceptance; preserve a client-by-client matrix |
-| P0 | Primary agent: qualify each intended local AI client | A runtime that loaded its MCP/CLI configuration retrieves its own uniquely marked mail and replies; distinguish configured, connected, notified and executed states |
+| P0 | Integration worker, primary-reviewed: qualify DSH to DSH first | Same-host two-instance round trip, then real cross-host Hub round trip, identity/auth checks, claim and acknowledgement, plus reconnect acceptance |
+| P0 | Integration worker, primary-reviewed: qualify DSH to Codex second | A real Codex runtime loads its connection and exchanges uniquely marked mail with DSH in both directions; distinguish configured, connected, notified and executed states |
+| P0 release gate | Primary agent: finish exact 0.1.5 real sidebar acceptance in a reproducible disposable DSH environment | Resolve the startup dependency failure, rerun the corrected browser harness against the frozen digest, verify send/receive, task guards, refresh, Quote, layout and cleanup; record a full PASS or an actionable product defect |
+| Before provider edits | Primary agent: preserve the located provider-source baseline | Public checkout `main` at reviewed `ca6601c` located; verify the exact runtime/artifact before changes and preserve the supplied archived checkout |
 | P1 | Primary agent: prepare 0.1.5 release and live-upgrade evidence after remaining gates pass | Reviewed source, exact archive/digest, CI after authorized push, installation/removal, protected backup, rollback and live browser/client acceptance; push, release and deployment remain separate owner decisions |
 | P1 | Provider/host integration task: reuse existing bridge/runners for opt-in wake | Qualify the existing local Codex/Grok/Claude path, wire the remote SSE helper into the intended CLI workflow if needed, and verify real remote execution, session routing, retries, failure visibility, limits and a stop switch; do not build a second runner inside the UI |
 | P1 | Provider API task: persistent sent-history and receipt/presence semantics | Define stored history, mailbox delivery, client retrieval, acknowledgement and presence independently; add the provider contract before expanding the UI |

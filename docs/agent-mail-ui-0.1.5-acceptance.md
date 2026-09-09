@@ -46,6 +46,7 @@ same digest. Neither provider source nor machine configuration is included.
 | Firefox 155 fixture browser | PASS, five scenarios |
 | Chrome 152 real DSH standalone | PASS; exact candidate and disposable provider mailbox |
 | Independent source and receiving-client review | PASS; 99 tests, generated bundle, repository checks, dry pack, exact bytes and read-only Codex receipt verification |
+| Two local DSH peer instances | PASS; worker run and primary fresh-profile rerun exchanged messages in both directions through their own plugin APIs; inbox recipient isolation and claim/ack verified |
 
 The fixture scenarios cover sidebar sending and task completion, external
 acknowledgement followed by manual refresh, standalone selected-session Quote,
@@ -64,6 +65,11 @@ the fresh disposable profile failed to resolve `@deepseek-ai/dsh-workspace`
 during startup. Partial screenshots do not qualify this gate as PASS. This
 does not supersede the passing sidebar fixture scenarios or establish a
 failure in the candidate UI itself.
+
+The later [peer acceptance plan](agent-mail-peer-acceptance-plan.md) records
+the same-host DSH-to-DSH result and keeps the next cross-host and Codex gates
+separate. Peer API checks do not supersede the incomplete sidebar browser
+gate.
 
 ## Separate receiving-client evidence
 
