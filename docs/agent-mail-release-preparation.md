@@ -467,9 +467,12 @@ update and remains unexecuted.**
 Catalog contributing.md recommends npm so storefronts can skip `allowBuilds`,
 but it also accepts a GitHub Release tarball and **requires** that tarball
 when the listing uses `tarball:`. This repository’s reviewed exact-byte
-channel has always been the GitHub Release asset. dshmarket with `npm: null`
-installs GitHub source, not the Release tarball; exact-byte acceptance
-therefore still depends on the Release asset even if npm is later published.
+channel has always been the GitHub Release asset. The inspected dshmarket `1.41.0` implementation (`lib/sources.js`,
+`installTargetFor`) prefers a valid npm name, then a repository-matched
+GitHub Release `tarball`, and only then GitHub source. With `npm: null` and
+the valid unified Release URL in the updated catalog, its target is the exact
+Release archive. Catalog merge/cache refresh and actual installation still
+need verification; installing the plugin does not upgrade the separate provider.
 
 Do not treat a GitHub Release as npm publication, or npm as a catalog update.
 
