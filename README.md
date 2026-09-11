@@ -1,6 +1,11 @@
 <p align="center">
+
   <img src="./assets/readme/hero.svg" width="100%" alt="DeepSeek Harness Plugins connects DSH to reviewed configuration-only MCP bundles">
 </p>
+
+> Development: the unreleased [unified Agent Mail candidate](docs/agent-mail-unified-candidate.md)
+> combines MCP and the mailbox UI in one installation. Existing release and
+> deployment records below describe their historical accepted versions.
 
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>

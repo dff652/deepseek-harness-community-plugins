@@ -307,8 +307,8 @@ export function parseTool(result) {
   return { isError: Boolean(result.isError), body };
 }
 
-export async function startSession(command, home, agentId) {
-  const client = new McpClient(command, [], mailEnv(home, agentId, command));
+export async function startSession(command, home, agentId, extraEnv = {}) {
+  const client = new McpClient(command, [], mailEnv(home, agentId, command, extraEnv));
   const initialize = await client.initialize();
   const listed = await client.request('tools/list');
   return { client, initialize, tools: (listed.tools ?? []).map((tool) => tool.name) };

@@ -11,6 +11,10 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const packageDir = path.join(root, 'packages', 'dsh-agent-mail');
 const execFileAsync = promisify(execFile);
 
+test('unified package assets match the compatibility UI source', async () => {
+  await execFileAsync(process.execPath, [path.join(root, 'scripts/build-agent-mail-unified.mjs'), '--check']);
+});
+
 const EXPECTED_TOOLS = [
   'comm_send',
   'comm_inbox',
@@ -29,16 +33,19 @@ const PACKED_FILES = [
   'LICENSE',
   'NOTICE',
   'README.md',
+  'client.js',
   'cordis.patch.yml',
   'index.js',
   'package.json',
+  'ui-host.js',
+  'view.js',
 ];
 
 test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed files', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
 
   assert.equal(manifest.name, '@dff652/dsh-agent-mail');
-  assert.equal(manifest.version, '0.1.1');
+  assert.equal(manifest.version, '0.2.0');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(
@@ -58,6 +65,9 @@ test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed file
   assert.deepEqual(manifest.dsh.bundle, { patch: './cordis.patch.yml' });
   assert.deepEqual(manifest.files, [
     'index.js',
+    'ui-host.js',
+    'client.js',
+    'view.js',
     'cordis.patch.yml',
     'README.md',
     'LICENSE',
@@ -89,12 +99,12 @@ test('bundle fails closed and contains no deployment path or secret', async () =
   assert.doesNotMatch(patch, /Bearer\s+/i);
 });
 
-test('inert entry copies no handlers and does not claim automatic wake', async () => {
+test('unified entry mounts the UI bridge without copying provider handlers', async () => {
   const entry = await readFile(path.join(packageDir, 'index.js'), 'utf8');
   const readme = await readFile(path.join(packageDir, 'README.md'), 'utf8');
   const notice = await readFile(path.join(packageDir, 'NOTICE'), 'utf8');
 
-  assert.match(entry, /export function apply\(\) \{\}/);
+  assert.match(entry, /export \{ apply, name \} from '\.\/ui-host\.js'/);
   assert.match(entry, /Automatic wake/);
   assert.doesNotMatch(entry, /comm_send|createMcpServer|agent-mail-mcp/);
   assert.match(readme, /never `human@local`/);

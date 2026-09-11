@@ -1,7 +1,7 @@
 {
   "name": "@dff652/dsh-agent-mail",
-  "version": "0.1.1",
-  "description": "Configuration-only DeepSeek Harness bundle for an existing Agent Mail MCP server",
+  "version": "0.2.0",
+  "description": "Agent Mail for DeepSeek Harness: MCP connection, inbox, sent receipts and recipient details",
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",
@@ -24,6 +24,9 @@
   },
   "files": [
     "index.js",
+    "ui-host.js",
+    "client.js",
+    "view.js",
     "cordis.patch.yml",
     "README.md",
     "LICENSE",
@@ -33,9 +36,23 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
     }
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-mcp-client": "0.1.1-rc.2"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./view": "./view.js",
+    "./package.json": "./package.json"
   }
 }

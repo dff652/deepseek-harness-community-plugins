@@ -18,6 +18,10 @@ import {
   DEFAULT_DONE_BODY,
   HUMAN_ONLY_TOOLS,
   PROXY_TOOLS,
+  SENT_HISTORY_LIMIT,
+  SENT_POLL_INTERVAL_MS,
+  SENT_POLL_MAX_ATTEMPTS,
+  SENT_POLL_MAX_DELAY_MS,
   TAB_ID,
   agentList,
   canAck,
@@ -26,11 +30,18 @@ import {
   diagnoseSummary,
   firstLine,
   inboxItems,
+  isPendingSentItem,
+  mergeSentRecords,
   messageTypeLabel,
   parseToolPayload,
   publicToolName,
   quoteComposerText,
+  nextSentPollDelay,
+  recipientDetails,
   sessionScope,
+  sentDeliveryStatus,
+  sentDeliveryStatusLabel,
+  sentItems,
   taskOutcome,
   taskOutcomeLabel,
   threadParticipants,
@@ -78,7 +89,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.7');
+  assert.equal(manifest.version, '0.1.8');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -154,6 +165,128 @@ test('recipient data uses only provider roster IDs and does not invent presence'
   assert.deepEqual(ids, ['ui-harness@local', 'peer-b@local', 'human@local']);
   assert.equal(ids.includes('online'), false);
   assert.equal(ids.includes('connected'), false);
+});
+
+test('durable sent history is sender-scoped and uses provider status evidence', () => {
+  const parsed = sentItems({
+    agent_id: 'sender@local',
+    count: 6,
+    items: [
+      {
+        message_id: 'sent-submitted',
+        sent_at: '2026-09-11T04:00:00.000Z',
+        to: 'peer@local',
+        type: 'task',
+        thread_id: 'thread-1',
+        task_id: 'task-1',
+        body_md: 'submit this',
+        status: 'submitted',
+        delivery_status: 'pending',
+        task_status: 'submitted',
+        status_evidence: { kind: 'mailbox-write', at: '2026-09-11T04:00:00.000Z' },
+      },
+      {
+        message_id: 'sent-processing',
+        to: 'peer@local',
+        type: 'task',
+        status: 'processing',
+        delivery_status: 'claimed',
+        task_status: 'in_progress',
+        status_evidence: { kind: 'claim', at: '2026-09-11T04:01:00.000Z' },
+      },
+      {
+        message_id: 'sent-completed',
+        to: 'peer@local',
+        type: 'task',
+        status: 'completed',
+        delivery_status: 'claimed',
+        task_status: 'completed',
+      },
+      {
+        message_id: 'sent-done',
+        to: 'peer@local',
+        type: 'done',
+        status: 'submitted',
+        delivery_status: 'pending',
+        task_status: 'submitted',
+      },
+      {
+        message_id: 'sent-unknown',
+        to: 'peer@local',
+        type: 'task',
+        task_status: 'completed',
+      },
+      {
+        message_id: 'foreign',
+        from: 'other@local',
+        to: 'peer@local',
+        delivery_status: 'failed',
+      },
+    ],
+  }, 'sender@local');
+  assert.equal(parsed.error, '');
+  assert.equal(parsed.agentId, 'sender@local');
+  assert.deepEqual(parsed.items.map((item) => item.messageId), [
+    'sent-submitted', 'sent-processing', 'sent-completed', 'sent-done', 'sent-unknown',
+  ]);
+  assert.equal(parsed.items[0].deliveryStatus, 'submitted');
+  assert.equal(parsed.items[0].rawDeliveryStatus, 'pending');
+  assert.equal(parsed.items[0].statusEvidence.kind, 'mailbox-write');
+  assert.equal(parsed.items[1].deliveryStatus, 'processing');
+  assert.equal(parsed.items[1].rawDeliveryStatus, 'claimed');
+  assert.equal(parsed.items[1].statusEvidence.kind, 'claim');
+  assert.equal(parsed.items[2].deliveryStatus, 'completed', 'task completion uses provider status');
+  assert.equal(parsed.items[2].rawDeliveryStatus, 'claimed');
+  assert.equal(parsed.items[3].deliveryStatus, 'submitted', 'done notification remains a submitted outbound item');
+  assert.equal(parsed.items[4].deliveryStatus, 'unknown', 'task completion cannot invent delivery state');
+  assert.equal(parsed.items[4].statusEvidence, null);
+  assert.equal(parsed.items.some((item) => item.messageId === 'foreign'), false);
+  assert.equal(sentItems({ agent_id: 'other@local', items: [] }, 'sender@local').error, 'sender-identity-mismatch');
+  assert.equal(sentItems({ items: [{ message_id: 'unsafe' }] }, 'sender@local').error, 'missing-sender-identity');
+});
+
+test('sent status mapping, merge and polling policy stay bounded', () => {
+  assert.equal(sentDeliveryStatus('submitted'), 'submitted');
+  assert.equal(sentDeliveryStatus('processing'), 'processing');
+  assert.equal(sentDeliveryStatus('acked'), 'acked');
+  assert.equal(sentDeliveryStatus('done'), 'unknown');
+  assert.equal(sentDeliveryStatusLabel('completed'), '已完成');
+  assert.equal(sentDeliveryStatusLabel('acked'), '已确认收悉');
+  assert.equal(sentDeliveryStatusLabel('unknown'), '状态未知');
+  assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'submitted' }), true);
+  assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'completed' }), false);
+  assert.equal(isPendingSentItem({ localOnly: true, deliveryStatus: 'processing' }), true);
+  assert.equal(nextSentPollDelay(SENT_POLL_INTERVAL_MS, true), SENT_POLL_INTERVAL_MS);
+  assert.equal(nextSentPollDelay(SENT_POLL_INTERVAL_MS, false), SENT_POLL_INTERVAL_MS * 2);
+  assert.equal(nextSentPollDelay(SENT_POLL_MAX_DELAY_MS * 2, false), SENT_POLL_MAX_DELAY_MS);
+  const remote = [{ messageId: 'm1', durable: true }];
+  const local = [{ messageId: 'm1', localOnly: true }, { messageId: 'm2', localOnly: true }];
+  assert.deepEqual(mergeSentRecords(remote, local), [remote[0], local[1]]);
+  assert.equal(SENT_POLL_INTERVAL_MS >= 3000 && SENT_POLL_INTERVAL_MS <= 5000, true);
+  assert.equal(SENT_POLL_MAX_ATTEMPTS > 0, true);
+  assert.equal(SENT_HISTORY_LIMIT, 50);
+});
+
+test('recipient details keep identity, device and Hub fields separate', () => {
+  const details = recipientDetails({
+    agent_id: 'peer@local',
+    device_name: 'worker-laptop',
+    device_ip: '192.0.2.8',
+    hub_endpoint: 'https://hub.fixture.test',
+    connection: 'connected',
+    last_seen: '2026-09-11T04:02:00.000Z',
+    evidence: { registration: true, heartbeat: true },
+  }, 'peer@local');
+  assert.equal(details.agentId, 'peer@local');
+  assert.equal(details.deviceName, 'worker-laptop');
+  assert.equal(details.deviceIp, '192.0.2.8');
+  assert.equal(details.hubEndpoint, 'https://hub.fixture.test');
+  assert.equal(details.connection, 'connected');
+  assert.equal(details.lastSeen, '2026-09-11T04:02:00.000Z');
+  assert.deepEqual(details.evidence, { registration: true, heartbeat: true });
+  assert.equal(recipientDetails({ agent_id: 'peer@local', connection: 'online' }, 'peer@local').connection, 'unknown');
+  assert.equal(recipientDetails({ agent_id: 'other@local' }, 'peer@local').error, 'agent-identity-mismatch');
+  assert.equal(recipientDetails({ agent_id: 'peer@local' }, 'peer@local').deviceIp, null);
 });
 
 test('UI state labels keep mailbox delivery separate from client presence and task outcome', () => {
@@ -335,6 +468,36 @@ test('host reuses the registered MCP tool execute path', async () => {
   assert.equal(calls[0].aborted, false);
 });
 
+test('host binds durable sent history and recipient details to additive MCP tools', async () => {
+  const calls = [];
+  const ctx = toolsCtx({
+    [publicToolName('comm_sent')]: async (args) => {
+      calls.push({ method: 'sent', args });
+      return { structuredContent: { agent_id: 'sender@local', count: 0, items: [] } };
+    },
+    [publicToolName('comm_agent_details')]: async (args) => {
+      calls.push({ method: 'agent-details', args });
+      return { structuredContent: { agent_id: args.agent_id, connection: 'unknown' } };
+    },
+  });
+  const sent = await handleApiMethod(ctx, 'sent', { limit: 25, before: 'cursor-1' });
+  assert.deepEqual(sent, { agent_id: 'sender@local', count: 0, items: [] });
+  const details = await handleApiMethod(ctx, 'agent-details', { agent_id: 'peer@local' });
+  assert.equal(details.agent_id, 'peer@local');
+  assert.deepEqual(calls, [
+    { method: 'sent', args: { limit: 25, before: 'cursor-1' } },
+    { method: 'agent-details', args: { agent_id: 'peer@local' } },
+  ]);
+  await assert.rejects(
+    () => handleApiMethod(ctx, 'agent-details', {}),
+    (error) => error?.code === 'bad-request' && /agent_id is required/.test(error.message),
+  );
+  await assert.rejects(
+    () => handleApiMethod(ctx, 'sent', { limit: 101 }),
+    (error) => error?.code === 'bad-request' && /between 1 and 100/.test(error.message),
+  );
+});
+
 test('host turns raw MCP isError results into failed API calls', async () => {
   const ctx = toolsCtx({
     [publicToolName('comm_ack')]: async () => ({
@@ -369,7 +532,30 @@ test('status is offline when the MCP namespace is missing and does not throw', (
   assert.equal(status.deliveryReceipts, 'unavailable');
   assert.equal(status.manualRefresh, true);
   assert.equal(status.proxy, 'existing-mcp-child');
+  assert.equal(status.durableSentHistory, 'upgrade-required');
+  assert.equal(status.recipientDetails, 'upgrade-required');
   assert.ok(status.missing.includes(publicToolName('comm_inbox')));
+});
+
+test('status exposes receipt capability only when the durable sent tool is registered', () => {
+  const status = mailStatus({
+    get(name) {
+      if (name !== 'tools') return undefined;
+      return {
+        get(toolName) {
+          return [
+            'comm_diagnose',
+            'comm_inbox',
+            'comm_send',
+            'comm_sent',
+          ].includes(toolName.replace(/^mcp__agent-mail__/, '')) ? {} : undefined;
+        },
+      };
+    },
+  });
+  assert.equal(status.live, true);
+  assert.equal(status.deliveryReceipts, 'available');
+  assert.equal(status.durableSentHistory, 'available');
 });
 
 test('API send write without confirmWrite fails closed', async () => {
@@ -426,7 +612,16 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(source, /检查并确认收悉/);
   assert.match(source, /'aria-label': '调整收件箱与详情高度'/);
   assert.match(source, /客户端连接：未知/);
-  assert.match(source, /仅显示本次面板打开期间的本地发送记录/);
+  assert.match(source, /发送历史由 Agent Mail provider 持久保存/);
+  assert.match(source, /最近 \$\{SENT_HISTORY_LIMIT\} 条/);
+  assert.match(source, /本次提交记录尚未在 provider 历史中核实/);
+  assert.match(source, /SENT_POLL_INTERVAL_MS/);
+  assert.match(source, /clearTimeout\(timer\)/);
+  assert.match(source, /document\.visibilityState/);
+  assert.match(source, /addEventListener\?\.\('offline'/);
+  assert.match(source, /removeEventListener\?\.\('offline'/);
+  assert.match(source, /最后观察时间：未知/);
+  assert.match(source, /身份登记证据/);
   assert.match(source, /await refresh\(false\)/);
   assert.doesNotMatch(source, /already claimed is not fatal/);
 });

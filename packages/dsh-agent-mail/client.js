@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: '@dff652/dsh-agent-mail-ui',
+	id: '@dff652/dsh-agent-mail',
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

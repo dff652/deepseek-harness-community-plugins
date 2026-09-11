@@ -42,6 +42,10 @@
     "pack:agent-mail": "npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts",
     "pack:agentmemory": "npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts",
     "pack:agent-mail-ui": "npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts",
-    "test:real-mcp:agent-mail-ui": "node tests/dsh-agent-mail-ui-mcp.acceptance.mjs"
+    "test:real-mcp:agent-mail-ui": "node tests/dsh-agent-mail-ui-mcp.acceptance.mjs",
+    "build:agent-mail": "node packages/dsh-agent-mail-ui/build-client.mjs && node scripts/build-agent-mail-unified.mjs",
+    "check:agent-mail-build": "node packages/dsh-agent-mail-ui/build-client.mjs --check && node scripts/build-agent-mail-unified.mjs --check",
+    "test:unified:agent-mail": "node tests/dsh-agent-mail-unified.acceptance.mjs",
+    "test:receipts:agent-mail": "node tests/dsh-agent-mail-unified-receipts.acceptance.mjs"
   }
 }

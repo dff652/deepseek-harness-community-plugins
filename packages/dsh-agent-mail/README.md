@@ -1,21 +1,27 @@
 # DSH Agent Mail bundle
 
-Configuration-only DeepSeek Harness bundle for an already installed Agent Mail
-`agent-mail-mcp` executable. It mounts the official `@deepseek-ai/dsh-mcp-client`
-peer and starts a deployment-owned stdio command; it does not copy Agent Mail
-handlers, store tokens, ship a provider binary, or wake any model.
+Unified DeepSeek Harness plugin for an independently installed Agent Mail
+`agent-mail-mcp` executable. One installation mounts one official MCP client
+and the mailbox UI. The provider executable, database and credentials remain
+outside this package. Automatic wake is not provided here.
 
-## Pinned combination
+## Development candidate
 
-| Item | Pin |
-|---|---|
-| DeepSeek Harness | `0.1.1-rc.2` |
-| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
-| Agent Mail | `1.0.0-alpha.4` |
-| Reviewed provider commit | `ca6601c95eeda2d5d558cca37179be1412b75a8d` |
+Version `0.2.0` is an unreleased unified candidate for DSH `0.1.1-rc.2`.
+The exact MCP peer remains `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2`.
+Persistent sent receipts and recipient details use the unreleased provider
+`1.0.0-alpha.7`, exposing
+`comm_sent` and `comm_agent_details`; older providers retain their existing
+mail operations but cannot supply those new views. The historical alpha.4
+fixture below remains a backward-compatibility gate, not a claim that alpha.4
+supports the new APIs.
 
-The deployment owns the executable path and its SHA-256. Do not launch a host
-`PATH` `agent-mail` that is not this TypeScript alpha.4 identity.
+The web profile shows the mailbox. A headless profile still exposes the MCP
+tools without loading the browser client. A separate UI installation is no
+longer required. The optional authenticated connection-management host remains
+an independently configured provider service.
+
+See [unified migration and acceptance](../../docs/agent-mail-unified-candidate.md).
 
 ## Deployment contract
 
@@ -48,7 +54,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.0.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -86,7 +92,7 @@ acceptance.
 approve or reject a write effect.
 
 Provider documentation says human approval tools are registered only for
-`human@local`. The current `1.0.0-alpha.4` server still advertises
+`human@local`. The historical `1.0.0-alpha.4` fixture advertises
 `comm_approve` and `comm_reject` to every identity; execution rejects
 non-human callers with exit code 6. This bundle freezes that discovery
 mismatch and tests the execution denial. It does not hide the two tools and
@@ -97,6 +103,8 @@ does not run Harness as `human@local` to make them succeed.
 ```text
 mcp__agent-mail__comm_send
 mcp__agent-mail__comm_inbox
+mcp__agent-mail__comm_sent
+mcp__agent-mail__comm_agent_details
 mcp__agent-mail__comm_claim
 mcp__agent-mail__comm_ack
 mcp__agent-mail__comm_list_agents
@@ -109,7 +117,7 @@ mcp__agent-mail__comm_diagnose
 ```
 
 The first MCP milestone is asynchronous send/inbox/claim/done/ack. Automatic
-wake, session injection, polling bridges, and starting DSH, Codex, Claude, or
+wake, session injection, wake polling bridges, and starting DSH, Codex, Claude, or
 Grok when mail arrives are a separate native-integration milestone and are
 not provided here.
 

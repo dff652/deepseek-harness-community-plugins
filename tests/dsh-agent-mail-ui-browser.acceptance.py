@@ -99,6 +99,10 @@ class Fixture:
         self.inbox_calls = 0
         self.agents_calls = 0
         self.diagnose_calls = 0
+        self.sent_calls = 0
+        self.sent_reads_after_send = 0
+        self.sent_history: list[dict[str, object]] = []
+        self.agent_details_calls = 0
         self.claimed = False
         self.done = False
         self.acked = False
@@ -233,7 +237,7 @@ class Fixture:
     def roster(self) -> list[str]:
         if self.scenario == "empty-roster":
             return []
-        if self.scenario in {"directory", "recipient-refresh-failure", "identity-loss", "recipient-loss", "send-retry", "duplicate-send", "refresh-failure", "send-refresh-failure", "offline"}:
+        if self.scenario in {"directory", "recipient-refresh-failure", "identity-loss", "recipient-loss", "send-retry", "duplicate-send", "refresh-failure", "send-refresh-failure", "offline", "sent-poll"}:
             if self.scenario == "recipient-loss" and self.agents_calls == 2:
                 return ["ui-harness@local", "human@local"]
             return ["ui-harness@local", "peer-b@local", "human@local"]
@@ -277,6 +281,8 @@ class Fixture:
                         "autoWake": False,
                         "clientPresence": "unknown",
                         "deliveryReceipts": "unavailable",
+                        "durableSentHistory": "upgrade-required",
+                        "recipientDetails": "upgrade-required",
                         "manualRefresh": True,
                     })
                 return HTTPStatus.OK, json_response(True, {
@@ -285,7 +291,9 @@ class Fixture:
                     "proxy": "existing-mcp-child",
                     "autoWake": False,
                     "clientPresence": "unknown",
-                    "deliveryReceipts": "unavailable",
+                    "deliveryReceipts": "available",
+                    "durableSentHistory": "available",
+                    "recipientDetails": "available",
                     "manualRefresh": True,
                 })
             if method == "diagnose":
@@ -314,6 +322,36 @@ class Fixture:
                 if self.scenario == "recipient-refresh-failure" and self.agents_calls == 2:
                     return HTTPStatus.SERVICE_UNAVAILABLE, json_response(False, error="recipient directory failed")
                 return HTTPStatus.OK, json_response(True, {"agents": self.roster()})
+            if method == "sent":
+                self.sent_calls += 1
+                if self.scenario == "sent-poll" and self.sent_history:
+                    self.sent_reads_after_send += 1
+                if self.scenario == "sent-poll" and self.sent_reads_after_send >= 2:
+                    for item in self.sent_history:
+                        if item["status"] in {"submitted", "processing"}:
+                            item["status"] = "completed"
+                            item["delivery_status"] = "claimed"
+                            item["status_evidence"] = {
+                                "kind": "provider-confirmed",
+                                "at": "2099-01-01T00:00:03.000Z",
+                            }
+                return HTTPStatus.OK, json_response(True, {
+                    "agent_id": "ui-harness@local",
+                    "count": len(self.sent_history),
+                    "items": [dict(item) for item in self.sent_history],
+                })
+            if method == "agent-details":
+                self.agent_details_calls += 1
+                agent_id = str(payload.get("agent_id", ""))
+                return HTTPStatus.OK, json_response(True, {
+                    "agent_id": agent_id,
+                    "device_name": "peer-b-fixture",
+                    "device_ip": "192.0.2.8",
+                    "hub_endpoint": "https://hub.fixture.test",
+                    "connection": "connected",
+                    "last_seen": "2099-01-01T00:00:02.000Z",
+                    "evidence": {"registration": True, "heartbeat": True},
+                })
             if method == "inbox":
                 self.inbox_calls += 1
                 if self.scenario in {"refresh-failure", "send-refresh-failure"} and self.inbox_calls == 2:
@@ -342,6 +380,20 @@ class Fixture:
                     if self.scenario == "duplicate-send":
                         time.sleep(0.4)
                     self.send_completed = True
+                    self.sent_history.append({
+                        "message_id": "fixture-message-new",
+                        "sent_at": "2099-01-01T00:00:01.000Z",
+                        "to": payload.get("to", ""),
+                        "type": payload.get("type", "task"),
+                        "thread_id": "fixture-thread-new",
+                        "task_id": "fixture-task-new",
+                        "body_md": payload.get("body", ""),
+                        "delivery_status": "submitted",
+                        "task_status": "pending",
+                        "status": "submitted",
+                        "status_evidence": {"kind": "mailbox-write", "at": "2099-01-01T00:00:01.000Z"},
+                    })
+                    self.sent_reads_after_send = 0
                     return HTTPStatus.OK, json_response(True, {
                         "id": "fixture-message-new",
                         "thread_id": "fixture-thread-new",
@@ -349,6 +401,19 @@ class Fixture:
                         "type": payload.get("type", "task"),
                     })
                 self.done = True
+                self.sent_history.append({
+                    "message_id": "fixture-done-1",
+                    "sent_at": "2099-01-01T00:00:02.000Z",
+                    "to": payload.get("to", ""),
+                    "type": "done",
+                    "thread_id": "fixture-thread-1",
+                    "task_id": "fixture-task-1",
+                    "body_md": payload.get("body", "done"),
+                    "delivery_status": "submitted",
+                    "task_status": "completed",
+                    "status": "submitted",
+                    "status_evidence": {"kind": "mailbox-write", "at": "2099-01-01T00:00:02.000Z"},
+                })
                 return HTTPStatus.OK, json_response(True, {
                     "id": "fixture-done-1",
                     "message_id": "fixture-done-1",
@@ -947,9 +1012,9 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
         "body": "Fixture message: roster presence is unknown.",
         "effect": "read",
     }, message_call
-    wait_for(driver, lambda current: "已发送（本次面板：1）" in text_of(current), "local sent record")
-    wait_for(driver, lambda current: "已提交到邮箱" in text_of(current), "outbound state")
-    assert "签收状态未知" in text_of(driver), "outbound record claimed a receipt"
+    wait_for(driver, lambda current: "已发送（1）" in text_of(current), "local sent record")
+    wait_for(driver, lambda current: "已提交" in text_of(current), "outbound state")
+    assert "已确认收悉" not in text_of(driver), "outbound record claimed a receipt"
     click_button(driver, "收件箱")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "inbox after local send")
 
@@ -1050,6 +1115,60 @@ def run_external_ack_refresh(driver, server: FixtureServer) -> dict[str, object]
         "externalAck": True,
         "manualRefreshSyncedSelectedState": True,
         "ackActionHidden": True,
+        "backend": "synthetic local HTTP fixture",
+    }
+
+
+def run_sent_history_poll_and_reload(driver, server: FixtureServer) -> dict[str, object]:
+    open_sidebar(driver, server, "sent-poll")
+    click_button_containing(driver, "写消息")
+    wait_for(driver, lambda current: len(current.find_elements(By.TAG_NAME, "select")) >= 1, "sent-history composer")
+    Select(driver.find_elements(By.TAG_NAME, "select")[0]).select_by_value("peer-b@local")
+    composer = wait_for(
+        driver,
+        lambda current: next(
+            (element for element in current.find_elements(By.TAG_NAME, "textarea") if element.is_displayed()),
+            False,
+        ),
+        "sent-history draft textarea",
+    )
+    composer.send_keys("Durable sent history should survive a panel reload.")
+    click_button(driver, "发送只读任务")
+    wait_api_call(server.fixture, "send")
+    sent_call = wait_api_call(
+        server.fixture,
+        "sent",
+        predicate=lambda call: call["payload"].get("limit") == 50,
+    )
+    assert sent_call["payload"] == {"limit": 50}, sent_call
+    wait_for(driver, lambda current: "已发送（1）" in text_of(current), "durable sent row")
+    wait_for(driver, lambda current: "已提交" in text_of(current), "pending provider delivery state")
+    wait_for(
+        driver,
+        lambda current: "已完成" in text_of(current) and server.fixture.sent_calls >= 3,
+        "polled provider delivery state",
+    )
+
+    # The fixture keeps provider history while the browser panel is recreated.
+    # A fresh panel must load the same row instead of relying on local state.
+    driver.refresh()
+    wait_for(driver, lambda current: current.execute_script("return Boolean(window.__HARNESS__.tab)"), "reloaded sidebar registration")
+    click_button(driver, "Agent Mail")
+    click_button(driver, "已发送（1）")
+    wait_for(
+        driver,
+        lambda current: "Durable sent history should survive a panel reload." in text_of(current)
+        and "最近 50 条" in text_of(current)
+        and "已完成" in text_of(current),
+        "durable sent history after reload",
+    )
+    return {
+        "surface": "sidebar",
+        "providerHistory": True,
+        "recentLimit": 50,
+        "pollCompleted": True,
+        "historySurvivedReload": True,
+        "sentCalls": server.fixture.sent_calls,
         "backend": "synthetic local HTTP fixture",
     }
 
@@ -1192,7 +1311,22 @@ def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
     wait_for(driver, lambda current: "peer-b@local" in text_of(current), "recipient view after folder navigation")
 
     node = recipient_element(driver, "peer-b@local")
-    driver.execute_script("arguments[0].closest('button')?.click() || arguments[0].click()", node)
+    details_button = node.find_element(By.CSS_SELECTOR, '[data-agent-mail-action="recipient-details"]')
+    details_button.click()
+    wait_for(
+        driver,
+        lambda current: "peer-b-fixture" in text_of(current)
+        and "192.0.2.8" in text_of(current)
+        and "已连接（当前有证据）" in text_of(current)
+        and "最后观察时间：" in text_of(current)
+        and "身份登记证据：有" in text_of(current),
+        "provider recipient details",
+    )
+    assert server.fixture.agent_details_calls == 1, server.fixture.agent_details_calls
+    close_details = action_button(driver, "recipient-details-close")
+    close_details.click()
+    node = recipient_element(driver, "peer-b@local")
+    node.find_element(By.CSS_SELECTOR, '[data-recipient-compose="peer-b@local"]').click()
     if not any(
         select.get_attribute("value") == "peer-b@local"
         for select in driver.find_elements(By.TAG_NAME, "select")
@@ -1215,6 +1349,7 @@ def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
         "diagnosticsCollapsed": True,
         "views": ["inbox", "sent", "recipients"],
         "composerPreselected": True,
+        "providerDetails": True,
         "backend": "synthetic local HTTP fixture",
     }
 
@@ -1908,6 +2043,11 @@ def main() -> int:
 
         server = start_server(Fixture("external-ack"))
         results.append(run_external_ack_refresh(driver, server))
+        server.shutdown()
+        server.server_close()
+
+        server = start_server(Fixture("sent-poll"))
+        results.append(run_sent_history_poll_and_reload(driver, server))
         server.shutdown()
         server.server_close()
 

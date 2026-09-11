@@ -22,7 +22,6 @@ import {
 } from '../scripts/lib/agent-mail-host.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const patchPath = path.join(root, 'packages', 'dsh-agent-mail', 'cordis.patch.yml');
 const identity = JSON.parse(
   await readFile(path.join(root, 'tests', 'fixtures', 'agent-mail-provider-identity.json'), 'utf8'),
 );
@@ -59,12 +58,18 @@ try {
   const provider = await resolveReviewedProvider(work, identity);
   const { home } = await initMailHome(provider.cli, work, [sender]);
   const pattern = provider.pattern;
+  async function installWeb(env) {
+    const installed = await runDsh(dshBin,
+      ['plugin', '--profile', 'web', 'add', '-w', tarball], env, work, 180000);
+    assert.equal(installed.code, 0, `${installed.stdout}\n${installed.stderr}`);
+  }
 
   const missing = path.join(work, 'missing-agent-mail-mcp');
   const missingEnv = mailEnv(home, sender, missing, { DSH_HOME: path.join(work, 'dsh-missing') });
+  await installWeb(missingEnv);
   const missingResult = await runDsh(
     dshBin,
-    ['--patch', patchPath, '--profile', 'web', '--port', '0'],
+    ['--profile', 'web', '--port', '0'],
     missingEnv,
     work,
   );
@@ -76,9 +81,10 @@ try {
   const dupPatch = path.join(work, 'dup.patch.yml');
   await writeDupPatch(dupPatch, 'mcp-agent-mail-dup', 'agent-mail');
   const dupEnv = mailEnv(home, sender, provider.command, { DSH_HOME: path.join(work, 'dsh-dup') });
+  await installWeb(dupEnv);
   const dupResult = await runDsh(
     dshBin,
-    ['--patch', patchPath, '--patch', dupPatch, '--profile', 'web', '--port', '0'],
+    ['--patch', dupPatch, '--profile', 'web', '--port', '0'],
     dupEnv,
     work,
   );
@@ -94,7 +100,8 @@ try {
 
   const reconnHome = path.join(work, 'dsh-reconn');
   const env = mailEnv(home, sender, provider.command, { DSH_HOME: reconnHome });
-  const child = spawn(dshBin, ['--patch', patchPath, '--profile', 'web', '--port', '0'], {
+  await installWeb(env);
+  const child = spawn(dshBin, ['--profile', 'web', '--port', '0'], {
     cwd: work,
     env: toolEnv(env),
     stdio: ['ignore', 'pipe', 'pipe'],

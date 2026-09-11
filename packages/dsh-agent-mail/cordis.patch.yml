@@ -23,3 +23,5 @@
           initialDelayMs: 500
           maxDelayMs: 30000
           maxAttempts: 10
+    - id: dsh-agent-mail-ui
+      name: '@dff652/dsh-agent-mail'

@@ -9,7 +9,7 @@ import {
   validateSendPayload,
 } from './view.js';
 
-export const name = '@dff652/dsh-agent-mail-ui';
+export const name = '@dff652/dsh-agent-mail';
 export { API_METHODS, HUMAN_ONLY_TOOLS };
 
 const MAX_BODY_BYTES = 1 << 20;

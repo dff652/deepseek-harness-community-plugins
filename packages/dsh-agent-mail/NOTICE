@@ -1,4 +1,4 @@
-This package is a configuration-only DeepSeek Harness bundle.
+This package is a DeepSeek Harness MCP configuration and mailbox UI bundle.
 
 It depends on @deepseek-ai/dsh-mcp-client@0.1.1-rc.2, distributed under the
 MIT License from https://github.com/deepseek-ai/deepseek-harness. The

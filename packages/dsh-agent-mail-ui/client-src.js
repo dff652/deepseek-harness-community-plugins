@@ -11,15 +11,24 @@ import { createRoot } from 'react-dom/client';
 import {
   API_PREFIX,
   DEFAULT_DONE_BODY,
+  SENT_POLL_INTERVAL_MS,
+  SENT_POLL_MAX_ATTEMPTS,
+  SENT_HISTORY_LIMIT,
   TAB_ID,
   agentList,
   canAck,
   deliveryStatusLabel,
   diagnoseSummary,
+  isPendingSentItem,
+  mergeSentRecords,
   messageTypeLabel,
   inboxItems,
   publicToolName,
   quoteComposerText,
+  recipientDetails,
+  sentDeliveryStatusLabel,
+  sentItems,
+  nextSentPollDelay,
   sessionScope,
   taskOutcome,
   taskOutcomeLabel,
@@ -191,6 +200,14 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const [panelView, setPanelView] = useState('inbox');
   const [composeReturnView, setComposeReturnView] = useState('inbox');
   const [sentRecords, setSentRecords] = useState([]);
+  const [sentCapability, setSentCapability] = useState('unknown');
+  const [sentLastRefresh, setSentLastRefresh] = useState(null);
+  const [sentError, setSentError] = useState('');
+  const [sentPollStopped, setSentPollStopped] = useState(false);
+  const [recipientInfo, setRecipientInfo] = useState(null);
+  const [recipientInfoId, setRecipientInfoId] = useState('');
+  const [recipientInfoError, setRecipientInfoError] = useState('');
+  const [recipientInfoBusy, setRecipientInfoBusy] = useState(false);
   const [selected, setSelected] = useState(null);
   const [thread, setThread] = useState([]);
   const [error, setError] = useState('');
@@ -218,9 +235,20 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const selectedRef = useRef(selected);
   const operationRef = useRef(false);
   const refreshInFlightRef = useRef(false);
+  const sentRefreshInFlightRef = useRef(null);
+  const sentRequestSequenceRef = useRef(0);
+  const sentGenerationRef = useRef(0);
+  const sentMountedRef = useRef(false);
+  const sentIdentityRef = useRef(null);
+  const sentRecordsRef = useRef(sentRecords);
   selectedRef.current = selected;
+  sentRecordsRef.current = sentRecords;
 
   const summary = useMemo(() => (diagnose ? diagnoseSummary(diagnose) : null), [diagnose]);
+  const pendingSentCount = useMemo(
+    () => sentRecords.filter(isPendingSentItem).length,
+    [sentRecords],
+  );
   const selfId = knownAgentId(summary?.agentId);
   const recipients = selfId
     ? agents.filter((id) => id && id !== selfId && id !== 'human@local')
@@ -233,6 +261,23 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     && String(draft.body ?? '').trim(),
   );
 
+  const [pageActive, setPageActive] = useState(() => isPagePollingActive());
+
+  useEffect(() => {
+    const documentTarget = typeof document === 'undefined' ? null : document;
+    const windowTarget = typeof window === 'undefined' ? null : window;
+    const update = () => setPageActive(isPagePollingActive());
+    documentTarget?.addEventListener?.('visibilitychange', update);
+    windowTarget?.addEventListener?.('online', update);
+    windowTarget?.addEventListener?.('offline', update);
+    update();
+    return () => {
+      documentTarget?.removeEventListener?.('visibilitychange', update);
+      windowTarget?.removeEventListener?.('online', update);
+      windowTarget?.removeEventListener?.('offline', update);
+    };
+  }, []);
+
   const beginOperation = () => {
     if (operationRef.current) return false;
     operationRef.current = true;
@@ -244,6 +289,40 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     operationRef.current = false;
     setBusy(false);
   };
+
+  const clearSelectedSent = useCallback(() => {
+    const current = selectedRef.current;
+    if (current?.durable !== true && current?.localOnly !== true) return;
+    setSelected(null);
+    setThread([]);
+    setClaimReady(false);
+  }, []);
+
+  const resetSentHistory = useCallback(() => {
+    sentGenerationRef.current += 1;
+    sentRefreshInFlightRef.current = null;
+    setSentRecords([]);
+    setSentCapability('unknown');
+    setSentLastRefresh(null);
+    setSentError('');
+    setSentPollStopped(false);
+    clearSelectedSent();
+  }, [clearSelectedSent]);
+
+  useEffect(() => {
+    sentMountedRef.current = true;
+    return () => {
+      sentMountedRef.current = false;
+      sentGenerationRef.current += 1;
+      sentRefreshInFlightRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sentIdentityRef.current === selfId) return;
+    sentIdentityRef.current = selfId;
+    resetSentHistory();
+  }, [selfId, resetSentHistory]);
 
   const refresh = useCallback(async (manageBusy = true) => {
     if (refreshInFlightRef.current) return false;
@@ -355,9 +434,137 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     }
   }, [unreadOnly]);
 
+  const refreshSent = useCallback(async ({ manageBusy = false, silent = false } = {}) => {
+    if (sentRefreshInFlightRef.current !== null) return { ok: false, skipped: true };
+    const requestId = ++sentRequestSequenceRef.current;
+    const requestGeneration = sentGenerationRef.current;
+    sentRefreshInFlightRef.current = requestId;
+    const isCurrent = () => sentMountedRef.current
+      && sentGenerationRef.current === requestGeneration
+      && sentRefreshInFlightRef.current === requestId;
+    if (manageBusy) setBusy(true);
+    if (!silent) setSentError('');
+    try {
+      const parsed = sentItems(await api('sent', { limit: SENT_HISTORY_LIMIT }), selfId);
+      if (!isCurrent()) return { ok: false, stale: true };
+      if (parsed.error) {
+        const message = parsed.error === 'sender-identity-mismatch'
+          ? '发送历史身份校验失败，已隐藏这次结果。'
+          : 'Agent Mail provider 未返回发送身份，无法安全显示持久历史。';
+        throw Object.assign(new Error(message), { code: 'sent-history-invalid' });
+      }
+      setSentCapability('available');
+      setSentLastRefresh({ at: Date.now(), ok: true });
+      setSentError('');
+      const merged = mergeSentRecords(
+        parsed.items,
+        sentRecordsRef.current.filter((item) => item.localOnly === true),
+      );
+      setSentRecords(merged);
+      const currentSelected = selectedRef.current;
+      if (currentSelected?.durable === true || currentSelected?.localOnly === true) {
+        const latest = merged.find((item) => (
+          (currentSelected.messageId && item.messageId === currentSelected.messageId)
+          || (!currentSelected.messageId && item.localKey === currentSelected.localKey)
+        ));
+        if (latest) {
+          setSelected(latest);
+          if (latest.messageId) {
+            setThread((current) => current.map((entry) => (
+              entry.messageId === latest.messageId
+                ? { ...entry, ...latest }
+                : entry
+            )));
+          }
+        } else {
+          clearSelectedSent();
+        }
+      }
+      return { ok: true, items: parsed.items };
+    } catch (err) {
+      if (!isCurrent()) return { ok: false, stale: true };
+      const unsupported = err?.code === 'mcp-unavailable';
+      if (unsupported) {
+        setSentCapability('unsupported');
+        setSentRecords((current) => current.filter((item) => item.localOnly === true));
+        clearSelectedSent();
+        setSentError('当前 Agent Mail provider 不支持持久发送历史，请升级 provider 后再查看。');
+      } else if (err?.code === 'sent-history-invalid') {
+        setSentCapability('error');
+        setSentRecords([]);
+        clearSelectedSent();
+        setSentError(err instanceof Error ? err.message : String(err));
+      } else {
+        setSentCapability((current) => current === 'unknown' ? 'error' : current);
+        setSentError(err instanceof Error ? err.message : String(err));
+      }
+      setSentLastRefresh({ at: Date.now(), ok: false });
+      return { ok: false, unsupported };
+    } finally {
+      if (sentRefreshInFlightRef.current === requestId) {
+        sentRefreshInFlightRef.current = null;
+        if (manageBusy) setBusy(false);
+      }
+    }
+  }, [selfId, clearSelectedSent]);
+
+  const refreshAll = useCallback(async (manageBusy = true) => {
+    setSentPollStopped(false);
+    const refreshed = await refresh(manageBusy);
+    if (refreshed) await refreshSent({ manageBusy: false });
+    return refreshed;
+  }, [refresh, refreshSent]);
+
   useEffect(() => {
-    if (visible) void refresh();
-  }, [visible, refresh]);
+    if (!visible || !pageActive) return undefined;
+    void refresh();
+    return undefined;
+  }, [visible, pageActive, refresh]);
+
+  useEffect(() => {
+    if (!visible || !pageActive || status?.live !== true || !selfId) return undefined;
+    void refreshSent();
+    return undefined;
+  }, [visible, pageActive, status?.live, selfId, refreshSent]);
+
+  useEffect(() => {
+    if (
+      !visible
+      || !pageActive
+      || panelView !== 'sent'
+      || status?.live !== true
+      || sentCapability === 'unsupported'
+      || sentPollStopped
+      || pendingSentCount === 0
+    ) return undefined;
+    let stopped = false;
+    let timer;
+    let attempts = 0;
+    let delay = SENT_POLL_INTERVAL_MS;
+    const schedule = () => {
+      if (stopped || attempts >= SENT_POLL_MAX_ATTEMPTS) {
+        if (!stopped) setSentPollStopped(true);
+        return;
+      }
+      timer = setTimeout(async () => {
+        if (stopped || !isPagePollingActive()) return;
+        attempts += 1;
+        const result = await refreshSent({ silent: true });
+        if (stopped || result.stale || !isPagePollingActive()) return;
+        delay = nextSentPollDelay(delay, result.ok);
+        if (attempts >= SENT_POLL_MAX_ATTEMPTS) {
+          setSentPollStopped(true);
+          return;
+        }
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [visible, pageActive, panelView, status?.live, sentCapability, sentPollStopped, pendingSentCount, refreshSent]);
 
   useEffect(() => {
     if (visible) void managementController.ensureStatus();
@@ -372,7 +579,8 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setError('');
     let claimed = false;
     try {
-      if (item.messageId && item.deliveryStatus !== 'outbound' && item.deliveryStatus !== 'acked') {
+      const isSent = panelView === 'sent' || item.localOnly === true || item.durable === true;
+      if (!isSent && item.messageId && item.deliveryStatus !== 'outbound' && item.deliveryStatus !== 'acked') {
         await api('claim', { message_id: item.messageId });
         claimed = true;
         setClaimReady(true);
@@ -409,6 +617,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       if (method === 'send') {
         const record = sentRecord(result, payload, summary?.agentId ?? '');
         setSentRecords((current) => [record, ...current]);
+        setSentPollStopped(false);
       }
       if (
         method === 'send'
@@ -436,6 +645,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       if (!refreshed) {
         setError('操作已成功，但刷新失败；请手动刷新确认状态。');
       }
+      if (refreshed && method === 'send') await refreshSent({ silent: true });
       const currentSelected = selectedRef.current;
       if (refreshed && currentSelected?.threadId) {
         const tailed = await api('tail', { thread_id: currentSelected.threadId });
@@ -473,6 +683,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       sent = await api('send', outgoing);
       const created = sentRecord(sent, outgoing, summary?.agentId ?? '');
       setSentRecords((current) => [created, ...current]);
+      setSentPollStopped(false);
       setDraft({ to: '', body: '', type: 'task' });
       setPanelView('sent');
       setSelected(created);
@@ -488,6 +699,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       if (!refreshed) {
         setError('消息已提交到邮箱，但刷新失败；请手动刷新确认状态。');
       }
+      if (refreshed) await refreshSent({ silent: true });
     } catch (err) {
       setError(`消息已提交到邮箱，但刷新失败：${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -513,6 +725,41 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setError('');
   };
 
+  const openRecipientDetails = async (recipient) => {
+    const id = String(recipient ?? '').trim();
+    if (!id || operationRef.current) return;
+    setRecipientInfoId(id);
+    setRecipientInfo(null);
+    setRecipientInfoError('');
+    if (status?.recipientDetails === 'upgrade-required') {
+      setRecipientInfoError('当前 Agent Mail provider 不支持收件人详情，请升级 provider 后重试。');
+      return;
+    }
+    if (!beginOperation()) return;
+    setRecipientInfoBusy(true);
+    try {
+      const details = recipientDetails(await api('agent-details', { agent_id: id }), id);
+      if (details.error) {
+        throw new Error(details.error === 'agent-identity-mismatch'
+          ? '收件人详情身份不匹配，已隐藏结果。'
+          : 'Agent Mail provider 未返回收件人身份，无法安全显示详情。');
+      }
+      setRecipientInfo(details);
+    } catch (err) {
+      setRecipientInfoError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRecipientInfoBusy(false);
+      endOperation();
+    }
+  };
+
+  const closeRecipientDetails = () => {
+    if (operationRef.current) return;
+    setRecipientInfoId('');
+    setRecipientInfo(null);
+    setRecipientInfoError('');
+  };
+
   const openRecipientsForTest = () => {
     if (operationRef.current) return;
     setManagementOpen(false);
@@ -520,8 +767,9 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   };
 
   const refreshAfterActivation = useCallback(() => {
-    void refresh();
-  }, [refresh]);
+    resetSentHistory();
+    void refreshAll();
+  }, [refreshAll, resetSentHistory]);
 
   const refreshRecipients = async () => {
     if (operationRef.current || refreshInFlightRef.current || status?.live !== true) return;
@@ -598,7 +846,14 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const selectedOutcome = selected ? taskOutcome(selected, thread, terminalTaskIds) : '';
   const selectedSubject = selected ? threadSubject(selected, thread) : '';
   const selectedParticipants = selected ? threadParticipants(selected, thread) : [];
-  const processable = Boolean(selected?.messageId && selected.deliveryStatus !== 'outbound' && claimReady);
+  const processable = Boolean(
+    selected?.messageId
+    && panelView !== 'sent'
+    && selected.localOnly !== true
+    && selected.durable !== true
+    && selected.deliveryStatus !== 'outbound'
+    && claimReady,
+  );
   const ackReady = processable && (canAck(selected, thread)
     || Boolean(selected?.taskId && terminalTaskIds.has(selected.taskId)));
   const checkCompletion = processable && selected.type === 'task' && !ackReady;
@@ -623,7 +878,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         disabled: busy,
         'data-agent-mail-action': 'mail-sent',
         onClick: () => chooseView('sent'),
-      }, `已发送（本次面板：${sentRecords.length}）`),
+      }, `已发送（${sentRecords.length}）`),
       h('button', {
         type: 'button',
         style: viewButtonStyle(panelView === 'recipients'),
@@ -649,7 +904,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           }, '刷新收件人'),
         ),
         h('div', { style: helperStyle },
-          '目录只提供 Agent Mail 返回的身份 ID；列表不能证明客户端在线，也不表示物理位置。',
+          '目录只提供 Agent Mail 返回的身份 ID；详情中的设备和连接字段由 provider 提供，列表本身不能证明客户端在线。',
         ),
         h('div', { style: recipientRefreshStyle },
           `上次刷新：${formatRefreshTime(lastAgentsRefresh?.at)}`,
@@ -661,18 +916,59 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
             : !selfId
               ? '当前身份未知，暂不展示目录；请重试诊断。'
               : '当前目录没有可用收件人。请先在 Agent Mail 中完成身份登记。'),
-        h('div', { style: recipientListStyle }, recipients.map((id) => h('button', {
+        h('div', { style: recipientListStyle }, recipients.map((id) => h('div', {
           key: id,
-          type: 'button',
-          style: recipientRowStyle,
-          disabled: busy,
+          style: recipientRowContainerStyle,
           'data-recipient-id': id,
-          onClick: () => openComposer(id),
         },
-          h('span', { style: recipientIdStyle }, id),
-          h('span', { style: recipientStatusStyle }, '连接状态：未知'),
-          h('span', { style: recipientArrowStyle, 'aria-hidden': true }, '→'),
+          h('button', {
+            type: 'button',
+            style: recipientRowStyle,
+            disabled: busy,
+            'data-recipient-compose': id,
+            onClick: () => openComposer(id),
+          },
+            h('span', { style: recipientIdStyle }, id),
+            h('span', { style: recipientStatusStyle }, '连接状态：未知'),
+            h('span', { style: recipientArrowStyle, 'aria-hidden': true }, '→'),
+          ),
+          h('button', {
+            type: 'button',
+            style: recipientDetailsButtonStyle,
+            disabled: busy,
+            'data-agent-mail-action': 'recipient-details',
+            'data-agent-mail-recipient': id,
+            onClick: () => void openRecipientDetails(id),
+          }, '查看详情'),
         ))),
+        recipientInfoId && h('section', {
+          style: recipientDetailsStyle,
+          'data-recipient-details': recipientInfoId,
+          'aria-label': `收件人详情 ${recipientInfoId}`,
+        },
+          h('div', { style: titleRowStyle },
+            h('strong', null, '收件人详情'),
+            h('button', {
+              type: 'button',
+              style: buttonStyle,
+              disabled: busy,
+              'data-agent-mail-action': 'recipient-details-close',
+              onClick: closeRecipientDetails,
+            }, '关闭'),
+          ),
+          h('div', { style: recipientDetailIdentityStyle }, `身份 ID：${recipientInfoId}`),
+          recipientInfoBusy && h('div', { style: loadingStyle, role: 'status' }, '正在读取 provider 详情…'),
+          recipientInfoError && h('div', { style: errorStyle, role: 'alert' }, recipientInfoError),
+          recipientInfo && h('div', { style: recipientDetailGridStyle },
+            h('div', null, `设备名称：${recipientInfo.deviceName || '未知'}`),
+            h('div', null, `设备 IP：${recipientInfo.deviceIp || '未知'}`),
+            h('div', null, `Hub 地址：${recipientInfo.hubEndpoint || '未知'}`),
+            h('div', null, `连接状态：${connectionLabel(recipientInfo.connection)}`),
+            h('div', null, formatObservedTime(recipientInfo.lastSeen)),
+            h('div', null, `身份登记证据：${recipientInfo.evidence?.registration === true ? '有' : '未知'}`),
+            h('div', null, `心跳证据：${recipientInfo.evidence?.heartbeat === true ? '有' : '未知'}`),
+          ),
+        ),
       )
       : h('div', { style: mailboxStyle },
         h('div', { style: viewHeadingStyle },
@@ -691,12 +987,24 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           ),
         ),
         panelView === 'sent' && h('div', { style: noticeStyle },
-          '仅显示本次面板打开期间的本地发送记录；Agent Mail 当前没有全局已发送历史或签收回执，关闭面板后记录会清空。',
+          sentCapability === 'unsupported'
+            ? '当前 Agent Mail provider 不支持持久发送历史，请升级 provider 后再查看。'
+            : `发送历史由 Agent Mail provider 持久保存；当前显示最近 ${SENT_HISTORY_LIMIT} 条；上次读取：${formatRefreshTime(sentLastRefresh?.at)}。`,
+        ),
+        panelView === 'sent' && sentRecords.some((item) => item.localOnly === true) && h('div', { style: warningStyle },
+          '有一条或多条本次提交记录尚未在 provider 历史中核实；它们只是面板临时记录，关闭面板后不会保留。',
+        ),
+        panelView === 'sent' && sentError && h('div', { style: errorStyle, role: 'alert' },
+          sentError,
+          h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '重试'),
+        ),
+        panelView === 'sent' && sentPollStopped && h('div', { style: warningStyle, role: 'status' },
+          '发送状态轮询已暂停；可手动刷新继续核实。',
         ),
         h('div', { ref: listRef, style: listPaneStyle, 'data-mail-folder': panelView },
           shownItems.length === 0 && h('div', { style: emptyStyle },
             panelView === 'sent'
-              ? '本次面板还没有发送记录。'
+              ? `最近 ${SENT_HISTORY_LIMIT} 条发送记录中暂无记录。`
               : status?.live === true ? '暂无邮件。可发送只读任务，或让模型调用 comm_send。' : '邮箱不可用。',
           ),
           shownItems.map((item) => h('button', {
@@ -713,7 +1021,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
                 ? `至 ${item.to || '未知收件人'}`
                 : `来自 ${item.from || '未知发件人'}`),
               h('span', { style: rowStatusStyle }, panelView === 'sent'
-                ? deliveryStatusLabel('outbound')
+                ? sentDeliveryStatusLabel(item.deliveryStatus)
                 : deliveryStatusLabel(item.deliveryStatus)),
             ),
             h('div', { style: snippetStyle }, item.body || '（空消息）'),
@@ -904,7 +1212,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           style: buttonStyle,
           disabled: busy,
           'data-agent-mail-action': 'mail-refresh',
-          onClick: () => void refresh(),
+          onClick: () => void refreshAll(),
         }, '手动刷新'),
         !isCompose && h('button', {
           type: 'button',
@@ -952,7 +1260,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     summary?.warnings?.map((warning) => h('div', { key: warning, style: warningStyle, role: 'status' }, warning)),
     error && h('div', { style: errorStyle, role: 'alert' },
       h('span', null, error),
-      h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refresh() }, '重试'),
+      h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '重试'),
     ),
     !managementOpen && (isCompose ? renderCompose() : renderMailbox()),
     h('div', { style: footerStyle }, '发送只写入 Agent Mail 邮箱，不会自动唤醒客户端。'),
@@ -1458,6 +1766,12 @@ function knownAgentId(value) {
   return ['unknown', 'unavailable', 'undefined', 'null', 'n/a'].includes(id.toLowerCase()) ? '' : id;
 }
 
+function isPagePollingActive() {
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return false;
+  return true;
+}
+
 function clientPresenceLabel(value) {
   const key = String(value ?? '').trim().toLowerCase();
   if (key === 'online' || key === 'connected') return '在线';
@@ -1492,13 +1806,18 @@ async function api(method, payload = {}) {
   }
   const parsed = await response.json().catch(() => null);
   if (!response.ok || parsed?.ok !== true) {
-    throw new Error(parsed?.error?.message ?? `HTTP ${response.status}`);
+    const error = new Error(parsed?.error?.message ?? `HTTP ${response.status}`);
+    error.code = parsed?.error?.code;
+    error.status = response.status;
+    throw error;
   }
   return parsed.value;
 }
 
 function sentRecord(result, payload, from) {
   const value = result != null && typeof result === 'object' ? result : {};
+  const providerStatus = value.status ?? value.delivery_status ?? 'submitted';
+  const normalizedStatus = sentDeliveryStatus(providerStatus);
   return {
     localKey: `sent-${Date.now()}-${++localSentSequence}`,
     messageId: String(value.id ?? value.message_id ?? ''),
@@ -1509,8 +1828,13 @@ function sentRecord(result, payload, from) {
     to: String(value.to ?? payload.to ?? ''),
     body: String(value.body_md ?? value.body ?? payload.body ?? ''),
     effect: String(value.effect_level ?? value.effect ?? payload.effect ?? 'read'),
-    deliveryStatus: 'outbound',
+    sentAt: value.sent_at ?? value.ts ?? null,
+    deliveryStatus: normalizedStatus === 'unknown' ? 'submitted' : normalizedStatus,
+    rawDeliveryStatus: value.delivery_status == null ? null : String(value.delivery_status),
+    taskStatus: value.task_status == null ? '' : String(value.task_status),
+    statusEvidence: value.status_evidence ?? null,
     unread: false,
+    durable: false,
     claimed: false,
     localOnly: true,
   };
@@ -1519,13 +1843,39 @@ function sentRecord(result, payload, from) {
 function formatRefreshTime(value) {
   if (!value) return '尚未刷新';
   try {
-    return new Date(value).toLocaleTimeString([], {
+    const date = new Date(value);
+    if (Number.isNaN(date.valueOf())) return '未知';
+    return date.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
     });
   } catch {
     return '未知';
+  }
+}
+
+function connectionLabel(value) {
+  if (value === 'connected') return '已连接（当前有证据）';
+  if (value === 'disconnected') return '已断开（当前有证据）';
+  return '未知';
+}
+
+function formatObservedTime(value) {
+  if (!value) return '最后观察时间：未知';
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.valueOf())) return '最后观察时间：未知';
+    return `最后观察时间：${date.toLocaleString([], {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })}`;
+  } catch {
+    return '最后观察时间：未知';
   }
 }
 
@@ -1601,11 +1951,16 @@ const countStyle = { padding: '2px 7px', borderRadius: 999, background: 'color-m
 const mailboxStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
 const recipientsStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
 const recipientListStyle = { display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, overflow: 'auto' };
+const recipientRowContainerStyle = { display: 'flex', alignItems: 'stretch', gap: 6, width: '100%' };
 const recipientRowStyle = { ...buttonStyle, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start', textAlign: 'left', padding: '10px 12px', borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' };
+const recipientDetailsButtonStyle = { ...buttonStyle, flex: '0 0 auto', alignSelf: 'center', whiteSpace: 'nowrap' };
 const recipientIdStyle = { flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere', fontWeight: 500 };
 const recipientStatusStyle = { flex: '0 0 auto', color: 'inherit', opacity: 0.7, fontSize: 12 };
 const recipientArrowStyle = { flex: '0 0 auto', opacity: 0.6 };
 const recipientRefreshStyle = { marginBottom: 10, fontSize: 12, opacity: 0.7 };
+const recipientDetailsStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, padding: 10, border: '1px solid color-mix(in srgb, currentColor 14%, transparent)', borderRadius: 6 };
+const recipientDetailIdentityStyle = { fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' };
+const recipientDetailGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere' };
 const listStyle = { overflow: 'auto', flex: '0 1 auto', minHeight: 0 };
 const threadStyle = { overflow: 'auto', flex: '1 1 0', minHeight: 0, borderTop: '1px solid color-mix(in srgb, currentColor 16%, transparent)', padding: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 10 };
 const composeStyle = { display: 'flex', flexDirection: 'column', gap: 12, flex: '1 1 auto', minHeight: 0, overflow: 'auto', padding: '14px 16px 16px' };
