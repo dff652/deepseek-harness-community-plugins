@@ -1,5 +1,8 @@
 # Agent Mail release preparation (T2)
 
+Execution results supersede the preparation snapshot below: see the
+[0.2.0 release and catalog handoff](agent-mail-0.2.0-release.md).
+
 Status date: 2026-09-11. This is a preparation record only. It does not
 authorize commit, push, tag, GitHub Release, npm publication, catalog edits,
 PR comments or production migration.

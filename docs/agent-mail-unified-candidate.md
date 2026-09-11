@@ -1,9 +1,10 @@
-# Unified Agent Mail development candidate
+# Unified Agent Mail 0.2.0 acceptance
 
-The next `@dff652/dsh-agent-mail@0.2.0` package contains the MCP configuration
-and mailbox UI. The standalone UI remains a compatibility package. This is an
-unreleased implementation; publication, catalog changes and live upgrades are
-separate operations after acceptance.
+The released `@dff652/dsh-agent-mail@0.2.0` package contains the MCP
+configuration and mailbox UI. The standalone UI remains a compatibility
+package. See the [release and catalog handoff](agent-mail-0.2.0-release.md)
+for published downloads and verification. Catalog merge and live upgrades
+remain separate operations.
 
 ## Installation and migration
 
@@ -167,9 +168,9 @@ substitution is a session limitation, not evidence that `luna-worker` ran.
 See the [parallel execution task list](agent-mail-release-tasks.md) for task
 ownership, dependencies, acceptance criteria and handoff prompts.
 
-Local source commits do not constitute publication or deployment. After this
-gate, decide separately on documentation/product commits, push, tags/releases,
-npm publication, the existing catalog request and production migration. The
+GitHub publication and the existing catalog PR update are now recorded in
+the [release handoff](agent-mail-0.2.0-release.md). Catalog merge, npm publication
+and production migration remain separate. The
 catalog follow-up should reflect the unified package and avoid a duplicate
 standalone UI entry. Automatic model wake-up, trusted device
 registration/presence and older-history navigation remain separate feature
