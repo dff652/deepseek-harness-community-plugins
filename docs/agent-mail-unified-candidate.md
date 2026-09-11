@@ -123,42 +123,56 @@ until manually refreshed. It does not offer older-page navigation yet; the
 provider API has a stable pagination cursor. Device name/IP and continuous
 connection status remain unknown without a trusted registration/heartbeat.
 
-## Next: isolated acceptance across two hosts
+## Cross-host isolated acceptance on 2026-09-11
 
-Two hosts have been selected. Read-only preflight confirmed SSH access, direct
-LAN routing and the basic runtime/build tools. Host A is a VM and Host B is a
-separate machine; this is a cross-host network gate, not a requirement for two
-bare-metal computers. The temporary Hub port and application path have not yet
-been tested. The TLS acceptance above still proves only independent clients on
-one machine.
+Host A (a VM) ran a disposable DSH web profile and an authenticated TLS Hub.
+Host B (a separate machine) used an independent MCP identity and mailbox home.
+Native dependencies were installed on each host; `node_modules` was not copied.
+The temporary CA and IP SAN were validated and TLS verification stayed enabled.
+The selected Hub port was reachable without changing router or firewall policy.
 
-1. Recheck both hosts and verify the candidate archive digests above. Use new
-   temporary installation prefixes, mailbox homes, identities and credentials.
-   Install native dependencies on each target; do not copy `node_modules`
-   between hosts.
-2. Run a disposable DSH web profile and authenticated TLS Hub on Host A, with
-   an independent MCP client on Host B. Validate the temporary CA and hostname
-   or IP SAN. Check the selected port without changing router/firewall policy.
-3. Verify bidirectional send, sender isolation, claim, completion, failure and
-   acknowledgment; distinguish task processing from notification delivery.
-4. Verify client restart, Hub disconnect/restart and durable sent history.
-   Inspect the real browser UI for automatic receipt updates and history after
-   reload. Keep unknown device/presence fields truthful.
-5. Capture sanitized evidence with versions/digests, remove temporary processes
-   and credentials, and check that existing services remain healthy.
+The primary agent independently verified, and did not treat a worker summary as
+acceptance. Item-by-item evidence is in the
+[cross-host closeout](agent-mail-acceptance-closeout.md).
 
-One `luna-worker` can own Host B's isolated installation and client-side checks.
-The primary agent owns Host A, integration orchestration, complete diff review,
-independent cross-host verification and final acceptance. Workers must preserve
-other contributors' changes. A worker summary alone does not pass the gate.
+- Bidirectional send, sender isolation, claim, completion, failure and
+  acknowledgment. Original task receipts used durable task state; done/error
+  notifications kept their own delivery receipts (`submitted` / pending).
+- The Host B worker’s first error call used the origin of a B→A task and was
+  rejected (`done/error must be sent by the assignee to the task origin`). The
+  primary agent retested as assignee: a claimed B→A task failed after Host A
+  sent `type=error`, and a new A→B task failed after Host B sent `type=error`.
+  In both cases the error notification stayed a delivery receipt.
+- MCP client restart and Hub disconnect/restart. The worker missed the short
+  Hub-down window. The primary agent still observed connection refused and no
+  fabricated receipts on both hosts, then recovered the same sent ids after
+  restart.
+- Real DSH browser, exact unified archive, Hub-backed provider: sent history
+  after reload, automatic claim/completion updates, hidden/offline/closed
+  panel polling suspension, and truthful unknown device/connection fields.
+  Wide and narrow screenshots were inspected; the narrow document has no
+  horizontal overflow.
 
-The next task should report each check as passed, failed or not run, together
-with cleanup results and remaining limitations. Machine-specific instructions
-belong in a private handoff, outside this public repository.
+Existing production and preview services on Host A, and unrelated Host B
+services, remained running. Temporary processes, tokens and certificates were
+removed after evidence capture. Machine-specific addresses, usernames, paths
+and credentials stay in the private handoff.
+
+The requested Host B `luna-worker` type was not registered in this session.
+One general-purpose subagent used the same Host B ownership contract. That
+substitution is a session limitation, not evidence that `luna-worker` ran.
+
+## Remaining decisions
+
+See the [parallel execution task list](agent-mail-release-tasks.md) for task
+ownership, dependencies, acceptance criteria and handoff prompts.
 
 Local source commits do not constitute publication or deployment. After this
-gate passes, decide separately on fixes/commits, push, tags/releases, npm
-publication, the existing catalog request and production migration. The catalog
-follow-up should reflect the unified package and avoid a duplicate standalone
-UI entry. Automatic model wake-up, trusted device registration/presence and
-older-history navigation remain separate feature work.
+gate, decide separately on documentation/product commits, push, tags/releases,
+npm publication, the existing catalog request and production migration. The
+catalog follow-up should reflect the unified package and avoid a duplicate
+standalone UI entry. Automatic model wake-up, trusted device
+registration/presence and older-history navigation remain separate feature
+work. Isolation closeout queried that catalog PR number only in this
+repository and did not treat a miss as proof the request is absent. No
+duplicate catalog entry was created.

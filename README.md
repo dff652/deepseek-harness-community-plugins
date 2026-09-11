@@ -3,9 +3,11 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="DeepSeek Harness Plugins connects DSH to reviewed configuration-only MCP bundles">
 </p>
 
-> Development: the unreleased [unified Agent Mail candidate](docs/agent-mail-unified-candidate.md)
-> combines MCP and the mailbox UI in one installation. Existing release and
-> deployment records below describe their historical accepted versions.
+> Development: the unreleased [unified Agent Mail 0.2.0 candidate](docs/agent-mail-unified-candidate.md)
+> combines MCP and the mailbox UI in one installation. Cross-host isolation
+> passed; see the [closeout](docs/agent-mail-acceptance-closeout.md). Existing
+> release and deployment records below describe their historical accepted
+> versions. Publication and live cutover remain separate.
 
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
