@@ -100,7 +100,7 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 ## 下一阶段：逐页界面优化
 
 用户确认的逐页问题、A0–A7 执行范围、验收矩阵及新任务起点见
-[界面简化任务清单](agent-mail-ui-simplification-tasks.md)。A0–A7 源码已作为 `0.2.1` 提交；未跑项与 B 类仍以该清单为准。
+[界面简化任务清单](agent-mail-ui-simplification-tasks.md)。`0.2.1` 实现已提交，但[完成度复核](agent-mail-ui-0.2.1-completion-review.md)确认 A6/A7 尚未闭环，C01–C08 待修复和补验。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 
