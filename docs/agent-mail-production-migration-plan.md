@@ -5,6 +5,14 @@ is not authorization to install, stop or restart services, edit profiles,
 create backups, commit, push, publish or deploy. Isolation acceptance of the
 unified candidate is not live production acceptance.
 
+An independent temporary SQLite method check passed: a committed WAL row was
+included by SQLite `Connection.backup()` while the main database file SHA-256
+remained unchanged; a `mode=ro` copy passed `PRAGMA integrity_check` and row
+verification; and, after writers stopped, `wal_checkpoint(TRUNCATE)` reported
+`busy=0`. This was a disposable experiment, not the production mailbox or a
+production backup. T5 must repeat and record the procedure against the live
+mailbox before cutover.
+
 Host A is the machine that currently runs the production DeepSeek Harness
 (DSH) web unit. Host B is a separate machine used only as a real recipient
 during later live acceptance. This public plan uses Host A/B and
@@ -145,23 +153,38 @@ Actual backup creation is a T5 step. The backup set is:
 4. **Provider alpha.4 runtime tree and its original tarball**, plus the
    current stdio wrapper.
 5. **Mailbox home.** The entire `/absolute/path/to/agent-mail-home`
-   directory (`store.sqlite`, `agents.json`, `config.json`, `policy.yaml`,
-   schemas, logs, locks, export). Record file names, sizes and a sqlite
-   integrity result. Do not copy message bodies into git or this
-   repository.
+   directory (`store.sqlite`, any `store.sqlite-wal` / `store.sqlite-shm`,
+   `agents.json`, `config.json`, `policy.yaml`, schemas, logs, locks, export).
+   Record file names and sizes. The final rollback image must be a
+   WAL-consistent SQLite backup, not a copy of the main database file alone.
+   Do not copy message bodies into git or this repository.
 6. **Non-secret environment names and values.** `DSH_HOME`,
    `DSH_AGENT_MAIL_COMMAND`, `DSH_AGENT_MAIL_HOME`, `DSH_AGENT_MAIL_ID`,
    and whether `DSH_AGENT_MAIL_HUB_URL` is set.
-7. **Checkpoint ledger.** SHA-256 of mailbox `store.sqlite`, web
-   `package.json`, wrappers and unit files at T0 and after each later
-   step.
+7. **Checkpoint ledger.** Record the SHA-256 of mailbox `store.sqlite` only as
+   a change-detection value; it is not proof that WAL content is included.
+   Also record the final SQLite backup image digest, checkpoint result, native
+   read-only verification, web `package.json`, wrappers and unit files at T0
+   and after each later step.
 
 Do not include: the Host A preview home, isolation evidence homes, test
 Hub certificates, test tokens, or Host B runtime data.
 
-Prefer a stopped, consistent copy of the live DSH home. If a backup is
-taken while DSH is running, record that it is crash-consistent only and
-re-copy sqlite after stop before using it as a rollback image.
+Before making the final rollback image, stop DSH and every process that can
+write the mailbox, including provider workers and maintenance jobs, and verify
+that no writer remains. Then use one of these SQLite-safe paths:
+
+- With writers stopped, run `PRAGMA wal_checkpoint(TRUNCATE);`, require
+  `busy=0`, verify the WAL/SHM state, and copy the database only after that
+  checkpoint succeeds.
+- Use SQLite's online backup API (`Connection.backup()`), then verify the
+  resulting backup with a native read-only connection. The backup must include
+  committed WAL rows; copying `store.sqlite` and hashing it is not equivalent.
+
+A plain filesystem copy made while DSH is running is unverified staging only;
+crash consistency is not guaranteed by copying files. Do not use
+it as a rollback image until the stopped-writer checkpoint or online-backup
+path and its verification have passed.
 
 ## How to verify a backup
 
@@ -171,8 +194,11 @@ A backup is not verified by existing. For each object:
   above.
 - `tar -tzf` the provider archive (117 files) and the unified archive
   (9 files).
-- On the **copy** of `store.sqlite`, run `PRAGMA integrity_check;` and
-  record table counts. Do not query message bodies into logs.
+- On the final SQLite backup image, open the database with a native read-only
+  connection (`mode=ro`), run `PRAGMA integrity_check;`, record table counts
+  and verify a non-body marker. Confirm any WAL/SHM handling is accounted for;
+  the main `store.sqlite` hash alone is not a consistency check. Do not query
+  message bodies into logs.
 - Diff unit/wrapper/drop-in copies against the live files; they must be
   byte-identical at T0.
 - Confirm the copied web `package.json` still lists Agent Mail `0.1.1`,
@@ -180,9 +206,17 @@ A backup is not verified by existing. For each object:
 - Restore the MCP `0.1.1` and UI `0.1.4` tarballs into a **disposable**
   `DSH_HOME` and confirm they add. That proves the rollback bytes are
   installable. Do not use the live home for this check.
-- Restore the mailbox copy into a disposable directory and open it
-  read-only with the alpha.4 provider. Do not point production
-  `DSH_AGENT_MAIL_HOME` at the copy.
+- Restore the final SQLite backup and the required mailbox metadata into a
+  disposable directory and repeat the native `mode=ro` integrity and marker
+  checks. This restore acceptance must pass before cutover.
+- Run the old alpha.4 provider compatibility check separately against that
+  disposable restore as a required rollback gate. Alpha.4 opens its store
+  writable, so do not describe that provider check as read-only. Never point
+  production `DSH_AGENT_MAIL_HOME` at the copy.
+  On a further disposable copy, first open with alpha.7 and create marked
+  synthetic task/receipt records, then verify alpha.4 can reopen that newer
+  database and preserve the records. Checking alpha.4 against only its own
+  pre-upgrade database does not validate software rollback after new mail.
 
 If any check fails, do not start cutover.
 
@@ -192,18 +226,21 @@ Rollback is allowed only when all of the following hold:
 
 - Production-operation authorization for rollback exists (separate from
   the cutover authorization if the owner split them).
-- The verified T0 backup still exists and the disposable restore check
-  passed.
+- The verified T0 software backup and the final SQLite backup still exist,
+  and the disposable restore checks passed.
+- The final SQLite backup was made through a stopped-writer checkpoint or the
+  online backup API, and its native read-only restore acceptance passed.
 - The Host A preview instance is still untouched.
 - The operator has the checkpoint ledger and knows whether new production
   mail was accepted after T0.
 
-Mailbox rule: **never restore `store.sqlite` from T0 after new mail has
-been accepted.** Plugin, provider and unit rollback must keep the newer
-mailbox home, identity and connection files. If a step before any new
-mail fails and the sqlite digest is still the T0 digest, restoring the
-mailbox copy is optional and should still be avoided unless the file was
-damaged.
+Mailbox rule: **never restore `store.sqlite` from T0 after any mailbox write
+may have been accepted.** Plugin, provider and unit rollback must keep the
+current mailbox home, identity and connection files. A main-file digest
+cannot establish that no committed WAL row exists. Restore the verified T0
+SQLite image only for demonstrated mailbox damage, after application/provider
+records establish that no accepted write would be discarded, and with explicit
+owner authorization.
 
 Do not roll this cutover back to DSH `0.1.0-rc.6`, preview UI `0.1.7`,
 or an isolation profile.
@@ -272,8 +309,10 @@ dsh plugin --profile web add -w /absolute/path/to/dff652-dsh-agent-mail-ui-0.1.4
 ```
 
 Restore the alpha.4 stdio wrapper / `DSH_AGENT_MAIL_COMMAND` and start
-the previous unit files. Do not restore mailbox sqlite unless it is
-still the T0 digest and the owner explicitly wants that copy.
+the previous unit files. Keep the current mailbox home. Do not restore
+mailbox SQLite based on a digest; use the rollback preconditions and an
+explicit owner decision if demonstrated corruption requires the verified T0
+image.
 
 ## Cutover steps
 
@@ -292,18 +331,23 @@ Each step is later T5 work. T3 does not execute them.
 
 - **Checkpoint:** Unit ActiveState, MainPID, NRestarts, web
   `package.json`, provider `package.json` version, mailbox sqlite
-  digest and integrity, wrapper digests, Hub URL presence.
+  change-detection digest plus native integrity, wrapper digests, Hub URL
+  presence. The digest does not prove WAL content.
 - **Expected:** Matches the baseline table. Preview still listening.
 - **Failure rollback:** Stop if the live baseline drifted. Re-inspect.
 - **Mailbox:** Read-only.
 
-### Step 2 — Create and verify backups
+### Step 2 — Prepare backup staging and verify rollback bytes
 
-- **Checkpoint:** Backup verification checklist above, all green.
-- **Expected:** T0 ledger written to the protected local directory, not
-  this repository.
+- **Checkpoint:** Software rollback archives and deployment-file staging checks
+  are green. Any mailbox copy made while DSH is running is explicitly marked
+  unverified staging; final SQLite consistency is not accepted yet.
+- **Expected:** Pre-stop facts are recorded in the protected local ledger, not
+  this repository. The final mailbox image and disposable restore acceptance
+  are deferred until Step 4 after all writers stop.
 - **Failure rollback:** Do not continue.
-- **Mailbox:** Copied; live file remains the source of truth.
+- **Mailbox:** No production mailbox change. A main-file digest alone does
+  not verify a staging copy or pass the final backup gate.
 
 ### Step 3 — Install provider alpha.7 side by side
 
@@ -311,17 +355,23 @@ Each step is later T5 work. T3 does not execute them.
   Node 20 wrapper written but not referenced by the unit.
 - **Expected:** Production DSH still on alpha.4. Preview unchanged.
 - **Failure rollback:** Delete only the new unused tree. No unit change.
-- **Mailbox:** Untouched. If this step is the first to fail, sqlite
-  digest must still equal T0.
+- **Mailbox:** Untouched by the side-by-side install. Confirm this from the
+  controlled operation/write record; do not infer it from the main-file hash.
 
-### Step 4 — Stop production DSH only
+### Step 4 — Stop production DSH and finalize the mailbox backup
 
 - **Checkpoint:** Production unit inactive; preview still up; mailbox
-  sqlite digest recorded as T0-stop.
+  change-detection digest recorded as T0-stop; every mailbox writer is stopped;
+  the final checkpoint or online-backup verification and disposable restore
+  acceptance are recorded.
 - **Expected:** Only the production DSH unit (and its proxy, which
-  depends on it) is down. Do not stop unrelated user units.
+  depends on it) is down. If another mailbox writer needs to be stopped outside
+  the authorized scope, halt before taking the final image and report it; do
+  not stop unrelated units to satisfy this checkpoint.
 - **Failure rollback:** Start the same unit with unchanged files.
-- **Mailbox:** No writer. Digest must match T0-stop.
+- **Mailbox:** No writer. Digest is change detection only; the
+  WAL-consistent backup image is the rollback artifact. Do not proceed if the
+  final backup or restore gate is missing.
 
 ### Step 5 — Switch `DSH_AGENT_MAIL_COMMAND` to alpha.7
 
@@ -341,35 +391,38 @@ Each step is later T5 work. T3 does not execute them.
 - **Expected:** Composed config has exactly one MCP row and one UI row
   naming `@dff652/dsh-agent-mail`.
 - **Failure rollback:** Step C plugin rollback, then Step 5 reverse,
-  then start. If sqlite digest is still T0-stop, mailbox restore
-  remains optional.
+  then start. Preserve the current mailbox; do not decide whether to restore
+  SQLite from a digest.
 - **Mailbox:** Plugin add/remove must not change sqlite. If it does,
   stop and investigate; do not continue.
 
 ### Step 7 — Start production DSH
 
-- **Checkpoint:** Unit active, NRestarts=0 after start, previous
+- **Checkpoint:** Unit active, NRestarts stable through the observation window after start, previous
   trusted-host / proxy configuration unchanged, MCP child uses alpha.7.
 - **Expected:** Web profile serves the mailbox UI. `comm_sent` and
   `comm_agent_details` exist. Preview still up.
 - **Failure rollback:** Stop DSH, plugin rollback, provider wrapper
-  rollback, start. Keep mailbox if digest changed only due to provider
-  startup with no user mail — compare with T0-stop; if the provider
-  rewrote sqlite without new user messages, prefer keeping the newer
-  file unless it fails integrity.
-- **Mailbox:** Integrity must pass. Do not replace with T0 if the
-  digest moved.
+  rollback, start. Keep the current mailbox and inspect native integrity plus
+  application/provider write records; a provider startup rewrite or a WAL
+  row cannot be classified from the main-file hash alone.
+- **Mailbox:** Native integrity must pass. Do not replace the current mailbox
+  with T0 without the rollback preconditions and explicit owner decision.
 
 ### Step 8 — Live acceptance matrix
 
 See the next section. Isolation evidence must not be copied in as a
 pass.
 
-- **Failure rollback:** If no new user/test mail was accepted and sqlite
-  is still T0-stop, full software rollback. If any new mail was
-  accepted, software-only rollback and keep mailbox.
-- **Mailbox:** Test messages are new mail. After the first accepted
-  test send, T0 sqlite is no longer a safe restore image.
+- **Failure rollback:** If acceptance fails, stop and use software-only
+  rollback while keeping the current mailbox whenever any write may have been
+  accepted or its outcome is unknown. Restore T0 SQLite only under the
+  rollback preconditions, with application/provider evidence that no accepted
+  write would be discarded and explicit owner authorization; never infer this
+  from the main-file hash.
+- **Mailbox:** Test messages are new mail. After the first accepted test send,
+  T0 SQLite is no longer a safe restore image. A failed or timed-out send is
+  also a possible write until the stable-marker query resolves it.
 
 ### Step 9 — Observation
 
@@ -390,12 +443,12 @@ and one UI row must already hold.
 
 | # | Case | How | Expected | Fail / rollback |
 |---|---|---|---|---|
-| L0 | Row shape | On the authorized stopped-or-live home, confirm composed config | Exactly one `id: mcp-agent-mail` and one `id: dsh-agent-mail-ui`. UI `name` is `@dff652/dsh-agent-mail`. No remaining `@dff652/dsh-agent-mail-ui` package. | Stop. Plugin rollback. No mail restore if sqlite moved. |
-| L1 | Submit feedback | From the production mailbox UI, send one marked test message to a real roster recipient | UI leaves compose, shows the sent view, status `submitted` / 「已提交」. The same id appears through `comm_sent`. Inbox of the sender does not invent a receive. | If send failed, no new row; safe to retry once. If send succeeded, never click send again for the same marker. |
+| L0 | Row shape | On the authorized stopped-or-live home, confirm composed config | Exactly one `id: mcp-agent-mail` and one `id: dsh-agent-mail-ui`. UI `name` is `@dff652/dsh-agent-mail`. No remaining `@dff652/dsh-agent-mail-ui` package. | Stop. Plugin rollback; retain the current mailbox under the rollback preconditions. |
+| L1 | Submit feedback | From the production mailbox UI, send one marked test message with a unique stable marker in its body to a real roster recipient. If the response fails or times out, read sender-scoped `comm_sent` results and compare the marker in `body_md` before doing anything else; use `before`/`next_before` pagination as needed, since there is no server-side marker filter. | UI leaves compose, shows the sent view, status `submitted` / 「已提交」. The same marked item appears through `comm_sent`. Inbox of the sender does not invent a receive. | A failed response is an unknown outcome until the marker query establishes success. Never resend while the outcome is unknown; if the marker is absent, stop for owner review. If it establishes success, never click send again for that marker. |
 | L2 | Submit succeeded but refresh failed | After a successful send, the UI refresh of inbox/sent/details fails (forced by a brief MCP/Hub interruption, or observed naturally) | Banner is 「消息已提交到邮箱，但刷新失败；请手动刷新确认状态。」 (or the claim/ack variant 「操作已成功，但刷新失败…」). Mailbox has exactly one new message for that marker. Manual refresh recovers the row. A second send is forbidden. | If two messages exist for one marker, stop and keep mailbox. Software rollback only after owner review. |
 | L3 | Durable history | Reload the browser; close and reopen the panel | The marked sent item remains. History comes from `comm_sent`, not from a panel-only list. Device name/IP stay unknown. | If history vanishes, provider is not alpha.7 or MCP row is wrong. Do not restore sqlite to “fix” a UI bug. |
 | L4 | Real recipient claim / done / error / ack | A real assignee client — not the isolation homes — claims the task, then sends `done` on one thread and `error` on a **second** marked task. The **assignee** must send `error` to the origin; the origin must not send `error` for the assignee. Then ack the originals | Original tasks show durable task state (`claimed` → `completed` / `failed`). The done/error notifications have their own delivery receipts (`submitted` / pending). Origin UI updates without a model wake. | Isolation Hub, preview identity, or origin-sent `error` is a failed case even if the UI looks green. |
-| L5 | Restart recovery | Restart the production DSH unit once after L1–L4. Do not restart the preview instance | Unit returns with NRestarts=0. Same MCP/UI rows. Sent history and task states return. Mailbox integrity passes. Unrelated bundles still load. | If restart loops, stop and software-rollback. Keep mailbox. |
+| L5 | Restart recovery | Restart the production DSH unit once after L1–L4. Do not restart the preview instance | Unit returns without unexpected automatic restarts (record NRestarts before and after). Same MCP/UI rows. Sent history and task states return. Mailbox integrity passes. Unrelated bundles still load. | If restart loops, stop and software-rollback. Keep mailbox. |
 
 Recipient topology: live Host A is currently a local mailbox with Hub
 URL unset. A real recipient is therefore either (1) a second non-human
@@ -420,11 +473,15 @@ Stop, and do not enlarge scope, when any of these occur:
 - Provider child started under Node 24 and the native addon fails.
 - `DSH_AGENT_MAIL_HOME` or `DSH_AGENT_MAIL_ID` changed, or a Hub URL /
   token_file from preview/isolation appeared.
-- Mailbox sqlite digest changed during plugin add/remove.
+- Mailbox state changed during plugin add/remove, or the operation's writer
+  audit is unavailable. A main-file digest is only a change-detection signal,
+  not proof that the mailbox was untouched.
 - Host A preview instance on its existing port disappeared after an
   operator action in this window.
 - Host B TSPlatform/ollama would need a change to proceed.
 - New mail has been accepted and someone proposes restoring T0 sqlite.
+- A send response failed or timed out and `comm_sent` cannot establish the
+  outcome by the stable marker; do not resend.
 - Published bytes are proposed in place of the hashed local candidate
   without a digest check.
 - Any step lacks its own authorization.
@@ -436,7 +493,7 @@ Stop, and do not enlarge scope, when any of these occur:
 | Production DSH unit start/stop | Deployment owner / T5 after authorization | Restore T0 unit files and start. |
 | Web plugin pins | Same | Restore MCP `0.1.1` then UI `0.1.4`. |
 | Provider command | Same | Point `DSH_AGENT_MAIL_COMMAND` at the alpha.4 wrapper. Keep the alpha.7 tree for inspection. |
-| Mailbox home | Deployment owner; not the plugin | Keep live sqlite after any accepted mail. T0 sqlite is a last-resort integrity rescue only. |
+| Mailbox home | Deployment owner; not the plugin | Keep the current sqlite after any possible accepted mail. Restore the verified T0 image only for demonstrated corruption, after the rollback preconditions and explicit owner authorization. |
 | Preview instance | Out of scope | Do not restart, migrate or use it as rollback. |
 | Host B | Out of scope for software rollback | Do not revert Host B to “fix” Host A. |
 | Publication | T4 / owner | Not rolled back by a production failure. |

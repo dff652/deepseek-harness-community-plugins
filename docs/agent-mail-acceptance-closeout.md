@@ -68,24 +68,25 @@ restart both recovered the same message ids.
 Unverified in this closeout: live catalog PR content (T2), production profile
 bytes (T3), and any gate that was not re-run after this documentation pass.
 
-## Proposed commits (not executed)
+## Completed documentation commits
 
-Plugins repository, branch `main`, after review:
+Plugins repository, branch `main`: `9cd36ef` committed the closeout, release preparation, migration plan and status documents.
 
 - `docs/agent-mail-unified-candidate.md`
 - `docs/agent-mail-acceptance-closeout.md`
-- `docs/agent-mail-release-tasks.md` (coordinator list; include only if the
-  coordinating session has already updated status)
+- `docs/agent-mail-release-tasks.md`
+- `docs/agent-mail-release-preparation.md`
+- `docs/agent-mail-production-migration-plan.md`
+- `README.md` and `docs/project-status.md`
 
-Suggested message:
+Commit message:
 `docs: record unified Agent Mail 0.2.0 cross-host closeout`
 
-Provider repository, branch `codex/agent-mail-enrollment`:
+Provider repository, branch `codex/agent-mail-enrollment`: `6bdcc67`.
 
 - `docs/acceptance/sent-receipts-alpha7.md`
 
-Suggested message:
+Commit message:
 `docs: record alpha.7 cross-host isolated acceptance`
 
-Do not push. Tag, Release, npm, catalog writes and production cutover stay
-outside these commits.
+These documentation commits do not publish or deploy the candidates. Subsequent review corrections to the backup, retry, release-workflow and task-status instructions are recorded in the current documentation revision. Push, tag, Release, npm, catalog writes and production cutover remain separate.
