@@ -1,9 +1,13 @@
 # Agent Mail production migration and rollback plan
 
-Status on 2026-09-11: documentation and read-only inspection only. This file
+Original T3 status on 2026-09-11: documentation and read-only inspection only. This file
 is not authorization to install, stop or restart services, edit profiles,
 create backups, commit, push, publish or deploy. Isolation acceptance of the
 unified candidate is not live production acceptance.
+
+A subsequent owner-authorized T5 cutover is complete; see the separate
+[production acceptance record](agent-mail-0.2.0-production-acceptance.md).
+The baseline and future-tense steps below preserve the original SOP.
 
 An independent temporary SQLite method check passed: a committed WAL row was
 included by SQLite `Connection.backup()` while the main database file SHA-256

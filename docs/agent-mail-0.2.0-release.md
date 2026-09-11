@@ -70,8 +70,9 @@ or upgrade that provider. Preserve the mailbox home, identity and connection
 configuration. “Submitted” means accepted into the mailbox, not human-read,
 continuous online presence or automatic model execution.
 
-Next: follow catalog checks/merge, refresh and verify the store entry, then
-execute the separately authorized [production migration plan](agent-mail-production-migration-plan.md)
-with backups and the real production acceptance matrix. Direct installation
-from the published Release is possible before catalog merge, but is still a
-production change when pointed at a live profile.
+The separately authorized production cutover has since completed using these
+published bytes; see [production acceptance](agent-mail-0.2.0-production-acceptance.md).
+Catalog checks/merge and verification of the refreshed store entry remain
+pending. Future live upgrades still require the
+[production migration plan](agent-mail-production-migration-plan.md) and
+owner authorization.
