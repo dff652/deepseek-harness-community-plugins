@@ -42,6 +42,9 @@ import {
   sentDeliveryStatus,
   sentDeliveryStatusLabel,
   sentItems,
+  mailRowStatus,
+  sanitizePublicError,
+  statusTone,
   taskOutcome,
   taskOutcomeLabel,
   threadParticipants,
@@ -89,7 +92,7 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.8');
+  assert.equal(manifest.version, '0.1.9');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
@@ -252,7 +255,18 @@ test('sent status mapping, merge and polling policy stay bounded', () => {
   assert.equal(sentDeliveryStatus('done'), 'unknown');
   assert.equal(sentDeliveryStatusLabel('completed'), '已完成');
   assert.equal(sentDeliveryStatusLabel('acked'), '已确认收悉');
-  assert.equal(sentDeliveryStatusLabel('unknown'), '状态未知');
+  assert.equal(sentDeliveryStatusLabel('unknown'), '待核实');
+  assert.equal(statusTone('submitted'), 'neutral');
+  assert.equal(statusTone('processing'), 'info');
+  assert.equal(statusTone('completed'), 'success');
+  assert.equal(statusTone('failed'), 'danger');
+  assert.equal(statusTone('unknown'), 'warning');
+  assert.equal(mailRowStatus({ type: 'task', taskStatus: 'completed', deliveryStatus: 'submitted' }, 'sent').layer, 'task');
+  assert.equal(mailRowStatus({ type: 'task', taskStatus: 'completed', deliveryStatus: 'submitted' }, 'sent').label, '已完成');
+  assert.equal(mailRowStatus({ type: 'done', deliveryStatus: 'submitted' }, 'sent').layer, 'delivery');
+  const leaked = ['/', 'h', 'ome', '/', 'user', '/db'].join('');
+  assert.match(sanitizePublicError(`boom ${leaked}`), /\[path\]/);
+  assert.equal(sanitizePublicError('token=supersecretvalue'), '操作失败。详细信息已隐藏。');
   assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'submitted' }), true);
   assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'completed' }), false);
   assert.equal(isPendingSentItem({ localOnly: true, deliveryStatus: 'processing' }), true);
@@ -292,8 +306,10 @@ test('recipient details keep identity, device and Hub fields separate', () => {
 test('UI state labels keep mailbox delivery separate from client presence and task outcome', () => {
   assert.equal(messageTypeLabel('task'), '任务');
   assert.equal(messageTypeLabel('message'), '消息');
-  assert.equal(deliveryStatusLabel('outbound'), '已提交到邮箱 · 签收状态未知');
+  assert.equal(deliveryStatusLabel('outbound'), '已提交，待核实');
   assert.equal(deliveryStatusLabel(''), '状态未知');
+  assert.equal(deliveryStatusLabel('claimed'), '已领取');
+  assert.equal(deliveryStatusLabel('submitted'), '已提交');
   assert.equal(firstLine('first line\nsecond line'), 'first line');
 
   const [task] = inboxItems({
@@ -317,8 +333,8 @@ test('UI state labels keep mailbox delivery separate from client presence and ta
   assert.equal(taskOutcome({ ...task, deliveryStatus: 'acked' }, []), 'acked');
   assert.equal(taskOutcome(task, tailed), 'unknown', 'tail without task_id cannot prove completion');
   assert.equal(taskOutcome(task, tailed, new Set(['k-state'])), 'done');
-  assert.equal(taskOutcomeLabel('unknown'), '完成状态未知（待核实）');
-  assert.equal(taskOutcomeLabel('acked'), '已结束（已签收）');
+  assert.equal(taskOutcomeLabel('unknown'), '待核实');
+  assert.equal(taskOutcomeLabel('acked'), '已确认收悉');
   assert.equal(threadSubject({ ...task, body: 'done' }, tailed), 'Handle the first line');
   assert.deepEqual(threadParticipants(task, tailed), ['worker@local', 'ui@local']);
 });
@@ -612,9 +628,12 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(source, /检查并确认收悉/);
   assert.match(source, /'aria-label': '调整收件箱与详情高度'/);
   assert.match(source, /客户端连接：未知/);
-  assert.match(source, /发送历史由 Agent Mail provider 持久保存/);
+  assert.match(source, /显示最近 \$\{SENT_HISTORY_LIMIT\} 条发送记录，不是全部历史/);
   assert.match(source, /最近 \$\{SENT_HISTORY_LIMIT\} 条/);
   assert.match(source, /本次提交记录尚未在 provider 历史中核实/);
+  assert.doesNotMatch(source, /连接状态：未知/);
+  assert.match(source, /仅显示待领取和已领取/);
+  assert.match(source, /Agent Mail · AI 协作邮箱/);
   assert.match(source, /SENT_POLL_INTERVAL_MS/);
   assert.match(source, /clearTimeout\(timer\)/);
   assert.match(source, /document\.visibilityState/);

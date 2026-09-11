@@ -1,13 +1,16 @@
 # DSH Agent Mail bundle
 
-Unified DeepSeek Harness plugin for an independently installed Agent Mail
-`agent-mail-mcp` executable. One installation mounts one official MCP client
-and the mailbox UI. The provider executable, database and credentials remain
-outside this package. Automatic wake is not provided here.
+Agent Mail · AI 协作邮箱. One DeepSeek Harness installation mounts an official
+MCP client and the mailbox UI so tools can send messages, hand off tasks and
+see delivery or processing receipts. The provider executable, database and
+credentials remain outside this package. You must connect a separately
+installed Agent Mail service. Automatic wake and live device presence are not
+provided here.
 
 ## Development candidate
 
-Version `0.2.0` is an unreleased unified candidate for DSH `0.1.1-rc.2`.
+Version `0.2.1` is a local unified candidate after the released `0.2.0`
+mailbox UI simplification. It still targets DSH `0.1.1-rc.2`.
 The exact MCP peer remains `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2`.
 Persistent sent receipts and recipient details use the unreleased provider
 `1.0.0-alpha.7`, exposing
@@ -54,7 +57,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.1.tgz
 dsh --profile <profile> --dump-config
 ```
 

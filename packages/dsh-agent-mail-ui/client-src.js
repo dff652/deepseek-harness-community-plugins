@@ -19,15 +19,21 @@ import {
   canAck,
   deliveryStatusLabel,
   diagnoseSummary,
+  firstLine,
   isPendingSentItem,
+  mailRowStatus,
   mergeSentRecords,
   messageTypeLabel,
   inboxItems,
   publicToolName,
   quoteComposerText,
+  recipientCapabilitySummary,
   recipientDetails,
-  sentDeliveryStatusLabel,
+  sanitizePublicError,
+  sentDeliveryStatus,
   sentItems,
+  statusBadgeStyle,
+  statusGlyph,
   nextSentPollDelay,
   sessionScope,
   taskOutcome,
@@ -81,8 +87,11 @@ export function apply(ctx) {
       id: 'dsh-agent-mail-ui',
       order: 110,
       label: () => 'Agent Mail',
-    }, () => h('div', { style: { fontSize: 12, lineHeight: 1.5 } },
-      '启用 better-sidebar：打开右侧面板，点击“+”→“Agent Mail”。未启用时：使用右下角的邮件按钮。',
+    }, () => h('div', { style: { fontSize: 12, lineHeight: 1.55 } },
+      h('div', { style: { fontWeight: 600 } }, 'Agent Mail · AI 协作邮箱'),
+      h('div', null, '日常：打开右侧面板，点击“+”→“Agent Mail”。未启用 better-sidebar 时，使用右下角邮件按钮。'),
+      h('div', { style: { marginTop: 6, opacity: 0.78 } },
+        '管理：在邮箱里打开连接管理。那是可选的远程配对能力，需要单独配置的管理宿主；未配置时日常收发仍可用。'),
     )));
   } catch (error) {
     console.error('[dsh-agent-mail-ui] settings section failed', error);
@@ -160,7 +169,7 @@ function StandaloneShell({ ctx }) {
     h('button', {
       type: 'button',
       style: fabStyle,
-      title: 'Agent Mail',
+      title: 'Agent Mail · AI 协作邮箱',
       'data-agent-mail-action': 'open-mail',
       onClick: () => setOpen((value) => !value),
     }, envelopeIcon(16), ' Mail'),
@@ -208,6 +217,8 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   const [recipientInfoId, setRecipientInfoId] = useState('');
   const [recipientInfoError, setRecipientInfoError] = useState('');
   const [recipientInfoBusy, setRecipientInfoBusy] = useState(false);
+  const [recipientDiagnosticsOpen, setRecipientDiagnosticsOpen] = useState(false);
+  const recipientDetailsReturnRef = useRef(null);
   const [selected, setSelected] = useState(null);
   const [thread, setThread] = useState([]);
   const [error, setError] = useState('');
@@ -725,9 +736,11 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setError('');
   };
 
-  const openRecipientDetails = async (recipient) => {
+  const openRecipientDetails = async (recipient, event) => {
     const id = String(recipient ?? '').trim();
     if (!id || operationRef.current) return;
+    recipientDetailsReturnRef.current = event?.currentTarget ?? null;
+    setRecipientDiagnosticsOpen(false);
     setRecipientInfoId(id);
     setRecipientInfo(null);
     setRecipientInfoError('');
@@ -758,6 +771,10 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setRecipientInfoId('');
     setRecipientInfo(null);
     setRecipientInfoError('');
+    setRecipientDiagnosticsOpen(false);
+    const returnTo = recipientDetailsReturnRef.current;
+    recipientDetailsReturnRef.current = null;
+    if (returnTo && typeof returnTo.focus === 'function') returnTo.focus();
   };
 
   const openRecipientsForTest = () => {
@@ -904,50 +921,49 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           }, '刷新收件人'),
         ),
         h('div', { style: helperStyle },
-          '目录只提供 Agent Mail 返回的身份 ID；详情中的设备和连接字段由 provider 提供，列表本身不能证明客户端在线。',
+          '名称和身份来自 Agent Mail 目录。列表不表示对方在线。',
         ),
         h('div', { style: recipientRefreshStyle },
-          `上次刷新：${formatRefreshTime(lastAgentsRefresh?.at)}`,
+          `刷新：${formatRefreshTime(lastAgentsRefresh?.at)}`,
         ),
         recipients.length === 0 && h('div', { style: emptyStyle }, status?.live !== true
-          ? 'Agent Mail 未加载，暂时无法读取收件人。'
+          ? '邮箱未加载，暂时无法读取收件人。'
           : lastAgentsRefresh?.ok === false
             ? '收件人读取失败，请重试。'
             : !selfId
-              ? '当前身份未知，暂不展示目录；请重试诊断。'
-              : '当前目录没有可用收件人。请先在 Agent Mail 中完成身份登记。'),
+              ? '当前身份未知，暂不展示目录。'
+              : '当前没有可写的收件人。'),
         h('div', { style: recipientListStyle }, recipients.map((id) => h('div', {
           key: id,
           style: recipientRowContainerStyle,
           'data-recipient-id': id,
         },
+          h('div', { style: recipientIdStyle }, id),
           h('button', {
             type: 'button',
-            style: recipientRowStyle,
+            style: recipientDetailsButtonStyle,
             disabled: busy,
             'data-recipient-compose': id,
+            'aria-label': `给 ${id} 写消息`,
             onClick: () => openComposer(id),
-          },
-            h('span', { style: recipientIdStyle }, id),
-            h('span', { style: recipientStatusStyle }, '连接状态：未知'),
-            h('span', { style: recipientArrowStyle, 'aria-hidden': true }, '→'),
-          ),
+          }, '写消息'),
           h('button', {
             type: 'button',
             style: recipientDetailsButtonStyle,
             disabled: busy,
             'data-agent-mail-action': 'recipient-details',
             'data-agent-mail-recipient': id,
-            onClick: () => void openRecipientDetails(id),
-          }, '查看详情'),
+            'aria-label': `查看 ${id} 详情`,
+            onClick: (event) => void openRecipientDetails(id, event),
+          }, '详情'),
         ))),
         recipientInfoId && h('section', {
           style: recipientDetailsStyle,
           'data-recipient-details': recipientInfoId,
           'aria-label': `收件人详情 ${recipientInfoId}`,
         },
-          h('div', { style: titleRowStyle },
-            h('strong', null, '收件人详情'),
+          h('div', { style: recipientDetailsHeaderStyle },
+            h('strong', { style: recipientDetailIdentityStyle }, recipientInfoId),
             h('button', {
               type: 'button',
               style: buttonStyle,
@@ -956,17 +972,26 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
               onClick: closeRecipientDetails,
             }, '关闭'),
           ),
-          h('div', { style: recipientDetailIdentityStyle }, `身份 ID：${recipientInfoId}`),
-          recipientInfoBusy && h('div', { style: loadingStyle, role: 'status' }, '正在读取 provider 详情…'),
-          recipientInfoError && h('div', { style: errorStyle, role: 'alert' }, recipientInfoError),
-          recipientInfo && h('div', { style: recipientDetailGridStyle },
-            h('div', null, `设备名称：${recipientInfo.deviceName || '未知'}`),
-            h('div', null, `设备 IP：${recipientInfo.deviceIp || '未知'}`),
-            h('div', null, `Hub 地址：${recipientInfo.hubEndpoint || '未知'}`),
-            h('div', null, `连接状态：${connectionLabel(recipientInfo.connection)}`),
-            h('div', null, formatObservedTime(recipientInfo.lastSeen)),
-            h('div', null, `身份登记证据：${recipientInfo.evidence?.registration === true ? '有' : '未知'}`),
-            h('div', null, `心跳证据：${recipientInfo.evidence?.heartbeat === true ? '有' : '未知'}`),
+          recipientInfoBusy && h('div', { style: loadingStyle, role: 'status' }, '正在读取详情…'),
+          recipientInfoError && h('div', { style: errorStyle, role: 'alert' }, sanitizePublicError(recipientInfoError)),
+          recipientInfo && h('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+            recipientInfo.hubEndpoint && h('div', null, `邮箱服务：${recipientInfo.hubEndpoint}`),
+            h('div', { style: helperStyle }, recipientCapabilitySummary(recipientInfo) || '当前没有额外设备信息。'),
+            h('details', {
+              style: detailsStyle,
+              open: recipientDiagnosticsOpen,
+              onToggle: (event) => setRecipientDiagnosticsOpen(event.currentTarget.open),
+            },
+              h('summary', { style: detailsSummaryStyle }, '技术证据'),
+              h('div', { style: detailsBodyStyle },
+                h('div', null, `设备名称：${recipientInfo.deviceName || '未知'}`),
+                h('div', null, `设备地址：${recipientInfo.deviceIp || '未知'}`),
+                h('div', null, `连接状态：${connectionLabel(recipientInfo.connection)}`),
+                h('div', null, formatObservedTime(recipientInfo.lastSeen)),
+                h('div', null, `身份登记证据：${recipientInfo.evidence?.registration === true ? '有' : '未知'}`),
+                h('div', null, `心跳证据：${recipientInfo.evidence?.heartbeat === true ? '有' : '未知'}`),
+              ),
+            ),
           ),
         ),
       )
@@ -983,20 +1008,20 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
               disabled: busy,
               onChange: (event) => setUnreadOnly(event.target.checked),
             }),
-            '仅显示未确认收悉',
+            '仅显示待领取和已领取',
           ),
         ),
-        panelView === 'sent' && h('div', { style: noticeStyle },
+        panelView === 'sent' && h('div', { style: helperStyle },
           sentCapability === 'unsupported'
-            ? '当前 Agent Mail provider 不支持持久发送历史，请升级 provider 后再查看。'
-            : `发送历史由 Agent Mail provider 持久保存；当前显示最近 ${SENT_HISTORY_LIMIT} 条；上次读取：${formatRefreshTime(sentLastRefresh?.at)}。`,
+            ? '当前服务不支持持久发送历史，请升级后再查看。'
+            : `显示最近 ${SENT_HISTORY_LIMIT} 条发送记录，不是全部历史。`,
         ),
         panelView === 'sent' && sentRecords.some((item) => item.localOnly === true) && h('div', { style: warningStyle },
           '有一条或多条本次提交记录尚未在 provider 历史中核实；它们只是面板临时记录，关闭面板后不会保留。',
         ),
         panelView === 'sent' && sentError && h('div', { style: errorStyle, role: 'alert' },
-          sentError,
-          h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '重试'),
+          sanitizePublicError(sentError),
+          h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '核实状态'),
         ),
         panelView === 'sent' && sentPollStopped && h('div', { style: warningStyle, role: 'status' },
           '发送状态轮询已暂停；可手动刷新继续核实。',
@@ -1005,7 +1030,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
           shownItems.length === 0 && h('div', { style: emptyStyle },
             panelView === 'sent'
               ? `最近 ${SENT_HISTORY_LIMIT} 条发送记录中暂无记录。`
-              : status?.live === true ? '暂无邮件。可发送只读任务，或让模型调用 comm_send。' : '邮箱不可用。',
+              : status?.live === true ? '暂无邮件。' : '邮箱不可用。',
           ),
           shownItems.map((item) => h('button', {
             key: item.localKey || item.messageId,
@@ -1013,18 +1038,18 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
             style: rowStyle(selected?.messageId === item.messageId && selected?.localKey === item.localKey),
             disabled: busy,
             'data-message-id': item.messageId,
+            'aria-label': firstLine(item.body),
             onClick: () => void openThread(item),
           },
+            h('div', { style: snippetStyle, title: item.body || '' }, item.body || '（空消息）'),
             h('div', { style: rowPrimaryStyle },
-              h('span', { style: typeStyle }, messageTypeLabel(item.type)),
               h('span', { style: rowAddressStyle }, panelView === 'sent'
                 ? `至 ${item.to || '未知收件人'}`
                 : `来自 ${item.from || '未知发件人'}`),
-              h('span', { style: rowStatusStyle }, panelView === 'sent'
-                ? sentDeliveryStatusLabel(item.deliveryStatus)
-                : deliveryStatusLabel(item.deliveryStatus)),
+              h('span', { style: typeStyle }, messageTypeLabel(item.type)),
+              h('span', { style: rowMetaStyle }, formatRefreshTime(item.sentAt)),
+              h(StatusBadge, { item, folder: panelView }),
             ),
-            h('div', { style: snippetStyle }, item.body || '（空消息）'),
           )),
         ),
         selected && h('div', {
@@ -1047,20 +1072,16 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         selected && h('div', { style: threadStyle },
           h('div', { style: threadHeaderStyle },
             h('div', { style: subjectStyle }, selectedSubject),
-            h('div', { style: participantStyle }, `参与者：${selectedParticipants.join('、') || '未知'}`),
             h('div', { style: statusGroupStyle },
-              h('span', { style: statePillStyle }, `${selected.type === 'task' ? '任务状态' : '类型'}：${selected.type === 'task' ? taskOutcomeLabel(selectedOutcome) : messageTypeLabel(selected.type)}`),
-              h('span', { style: statePillStyle }, `投递/签收：${deliveryStatusLabel(selected.deliveryStatus)}`),
-            ),
-          ),
-          h('details', { style: detailsStyle },
-            h('summary', { style: detailsSummaryStyle }, '查看内部 ID 与投递信息'),
-            h('div', { style: detailsBodyStyle },
-              h('div', null, `message_id：${selected.messageId || '未知'}`),
-              h('div', null, `thread_id：${selected.threadId || '未知'}`),
-              h('div', null, `task_id：${selected.taskId || '未知'}`),
-              h('div', null, `效果级别：${selected.effect || '未知'}`),
-              h('div', null, '投递状态来自 Agent Mail；不表示客户端在线或客户端已读。'),
+              selected.type === 'task' && h('span', {
+                style: statusBadgeStyle(statusToneForOutcome(selectedOutcome)),
+                'data-status-layer': 'task',
+              }, statusGlyph(statusToneForOutcome(selectedOutcome)), ' 处理结果：', taskOutcomeLabel(selectedOutcome)),
+              h('span', {
+                style: statusBadgeStyle(mailRowStatus(selected, panelView === 'sent' ? 'sent' : 'inbox').tone),
+                'data-status-layer': 'delivery',
+              }, statusGlyph(mailRowStatus(selected, panelView === 'sent' ? 'sent' : 'inbox').tone),
+              ' 投递：', deliveryStatusLabel(selected.deliveryStatus)),
             ),
           ),
           thread.map((entry, index) => h('div', { key: entry.messageId || String(index), style: messageStyle },
@@ -1068,12 +1089,22 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
               h('span', null, `${entry.from || selected.from || '未知发件人'}${entry.to ? ` → ${entry.to}` : ''}`),
               h('span', { style: typeStyle }, messageTypeLabel(entry.type)),
             ),
-            h('div', { style: rowStatusStyle }, `投递/签收：${deliveryStatusLabel(entry.deliveryStatus)}`),
-            h('div', { style: { whiteSpace: 'pre-wrap' } }, entry.body),
+            h('div', { style: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } }, entry.body),
             entry.requiresHumanApproval && h('div', { style: noticeStyle },
-              '写入效果正在等待 human@local 审批。Harness 身份不能执行 comm_approve。',
+              '这项写入需要人类审批后才能执行。当前身份不能代替审批。',
             ),
           )),
+          h('details', { style: detailsStyle },
+            h('summary', { style: detailsSummaryStyle }, '内部编号与投递说明'),
+            h('div', { style: detailsBodyStyle },
+              h('div', null, `参与者：${selectedParticipants.join('、') || '未知'}`),
+              h('div', null, `message_id：${selected.messageId || '未知'}`),
+              h('div', null, `thread_id：${selected.threadId || '未知'}`),
+              h('div', null, `task_id：${selected.taskId || '未知'}`),
+              h('div', null, `只读约束：${selected.effect === 'write' ? '写入（需人类审批）' : '只读，不会改对方系统'}`),
+              h('div', null, '投递状态来自邮箱，不表示对方在线或人已读。human@local 才能执行审批。'),
+            ),
+          ),
           selected.type === 'task' && processable && !ackReady && h('div', { style: noticeStyle },
             '任务完成、报错或取消后才可以确认收悉。',
             checkCompletion
@@ -1135,7 +1166,11 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       }, `返回${composeReturnView === 'recipients' ? '收件人' : composeReturnView === 'sent' ? '已发送' : '收件箱'}`),
       h('div', { style: composeTitleStyle }, '写消息'),
     ),
-    h('div', { style: helperStyle }, '效果级别固定为只读。提交成功只代表已写入邮箱，不代表客户端已连接、已收到通知或已读。'),
+    h('div', { style: helperStyle },
+      draft.type === 'task'
+        ? '任务需要对方领取并处理。发送成功只表示已写入邮箱，不会自动唤醒对方。'
+        : '消息用于通知，不要求对方领取。发送成功只表示已写入邮箱。',
+    ),
     h('label', { style: fieldStyle },
       h('span', null, '收件人'),
       h('select', {
@@ -1146,11 +1181,11 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         onChange: (event) => setDraft((current) => ({ ...current, to: event.target.value })),
       },
         h('option', { value: '' }, '选择收件人'),
-        recipients.map((id) => h('option', { key: id, value: id }, `${id}（连接状态未知）`)),
+        recipients.map((id) => h('option', { key: id, value: id }, id)),
       ),
     ),
     h('label', { style: fieldStyle },
-      h('span', null, '消息类型'),
+      h('span', null, '类型'),
       h('select', {
         style: inputStyle,
         value: draft.type,
@@ -1158,8 +1193,8 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         'data-agent-mail-field': 'message-type',
         onChange: (event) => setDraft((current) => ({ ...current, type: event.target.value })),
       },
-        h('option', { value: 'task' }, '任务'),
-        h('option', { value: 'message' }, '消息'),
+        h('option', { value: 'task' }, '任务（需要对方处理）'),
+        h('option', { value: 'message' }, '消息（通知）'),
       ),
     ),
     h('label', { style: fieldStyle },
@@ -1174,19 +1209,24 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       }),
     ),
     h('div', { style: composeFooterStyle },
-      h('span', null, '效果级别：只读'),
+      h('span', { style: helperStyle }, '只读：不会改对方系统。结果未知时请先核实，不要再点发送。'),
       h('button', {
         type: 'button',
         style: primaryButtonStyle,
         disabled: busy || !sendReady,
         'data-agent-mail-action': 'send-mail',
         onClick: () => void sendDraft(),
-      }, draft.type === 'task' ? '发送只读任务' : '发送消息'),
+      }, draft.type === 'task' ? '发送任务' : '发送消息'),
     ),
   );
 
   const statusLabel = status === null ? (busy ? '正在连接' : '等待连接') : status.live === true ? '通信工具已加载' : '通信工具未加载';
   const clientPresence = clientPresenceLabel(status?.clientPresence);
+  const viewRefresh = panelView === 'sent'
+    ? sentLastRefresh
+    : panelView === 'recipients'
+      ? lastAgentsRefresh
+      : lastRefresh;
   const diagnostics = diagnosticsOpen && h('div', { style: diagnosticsStyle },
     h('div', { style: diagnosticRowStyle }, clientPresence === '未知'
       ? '客户端连接：未知'
@@ -1201,19 +1241,21 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       h('div', { style: headerIdentityStyle },
         envelopeIcon(16),
         h('div', { style: headerCopyStyle },
-          h('strong', { style: headerTitleStyle }, 'Agent Mail'),
-          h('span', { style: headerSublineStyle }, `当前身份：${selfId || '未知'}`),
+          h('strong', { style: headerTitleStyle }, 'Agent Mail · AI 协作邮箱'),
+          h('span', { style: headerSublineStyle }, selfId || '身份未知'),
         ),
         h('span', { style: pillStyle(status?.live === true) }, statusLabel),
       ),
       h('div', { style: headerActionsStyle },
+        h('span', { style: headerSublineStyle },
+          `${viewRefresh?.ok ? '刷新' : viewRefresh ? '刷新失败' : '刷新'}：${formatRefreshTime(viewRefresh?.at)}`),
         h('button', {
           type: 'button',
           style: buttonStyle,
           disabled: busy,
           'data-agent-mail-action': 'mail-refresh',
           onClick: () => void refreshAll(),
-        }, '手动刷新'),
+        }, '刷新'),
         !isCompose && h('button', {
           type: 'button',
           style: primaryButtonStyle,
@@ -1223,10 +1265,6 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         }, '写消息'),
       ),
     ),
-    h('div', { style: infoBarStyle },
-      h('span', null, `当前邮箱：${selfId || '未知'}`),
-      h('span', null, `${lastRefresh?.ok ? '最后刷新' : lastRefresh ? '最近尝试' : '最后刷新'}：${formatRefreshTime(lastRefresh?.at)}`),
-    ),
     h('div', { style: managementOpen ? { ...connectionStyle, flex: '1 1 auto', minHeight: 0, overflow: 'auto' } : connectionStyle, 'data-agent-mail-connection': true },
       h('button', {
         type: 'button',
@@ -1234,7 +1272,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         'aria-expanded': diagnosticsOpen,
         'data-agent-mail-action': 'diagnostics',
         onClick: () => setDiagnosticsOpen((open) => !open),
-      }, diagnosticsOpen ? '收起连接详情' : '连接详情 · 状态按需查看'),
+      }, diagnosticsOpen ? '收起状态说明' : '状态说明'),
       diagnostics,
       h('button', {
         type: 'button',
@@ -1242,7 +1280,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         'aria-expanded': managementOpen,
         'data-agent-mail-action': 'connection-management',
         onClick: () => setManagementOpen((open) => !open),
-      }, managementOpen ? '收起连接管理' : '连接管理'),
+      }, managementOpen ? '收起连接管理' : '连接管理（可选）'),
       managementOpen && h(ManagementPanel, {
         controller: managementController,
         snapshot: managementSnapshot,
@@ -1254,16 +1292,15 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       ? '正在读取 Agent Mail…'
       : '正在处理 Agent Mail…'),
     status && status.live !== true && h('div', { style: noticeStyle, role: 'alert' },
-      'Agent Mail MCP 未挂载。请安装 @dff652/dsh-agent-mail，设置部署环境后重启 DSH。缺少：',
-      (status.missing || []).join(', ') || 'namespace',
+      '邮箱服务未加载。请确认已安装 Agent Mail 并配置服务路径后重启。这不是发送失败。',
     ),
-    summary?.warnings?.map((warning) => h('div', { key: warning, style: warningStyle, role: 'status' }, warning)),
+    summary?.warnings?.map((warning) => h('div', { key: warning, style: warningStyle, role: 'status' }, sanitizePublicError(warning))),
     error && h('div', { style: errorStyle, role: 'alert' },
-      h('span', null, error),
-      h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '重试'),
+      h('span', null, sanitizePublicError(error)),
+      h('button', { type: 'button', style: buttonStyle, disabled: busy, onClick: () => void refreshAll() }, '核实状态'),
     ),
     !managementOpen && (isCompose ? renderCompose() : renderMailbox()),
-    h('div', { style: footerStyle }, '发送只写入 Agent Mail 邮箱，不会自动唤醒客户端。'),
+    h('div', { style: footerStyle }, '发送只写入邮箱，不会自动唤醒对方。'),
   );
 }
 
@@ -1323,7 +1360,7 @@ function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }
     unconfigured: '管理宿主未配置',
     unauthenticated: '未登录',
     authenticated: '已登录',
-    error: '状态未知',
+    error: '无法检查',
   }[snapshot.managementStatus] ?? '状态未知';
 
   const header = h('div', { style: managementHeaderStyle },
@@ -1335,7 +1372,7 @@ function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }
       }, statusLabel),
     ),
     h('div', { style: managementHelperStyle },
-      '配对、保存和激活由受保护的管理宿主执行；普通 Agent Mail 工具不会获得这些权限。',
+      '连接管理用于配对远程邮箱服务，是可选能力。未配置或未登录都不表示本地邮箱坏了。',
     ),
   );
 
@@ -1404,7 +1441,7 @@ function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }
       'aria-label': '连接管理',
     }, header, ...notices,
     h('div', { style: emptyStyle, role: 'status' },
-      '当前 DSH 没有配置受保护的管理宿主；连接管理向导暂不可用。',
+      '未配置管理宿主，因此无法在这里配对远程连接。日常收发不受影响。',
     ));
   }
 
@@ -1636,7 +1673,7 @@ function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }
     );
   } else if (phase === 'active') {
     enrollmentControls = h('div', { style: actionsStyle },
-      h('div', { style: noticeStyle, role: 'status' }, '连接已激活；正在读取收件人和连接状态。'),
+      h('div', { style: noticeStyle, role: 'status' }, '连接已激活。保存成功不等于激活成功；现在可以查看收件人。'),
       h('button', {
         type: 'button',
         style: buttonStyle,
@@ -1714,18 +1751,17 @@ function ManagementPanel({ controller, snapshot, onActivated, onOpenRecipients }
 function ToolCard({ toolName, owner }) {
   const model = toolCardModel(toolName, owner?.block);
   const { kind, payload } = model;
+  const action = { inbox: '读取收件箱', send: '发送', approvals: '查询审批', diagnose: '诊断' }[kind] ?? '工具调用';
   if (model.state === 'running') {
     return h('div', { style: cardStyle },
-      h('div', { style: { fontWeight: 600 } }, '执行中'),
-      h('div', { style: snippetStyle }, model.callId || toolName),
+      h('div', { style: { fontWeight: 600 } }, `${action}中`),
     );
   }
   if (model.state === 'error' || model.state === 'stopped') {
-    const action = { inbox: '读取收件箱', send: '发送', approvals: '查询审批', diagnose: '诊断' }[kind] ?? '工具调用';
     const title = model.state === 'stopped' ? '已停止' : `${action}失败`;
     return h('div', { style: cardStyle },
       h('div', { style: { fontWeight: 600, color: 'var(--dsh-danger, #c44)' } }, title),
-      h('div', { style: snippetStyle }, model.text || '工具返回错误'),
+      h('div', { style: snippetStyle }, sanitizePublicError(model.text || '工具返回错误')),
     );
   }
   if (kind === 'inbox') {
@@ -1734,30 +1770,48 @@ function ToolCard({ toolName, owner }) {
       h('div', { style: { fontWeight: 600, marginBottom: 6 } }, `收件箱（${list.length}）`),
       list.length === 0 && h('div', { style: emptyStyle }, '收件箱为空'),
       list.slice(0, 8).map((item) => h('div', { key: item.messageId, style: snippetStyle },
-        `${messageTypeLabel(item.type)} ${item.from}：${item.body.slice(0, 120)}`,
+        `${firstLine(item.body)} · ${messageTypeLabel(item.type)}`,
       )),
     );
   }
   if (kind === 'send') {
     return h('div', { style: cardStyle },
       h('div', { style: { fontWeight: 600 } }, '已提交到邮箱'),
-      h('div', { style: snippetStyle }, payload.id || payload.message_id || payload.thread_id || 'ok'),
+      h('div', { style: snippetStyle }, firstLine(payload.body_md || payload.body || payload.id || payload.message_id || 'ok')),
       payload.requires_human_approval === true && h('div', { style: noticeStyle },
-        '写入效果需要 human@local 审批。Harness 不能执行 comm_approve。',
+        '这项写入需要人类审批后才能执行。当前身份不能代替审批。',
       ),
     );
   }
   if (kind === 'diagnose') {
     const summary = diagnoseSummary(payload);
     return h('div', { style: cardStyle },
-      h('div', { style: { fontWeight: 600 } }, summary.ok ? 'Agent Mail 正常' : 'Agent Mail 有警告'),
-      h('div', { style: snippetStyle }, [summary.agentId, summary.version].filter(Boolean).join(' · ')),
+      h('div', { style: { fontWeight: 600 } }, summary.ok ? '邮箱正常' : '邮箱有警告'),
+      h('div', { style: snippetStyle }, summary.agentId || '诊断完成'),
     );
   }
+  const pending = Array.isArray(payload.items) ? payload.items.length : Array.isArray(payload.approvals) ? payload.approvals.length : 0;
   return h('div', { style: cardStyle },
-    h('div', { style: { fontWeight: 600 } }, '待人工审批'),
-    h('div', { style: snippetStyle }, JSON.stringify(payload).slice(0, 240)),
+    h('div', { style: { fontWeight: 600 } }, '待人类审批'),
+    h('div', { style: snippetStyle }, pending > 0 ? `${pending} 项等待审批` : '没有待审批项'),
   );
+}
+
+function StatusBadge({ item, folder }) {
+  const status = mailRowStatus(item, folder);
+  return h('span', {
+    style: statusBadgeStyle(status.tone),
+    'data-status-tone': status.tone,
+    'data-status-layer': status.layer,
+    title: status.layer === 'task' ? '任务结果' : '投递状态',
+  }, statusGlyph(status.tone), ' ', status.label);
+}
+
+function statusToneForOutcome(outcome) {
+  if (outcome === 'done' || outcome === 'acked') return 'success';
+  if (outcome === 'error') return 'danger';
+  if (outcome === 'unknown') return 'warning';
+  return 'neutral';
 }
 
 function knownAgentId(value) {
@@ -1936,7 +1990,6 @@ const headerCopyStyle = { display: 'flex', flexDirection: 'column', gap: 2, minW
 const headerTitleStyle = { fontSize: 15, fontWeight: 600, lineHeight: 1.2 };
 const headerSublineStyle = { fontSize: 12, opacity: 0.7, overflowWrap: 'anywhere' };
 const headerActionsStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: 6, width: '100%' };
-const infoBarStyle = { display: 'flex', flexWrap: 'wrap', gap: '4px 14px', padding: '8px 16px', fontSize: 12, opacity: 0.8, borderBottom: '1px solid color-mix(in srgb, currentColor 10%, transparent)' };
 const buttonStyle = { fontSize: 12, padding: '6px 10px', border: '1px solid color-mix(in srgb, currentColor 18%, transparent)', borderRadius: 6, background: 'transparent', color: 'inherit', cursor: 'pointer' };
 const connectionStyle = { padding: '8px 16px', borderBottom: '1px solid color-mix(in srgb, currentColor 10%, transparent)' };
 const connectionButtonStyle = { ...buttonStyle, border: 0, padding: '2px 0', color: 'inherit', opacity: 0.78 };
@@ -1951,12 +2004,10 @@ const countStyle = { padding: '2px 7px', borderRadius: 999, background: 'color-m
 const mailboxStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
 const recipientsStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
 const recipientListStyle = { display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, overflow: 'auto' };
-const recipientRowContainerStyle = { display: 'flex', alignItems: 'stretch', gap: 6, width: '100%' };
-const recipientRowStyle = { ...buttonStyle, display: 'flex', alignItems: 'center', gap: 10, width: '100%', justifyContent: 'flex-start', textAlign: 'left', padding: '10px 12px', borderColor: 'color-mix(in srgb, currentColor 12%, transparent)' };
-const recipientDetailsButtonStyle = { ...buttonStyle, flex: '0 0 auto', alignSelf: 'center', whiteSpace: 'nowrap' };
+const recipientRowContainerStyle = { display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '8px 0' };
+const recipientDetailsButtonStyle = { ...buttonStyle, flex: '0 0 auto', whiteSpace: 'nowrap' };
 const recipientIdStyle = { flex: '1 1 auto', minWidth: 0, overflowWrap: 'anywhere', fontWeight: 500 };
-const recipientStatusStyle = { flex: '0 0 auto', color: 'inherit', opacity: 0.7, fontSize: 12 };
-const recipientArrowStyle = { flex: '0 0 auto', opacity: 0.6 };
+const recipientDetailsHeaderStyle = { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 };
 const recipientRefreshStyle = { marginBottom: 10, fontSize: 12, opacity: 0.7 };
 const recipientDetailsStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, padding: 10, border: '1px solid color-mix(in srgb, currentColor 14%, transparent)', borderRadius: 6 };
 const recipientDetailIdentityStyle = { fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' };
@@ -1976,7 +2027,7 @@ const typeStyle = { flex: '0 0 auto', fontSize: 12, opacity: 0.78, fontWeight: 6
 const filterLabelStyle = { display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 };
 const rowPrimaryStyle = { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 };
 const rowAddressStyle = { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
-const rowStatusStyle = { flex: '0 0 auto', fontSize: 12, opacity: 0.72 };
+const rowMetaStyle = { flex: '0 0 auto', fontSize: 11, opacity: 0.62 };
 const messageStyle = { display: 'flex', flexDirection: 'column', gap: 6, padding: '8px 0', borderBottom: '1px solid color-mix(in srgb, currentColor 10%, transparent)' };
 const cardStyle = { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12 };
 const noticeStyle = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: '9px 16px', fontSize: 12, opacity: 0.88 };
@@ -1998,7 +2049,6 @@ const threadHeaderStyle = { display: 'flex', flexDirection: 'column', gap: 6, pa
 const subjectStyle = { fontSize: 15, fontWeight: 600, lineHeight: 1.35, overflowWrap: 'anywhere' };
 const participantStyle = { fontSize: 12, opacity: 0.78, overflowWrap: 'anywhere' };
 const statusGroupStyle = { display: 'flex', flexWrap: 'wrap', gap: 6 };
-const statePillStyle = { display: 'inline-flex', padding: '4px 8px', borderRadius: 999, fontSize: 12, background: 'color-mix(in srgb, currentColor 8%, transparent)', overflowWrap: 'anywhere' };
 const detailsStyle = { fontSize: 12, opacity: 0.82 };
 const detailsSummaryStyle = { cursor: 'pointer', userSelect: 'none' };
 const detailsBodyStyle = { display: 'flex', flexDirection: 'column', gap: 4, padding: '8px 0', overflowWrap: 'anywhere' };

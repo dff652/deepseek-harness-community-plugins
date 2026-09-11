@@ -1,13 +1,13 @@
 # DSH Agent Mail UI
 
-The unreleased `0.1.8` compatibility candidate adds durable sent receipts and
-recipient details for provider `1.0.0-alpha.7`. New installations should use
-the unified Agent Mail `0.2.0` package described in the migration guide below.
+Agent Mail · AI 协作邮箱界面. This compatibility package shows messages, task
+handoffs and receipts inside the existing right-hand workbench. New
+installations should use the unified Agent Mail package.
 
-Host/client DeepSeek Harness plugin that gives humans a mailbox inside the
-existing right-hand workbench. It does **not** start `agent-mail-mcp`, copy
-Agent Mail handlers, or wake sessions. Mail transport stays in
-`@dff652/dsh-agent-mail`.
+It does **not** start `agent-mail-mcp`, copy Agent Mail handlers, wake
+sessions, or show live device/IP presence. Mail transport stays in
+`@dff652/dsh-agent-mail`. You still need a separately installed Agent Mail
+service.
 
 UI `0.1.7` also includes an optional connection-management wizard. The wizard
 is usable only when a provider `1.0.0-alpha.6` management host has been
@@ -15,7 +15,7 @@ explicitly mounted with its private configuration; it does not bundle or
 discover that host.
 
 This standalone package remains available for compatibility with the old
-MCP-only bundle. The unreleased unified Agent Mail `0.2.0` includes this UI;
+MCP-only bundle. The unified Agent Mail package includes this UI;
 remove the standalone UI before upgrading to the unified package. See the
 [migration guide](../../docs/agent-mail-unified-candidate.md).
 The Agent Mail settings section only explains where to open that mailbox.
@@ -69,7 +69,7 @@ the all-mail view do not count as unread.
 |---|---|
 | DeepSeek Harness MCP client peer | `0.1.1-rc.2` |
 | Companion MCP bundle | `@dff652/dsh-agent-mail` |
-| UI candidate | `0.1.8` (unreleased) |
+| UI candidate | `0.1.9` (unreleased) |
 | Auto-wake | not provided |
 
 The UI package activates even when the MCP namespace is missing. The panel
@@ -107,7 +107,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.8.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.9.tgz
 dsh --profile <profile> --dump-config
 ```
 

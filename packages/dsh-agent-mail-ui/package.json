@@ -1,7 +1,7 @@
 {
   "name": "@dff652/dsh-agent-mail-ui",
-  "version": "0.1.8",
-  "description": "DeepSeek Harness client/host UI for an already mounted Agent Mail MCP namespace",
+  "version": "0.1.9",
+  "description": "Agent Mail · AI 协作邮箱界面：收发消息、交接任务并查看处理回执（兼容包）",
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",

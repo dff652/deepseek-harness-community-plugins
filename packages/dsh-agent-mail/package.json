@@ -1,7 +1,7 @@
 {
   "name": "@dff652/dsh-agent-mail",
-  "version": "0.2.0",
-  "description": "Agent Mail for DeepSeek Harness: MCP connection, inbox, sent receipts and recipient details",
+  "version": "0.2.1",
+  "description": "Agent Mail · AI 协作邮箱：在 DeepSeek Harness 中让 AI 工具互发消息、交接任务并查看收发回执",
   "keywords": [
     "deepseek-harness",
     "dsh-plugin",

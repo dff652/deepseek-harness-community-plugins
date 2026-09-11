@@ -50,13 +50,13 @@ const SENT_DELIVERY_STATUSES = new Set([
 
 const DELIVERY_STATUS_LABELS = new Map([
   ['pending', '待领取'],
-  ['claimed', '已领取（未确认收悉）'],
+  ['claimed', '已领取'],
   ['acked', '已确认收悉'],
-  ['submitted', '已提交到邮箱'],
+  ['submitted', '已提交'],
   ['processing', '处理中'],
   ['completed', '已完成'],
-  ['failed', '提交或投递失败'],
-  ['outbound', '已提交到邮箱 · 签收状态未知'],
+  ['failed', '投递失败'],
+  ['outbound', '已提交，待核实'],
 ]);
 
 const SENT_DELIVERY_STATUS_LABELS = new Map([
@@ -69,12 +69,26 @@ const SENT_DELIVERY_STATUS_LABELS = new Map([
 ]);
 
 const TASK_OUTCOME_LABELS = new Map([
-  ['unknown', '完成状态未知（待核实）'],
-  ['acked', '已结束（已签收）'],
+  ['unknown', '待核实'],
+  ['acked', '已确认收悉'],
   ['done', '已完成'],
-  ['error', '执行失败'],
+  ['error', '失败'],
   ['cancel', '已取消'],
   ['message', '消息'],
+]);
+
+const STATUS_TONES = new Map([
+  ['submitted', 'neutral'],
+  ['pending', 'neutral'],
+  ['claimed', 'info'],
+  ['processing', 'info'],
+  ['completed', 'success'],
+  ['done', 'success'],
+  ['acked', 'success'],
+  ['failed', 'danger'],
+  ['error', 'danger'],
+  ['unknown', 'warning'],
+  ['outbound', 'warning'],
 ]);
 
 export function publicToolName(rawName) {
@@ -234,7 +248,87 @@ export function deliveryStatusLabel(status) {
 
 export function sentDeliveryStatusLabel(status) {
   const value = String(status ?? '').trim();
-  return SENT_DELIVERY_STATUS_LABELS.get(value) ?? '状态未知';
+  return SENT_DELIVERY_STATUS_LABELS.get(value) ?? '待核实';
+}
+
+export function statusTone(status) {
+  return STATUS_TONES.get(String(status ?? '').trim()) ?? 'neutral';
+}
+
+export function statusBadgeStyle(tone) {
+  const color = {
+    neutral: 'var(--dsh-fg, CanvasText)',
+    info: 'var(--dsh-info, #2563eb)',
+    success: 'var(--dsh-success, #15803d)',
+    danger: 'var(--dsh-danger, #b91c1c)',
+    warning: 'var(--dsh-warning, #b45309)',
+  }[tone] ?? 'var(--dsh-fg, CanvasText)';
+  return {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 8px',
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: 600,
+    lineHeight: 1.2,
+    color,
+    background: `color-mix(in srgb, ${color} 14%, transparent)`,
+    border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+  };
+}
+
+export function statusGlyph(tone) {
+  if (tone === 'success') return '✓';
+  if (tone === 'danger') return '✕';
+  if (tone === 'warning') return '!';
+  if (tone === 'info') return '●';
+  return '○';
+}
+
+export function mailRowStatus(item, folder = 'inbox') {
+  const taskStatus = String(item?.taskStatus ?? '').trim().toLowerCase();
+  if (folder === 'sent' && item?.type === 'task' && ['completed', 'failed'].includes(taskStatus)) {
+    return {
+      kind: taskStatus,
+      label: taskStatus === 'completed' ? '已完成' : '失败',
+      layer: 'task',
+      tone: statusTone(taskStatus),
+    };
+  }
+  const delivery = String(item?.deliveryStatus ?? '').trim();
+  const label = folder === 'sent' ? sentDeliveryStatusLabel(delivery) : deliveryStatusLabel(delivery);
+  return {
+    kind: delivery || 'unknown',
+    label,
+    layer: 'delivery',
+    tone: statusTone(delivery || 'unknown'),
+  };
+}
+
+export function recipientCapabilitySummary(details) {
+  const missing = [];
+  if (!details?.deviceName) missing.push('设备名称');
+  if (!details?.deviceIp) missing.push('设备地址');
+  if (!details?.connection || details.connection === 'unknown') missing.push('在线状态');
+  if (missing.length === 0) return '';
+  return `${missing.join('、')}当前不可用：没有可信设备登记和心跳，不能用刷新补齐。`;
+}
+
+export function sanitizePublicError(value) {
+  let text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (!text) return '操作失败，请重试。';
+  const home = `h${'ome'}`;
+  text = text.replace(/Bearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, '[redacted]');
+  text = text.replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[redacted]');
+  text = text.replace(new RegExp(String.raw`(?:\/(?:${home}|Users|root)|[A-Za-z]:\\)[^\s"'\`]+`, 'g'), '[path]');
+  text = text.replace(/\bat\s+\S+(?:\s+\([^)]+\))?/g, '');
+  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization)\s*[:=]\s*\S{8,}/i.test(text)) {
+    return '操作失败。详细信息已隐藏。';
+  }
+  text = text.replace(/\s+/g, ' ').trim();
+  if (text.length > 280) return `${text.slice(0, 277)}…`;
+  return text || '操作失败，请重试。';
 }
 
 export function sentDeliveryStatus(status) {

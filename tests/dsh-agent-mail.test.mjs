@@ -45,7 +45,7 @@ test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed file
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
 
   assert.equal(manifest.name, '@dff652/dsh-agent-mail');
-  assert.equal(manifest.version, '0.2.0');
+  assert.equal(manifest.version, '0.2.1');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(
