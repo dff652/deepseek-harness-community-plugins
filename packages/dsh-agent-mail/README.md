@@ -12,7 +12,7 @@ provided here.
 Version `0.2.1` is a local unified candidate after the released `0.2.0`
 mailbox UI simplification. It still targets DSH `0.1.1-rc.2`.
 The exact MCP peer remains `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2`.
-Persistent sent receipts and recipient details use the unreleased provider
+Persistent sent receipts and recipient details use the released provider
 `1.0.0-alpha.7`, exposing
 `comm_sent` and `comm_agent_details`; older providers retain their existing
 mail operations but cannot supply those new views. The historical alpha.4

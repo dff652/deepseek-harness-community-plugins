@@ -5,6 +5,7 @@ import {
   isHumanOnlyTool,
   isProxyTool,
   parseToolPayload,
+  publicErrorMessage,
   publicToolName,
   validateSendPayload,
 } from './view.js';
@@ -51,7 +52,7 @@ export function apply(ctx) {
           const status = error?.status ?? (code === 'mcp-unavailable' ? 503 : 400);
           writeJson(res, status, {
             ok: false,
-            error: { code, message: error instanceof Error ? error.message : String(error) },
+            error: { code, message: publicErrorMessage(error) },
           });
         }
       },

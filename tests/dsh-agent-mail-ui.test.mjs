@@ -42,7 +42,10 @@ import {
   sentDeliveryStatus,
   sentDeliveryStatusLabel,
   sentItems,
+  actualDeliveryStatus,
   mailRowStatus,
+  publicErrorMessage,
+  recipientCapabilitySummary,
   sanitizePublicError,
   statusTone,
   taskOutcome,
@@ -264,9 +267,41 @@ test('sent status mapping, merge and polling policy stay bounded', () => {
   assert.equal(mailRowStatus({ type: 'task', taskStatus: 'completed', deliveryStatus: 'submitted' }, 'sent').layer, 'task');
   assert.equal(mailRowStatus({ type: 'task', taskStatus: 'completed', deliveryStatus: 'submitted' }, 'sent').label, '已完成');
   assert.equal(mailRowStatus({ type: 'done', deliveryStatus: 'submitted' }, 'sent').layer, 'delivery');
+  const completedAcked = {
+    type: 'task',
+    taskStatus: 'completed',
+    deliveryStatus: 'completed',
+    rawDeliveryStatus: 'acked',
+  };
+  assert.equal(actualDeliveryStatus(completedAcked), 'acked');
+  assert.equal(mailRowStatus(completedAcked, 'sent').layer, 'task');
+  assert.equal(mailRowStatus(completedAcked, 'sent').label, '已完成');
+  assert.equal(sentDeliveryStatusLabel(actualDeliveryStatus(completedAcked)), '已确认收悉');
   const leaked = ['/', 'h', 'ome', '/', 'user', '/db'].join('');
   assert.match(sanitizePublicError(`boom ${leaked}`), /\[path\]/);
-  assert.equal(sanitizePublicError('token=supersecretvalue'), '操作失败。详细信息已隐藏。');
+  const assigned = ['tok', 'en', '=', 'supersecretvalue'].join('');
+  assert.equal(sanitizePublicError(assigned), '操作失败。详细信息已隐藏。');
+  assert.match(sanitizePublicError('fetch https://user:secret@hub.example/v1'), /\[redacted\]/);
+  assert.equal(sanitizePublicError(['pass', 'word', '=', 'abcd'].join('')), '操作失败。详细信息已隐藏。');
+  assert.match(sanitizePublicError('failed /var/lib/mail/store.sqlite'), /\[path\]/);
+  assert.equal(publicErrorMessage({ code: 'mcp-tool-error', message: `tool failed: ${assigned}` }), '邮箱操作失败。');
+  assert.equal(recipientCapabilitySummary({
+    deviceName: '',
+    deviceIp: null,
+    connection: 'unknown',
+    evidence: { registration: true },
+  }).includes('没有可信设备登记'), false);
+  assert.match(recipientCapabilitySummary({
+    deviceName: '',
+    deviceIp: null,
+    connection: 'unknown',
+    evidence: { registration: false, heartbeat: false },
+  }), /没有可信设备登记和心跳/);
+  assert.equal(recipientCapabilitySummary({
+    deviceName: 'desk',
+    deviceIp: '192.0.2.8',
+    connection: 'connected',
+  }), '');
   assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'submitted' }), true);
   assert.equal(isPendingSentItem({ durable: true, deliveryStatus: 'completed' }), false);
   assert.equal(isPendingSentItem({ localOnly: true, deliveryStatus: 'processing' }), true);
@@ -457,6 +492,60 @@ test('apply waits for webServer via inject instead of skipping the host API', ()
   assert.equal(registered.length, 1);
   assert.equal(registered[0].kind, 'prefix');
   assert.equal(registered[0].path, API_PREFIX);
+});
+
+test('host API JSON errors use public messages and drop tool payloads', async () => {
+  const leaked = ['tok', 'en', '=', 'supersecretvalue'].join('');
+  const registered = [];
+  apply({
+    get() { return undefined; },
+    inject(_deps, callback) {
+      callback({
+        webServer: {
+          register(route) {
+            registered.push(route);
+            return () => {};
+          },
+        },
+        get(name) {
+          if (name !== 'tools') return undefined;
+          return {
+            get() {
+              return {
+                execute: async () => ({
+                  isError: true,
+                  content: [{ type: 'text', text: JSON.stringify({ error: leaked }) }],
+                }),
+              };
+            },
+          };
+        },
+        effect(factory) { return factory(); },
+      });
+      return () => {};
+    },
+  });
+  const req = {
+    method: 'POST',
+    url: `${API_PREFIX}/ack`,
+    headers: { host: 'localhost:3080' },
+    async *[Symbol.asyncIterator]() {
+      yield Buffer.from('{"message_id":"m1"}');
+    },
+  };
+  const res = {
+    status: 0,
+    body: '',
+    writeHead(status) { this.status = status; },
+    end(body) { this.body = body; },
+  };
+  await registered[0].handler(req, res);
+  const parsed = JSON.parse(res.body);
+  assert.equal(parsed.ok, false);
+  assert.equal(parsed.error.code, 'mcp-tool-error');
+  assert.equal(parsed.error.message, '邮箱操作失败。');
+  assert.doesNotMatch(parsed.error.message, /tok(?:en)=/);
+  assert.doesNotMatch(res.body, /supersecretvalue/);
 });
 
 test('apply stays headless-safe when webServer never appears', () => {

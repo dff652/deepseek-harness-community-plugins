@@ -1,10 +1,16 @@
 # Project status
 
-Status date: 2026-09-11.
+Status date: 2026-09-12.
 
 The released [unified Agent Mail 0.2.0](agent-mail-0.2.0-release.md)
 passed same-machine gates and [cross-host isolated acceptance](agent-mail-acceptance-closeout.md).
-GitHub Releases and anonymous-download installation checks passed. The unified catalog PR is updated but open; npm publication and live cutover remain separate.
+GitHub Releases and anonymous-download installation checks passed. Host A
+production cutover of 0.2.0 is in
+[production acceptance](agent-mail-0.2.0-production-acceptance.md).
+Local HEAD also has unreleased `@dff652/dsh-agent-mail@0.2.1`; it is not a
+Release and is not production. See the
+[0.2.1 completion review](agent-mail-ui-0.2.1-completion-review.md).
+The unified catalog PR is updated but open; npm publication remains separate.
 The [September 9 delivery and UI review](agent-mail-2026-09-09-review.md)
 confirms the live 0.1.4 mailbox and authorized browser-to-recipient-MCP
 delivery. It also records client connection and interface limitations, the
@@ -61,7 +67,8 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; state rechecked September 9 | Public artifact not installed live; private companion 0.1.1 is separate |
-| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837) updated to unified 0.2.0 only; open | Not migrated by this release; last inspected production MCP 0.1.1 plus UI 0.1.4 |
+| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837) updated to unified 0.2.0 only; open | Host A production cutover recorded 2026-09-11; see production acceptance |
+| `@dff652/dsh-agent-mail@0.2.1` | UI simplification plus C01–C03/C02 host error-boundary fixes; C04 partial, C05 not run | Local; not pushed | Not released | Not published | Do not treat as catalog target | Not live; current packed SHA-256 `dc03a0f1d617f5d489d5e538cccea44d4d071aef20f21833b29328798f485f88` |
 | `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Live with DSH/MCP rc.2, Agent Mail 0.1.1, private Memory 0.1.1, sidebar 0.12.2 and market 1.41.0; Graph temporarily excluded; browser/API/restart PASS |
 | `@dff652/dsh-agent-mail-ui@0.1.5` | Revised local candidate; 99 tests, real standalone/sidebar and uninstrumented workspace/Quote/tab remount PASS; exact digest recorded | Local candidate; not pushed | Not released | Not published | Not submitted | Historical preview candidate; superseded there by 0.1.6, with its archive/evidence retained |
 | `@dff652/dsh-agent-mail-ui@0.1.6` | P0 visual/recipient/composer implementation; 100 portable tests per Node version, 16 scenarios per fixture browser, real DSH and independent review PASS | Local candidate; not pushed | Not released | Not published | Not submitted | Isolated preview upgraded with verified backup; model settings, nine original session streams and mailbox counts preserved; production UI remains 0.1.4 |
@@ -209,14 +216,17 @@ Native automatic wake and session injection are not part of the
 configuration-only candidate. The provider `MIGRATION-REPORT.md` is stale
 relative to public `ca6601c` and is not edited from this repository.
 
-Local `@dff652/dsh-agent-mail@0.2.0` unifies the MCP row and mailbox UI in one
-nine-file package. Provider `1.0.0-alpha.7` supplies `comm_sent` and
+Released `@dff652/dsh-agent-mail@0.2.0` unifies the MCP row and mailbox UI in
+one nine-file package. Provider `1.0.0-alpha.7` supplies `comm_sent` and
 `comm_agent_details`. Cross-host isolated acceptance passed on 2026-09-11;
 item-by-item evidence is in the [closeout](agent-mail-acceptance-closeout.md).
-[Release preparation](agent-mail-release-preparation.md) and the
-[production migration plan](agent-mail-production-migration-plan.md) are
-documentation only. The standalone UI remains a compatibility package and must
-not be coinstalled with 0.2.0.
+Host A production cutover of those published bytes is in
+[production acceptance](agent-mail-0.2.0-production-acceptance.md).
+Local `@dff652/dsh-agent-mail@0.2.1` adds UI simplification and C01–C03
+fixes; remaining C04/C05 gaps are in the
+[completion review](agent-mail-ui-0.2.1-completion-review.md). It is not
+released. The standalone UI remains a compatibility package and must not be
+coinstalled with the unified package.
 
 ## Agent Mail UI
 

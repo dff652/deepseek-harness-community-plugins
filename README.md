@@ -4,9 +4,10 @@
 </p>
 
 > Released: [Agent Mail 0.2.0](docs/agent-mail-0.2.0-release.md) combines MCP
-> and the mailbox UI in one installation. Durable sent receipts require the
-> separately installed provider alpha.7. GitHub Release downloads passed
-> verification; catalog merge and production migration remain separate.
+> and the mailbox UI. Local HEAD also has an unreleased [0.2.1 UI candidate](docs/agent-mail-ui-simplification-tasks.md).
+> Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
+> Catalog merge remains separate. Production cutover of 0.2.0 is recorded in
+> [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
@@ -40,46 +41,33 @@ package is a small configuration bundle with its own version and allowlist.
 > passed disposable Web/headless install/remove checks. Current live-use
 > observations are tracked separately below.
 
-HEAD also carries new DSH `0.1.1-rc.2` compatibility candidates:
-`@dff652/dsh-ai-asset-hub@0.1.2`, `@dff652/dsh-agent-mail@0.1.1` and
-`@dff652/dsh-agentmemory@0.1.1`. These remain unreleased source candidates.
-`@dff652/dsh-agent-mail-ui@0.1.4` has been pushed and released. The approved
-five-plugin rc.2 profile is now live after a stop-and-fresh-copy cutover: DSH/MCP
-`0.1.1-rc.2`, Agent Mail `0.1.1`, UI `0.1.4`, private AgentMemory `0.1.1`,
-better-sidebar `0.12.2` and dsh-market `1.41.0` are active; Git Graph is
-temporarily excluded. An authorized HTTPS browser session opened, the Mail
-sidebar rendered, and a new blank session survived the final restart. System
-DNS was not changed; the browser used the existing proxy mapping over valid
-TLS. The [migration record](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05)
-keeps the old runtime/home as the rollback baseline.
-Source, release and live-use states are tracked separately in
-[project status](docs/project-status.md).
-The disposable install/config/remove evidence is recorded in
-[`docs/dsh-0.1.1-rc.2-compatibility.md`](./docs/dsh-0.1.1-rc.2-compatibility.md),
-with newer UI evidence in [UI acceptance](docs/agent-mail-ui-0.1.4-acceptance.md).
-The [full-range UI review and release plan](docs/agent-mail-ui-release-plan.md)
-records the completed local and live gates, current observations and rollback
-steps.
+Released Agent Mail is `@dff652/dsh-agent-mail@0.2.0` plus provider
+`1.0.0-alpha.7`. Local source also contains unreleased `@dff652/dsh-agent-mail@0.2.1`
+and compatibility UI `0.1.9`. Those candidate versions are not a GitHub Release
+and are not a production upgrade. Host A production cutover of 0.2.0 is in
+[production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
-The [September 9 Agent Mail review](docs/agent-mail-2026-09-09-review.md)
-records current delivery evidence, client connection limits and UI follow-up.
-The [capability comparison and next steps](docs/agent-mail-capability-roadmap.md)
-separate the full provider from its DSH bundles. The [peer acceptance record](docs/agent-mail-peer-acceptance-plan.md)
-now covers passing cross-host DSH-to-DSH and DSH-to-Codex app-server MCP
-transport checks; desktop task loading and automatic wake remain separate.
-The [UI 0.1.6 P0 candidate](docs/agent-mail-ui-0.1.6-acceptance.md) adds the
-revised visual hierarchy, recipient directory and dedicated composer. It passes
-real sidebar/standalone and failure-recovery checks. The isolated evaluation
-preview uses this candidate; production remains on the released UI 0.1.4.
-The candidate has not been pushed or released.
+Historical rc.2 records remain valid as history: AIAH `0.1.2` / Agent Mail `0.1.1`
+source candidates, UI `0.1.4` Release, and the September 5 five-plugin cutover
+described in the [migration record](docs/agent-mail-ui-release-plan.md#full-profile-migration-hold-2026-09-05).
+Do not read those paragraphs as the current Agent Mail production or HEAD
+package. Track source, release and live-use separately in
+[project status](docs/project-status.md).
+
+The [September 9 Agent Mail review](docs/agent-mail-2026-09-09-review.md),
+[capability roadmap](docs/agent-mail-capability-roadmap.md),
+[peer acceptance](docs/agent-mail-peer-acceptance-plan.md) and
+[UI 0.1.6 P0 candidate](docs/agent-mail-ui-0.1.6-acceptance.md) are historical
+evidence. Current mailbox UI work is in
+[0.2.1 completion review](docs/agent-mail-ui-0.2.1-completion-review.md).
 
 ## What you get
 
 | Package | Contract |
 | --- | --- |
 | `@dff652/dsh-ai-asset-hub` | Starts a deployment-owned `aiah mcp` process. Eight read-only tools. Five-file package. |
-| `@dff652/dsh-agent-mail` | Starts a deployment-owned `agent-mail-mcp` process. Eleven tools with non-human approval denial. Six-file package including `NOTICE`. |
-| `@dff652/dsh-agent-mail-ui` | Optional host/client mailbox tab for the existing Agent Mail MCP namespace. Does not spawn a second MCP child. |
+| `@dff652/dsh-agent-mail` | Starts a deployment-owned `agent-mail-mcp` process and the mailbox UI. Nine-file unified package including `NOTICE`. Human-only approve/reject are not proxied. |
+| `@dff652/dsh-agent-mail-ui` | Compatibility mailbox UI for an already mounted Agent Mail MCP namespace. Does not spawn a second MCP child. |
 | `@dff652/dsh-agentmemory` | Starts a deployment-owned AgentMemory stdio adapter. Exact eight tools. Five-file package. Users supply the reviewed adapter. |
 
 The bundles do **not** ship provider executables, copy provider handlers, store

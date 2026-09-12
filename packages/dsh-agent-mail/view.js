@@ -296,7 +296,7 @@ export function mailRowStatus(item, folder = 'inbox') {
       tone: statusTone(taskStatus),
     };
   }
-  const delivery = String(item?.deliveryStatus ?? '').trim();
+  const delivery = actualDeliveryStatus(item);
   const label = folder === 'sent' ? sentDeliveryStatusLabel(delivery) : deliveryStatusLabel(delivery);
   return {
     kind: delivery || 'unknown',
@@ -306,24 +306,83 @@ export function mailRowStatus(item, folder = 'inbox') {
   };
 }
 
+export function actualDeliveryStatus(item) {
+  const raw = String(item?.rawDeliveryStatus ?? '').trim().toLowerCase();
+  if (raw) {
+    const normalized = sentDeliveryStatus(raw);
+    return normalized === 'unknown' ? 'unknown' : normalized;
+  }
+  const derived = String(item?.deliveryStatus ?? '').trim().toLowerCase();
+  if (['pending', 'claimed', 'acked', 'submitted'].includes(derived)) return derived;
+  return derived ? sentDeliveryStatus(derived) : 'unknown';
+}
+
 export function recipientCapabilitySummary(details) {
+  if (!details || details.error === 'upgrade-required') {
+    return '当前服务不支持收件人设备详情。';
+  }
   const missing = [];
-  if (!details?.deviceName) missing.push('设备名称');
-  if (!details?.deviceIp) missing.push('设备地址');
-  if (!details?.connection || details.connection === 'unknown') missing.push('在线状态');
+  if (!details.deviceName) missing.push('设备名称');
+  if (!details.deviceIp) missing.push('设备地址');
+  if (!details.connection || details.connection === 'unknown') missing.push('在线状态');
   if (missing.length === 0) return '';
-  return `${missing.join('、')}当前不可用：没有可信设备登记和心跳，不能用刷新补齐。`;
+  const evidence = details.evidence && typeof details.evidence === 'object' ? details.evidence : {};
+  const unknownFields = Array.isArray(details.fieldsUnknown) ? details.fieldsUnknown : [];
+  const names = missing.join('、');
+  if (evidence.registration === false && evidence.heartbeat === false) {
+    return `${names}当前不可用：没有可信设备登记和心跳。`;
+  }
+  if (unknownFields.length > 0) {
+    return `${names}当前未知。`;
+  }
+  if (details.connection === 'unavailable') {
+    return `${names}当前不可用。`;
+  }
+  return `${names}当前未知。原因未说明，刷新不能补齐。`;
+}
+
+const PUBLIC_ERROR_MESSAGES = new Map([
+  ['forbidden', '无权执行此操作。'],
+  ['method-error', '请求方式不受支持。'],
+  ['not-found', '找不到该操作。'],
+  ['bad-request', '请求无效。'],
+  ['mcp-unavailable', '邮箱服务未加载。'],
+  ['mcp-tool-error', '邮箱操作失败。'],
+  ['internal', '操作失败，请重试。'],
+  ['timeout', '操作超时，请核实结果后再试。'],
+  ['unconfigured', '尚未配置该项。'],
+]);
+
+export function publicErrorMessage(error) {
+  const code = error && typeof error === 'object'
+    ? String(error.code ?? error.error?.code ?? '').trim()
+    : '';
+  if (code && PUBLIC_ERROR_MESSAGES.has(code)) return PUBLIC_ERROR_MESSAGES.get(code);
+  const raw = error instanceof Error
+    ? error.message
+    : error && typeof error === 'object'
+      ? error.message ?? error.error?.message
+      : error;
+  return sanitizePublicError(raw);
 }
 
 export function sanitizePublicError(value) {
   let text = String(value ?? '').replace(/\s+/g, ' ').trim();
   if (!text) return '操作失败，请重试。';
   const home = `h${'ome'}`;
-  text = text.replace(/Bearer\s+[A-Za-z0-9._~+/=-]{8,}/gi, '[redacted]');
+  text = text.replace(/[a-z][a-z0-9+.-]*:\/\/[^\s\/]*:[^\s\/]*@/gi, (match) => {
+    const scheme = match.split(':')[0];
+    return `${scheme}://[redacted]@`;
+  });
+  text = text.replace(/Bearer\s+[A-Za-z0-9._~+/=-]{4,}/gi, '[redacted]');
   text = text.replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[redacted]');
-  text = text.replace(new RegExp(String.raw`(?:\/(?:${home}|Users|root)|[A-Za-z]:\\)[^\s"'\`]+`, 'g'), '[path]');
+  text = text.replace(new RegExp(String.raw`(?:\/(?:${home}|Users|root|etc|var|opt|tmp|usr|mnt|srv|data)|[A-Za-z]:\\)[^\s"'\`]+`, 'g'), '[path]');
+  text = text.replace(/(?:^|[\s"'`])(\/(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+)/g, ' [path]');
   text = text.replace(/\bat\s+\S+(?:\s+\([^)]+\))?/g, '');
-  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization)\s*[:=]\s*\S{8,}/i.test(text)) {
+  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization|passwd)\s*[:=]\s*\S{4,}/i.test(text)) {
+    return '操作失败。详细信息已隐藏。';
+  }
+  if (/:[^\/\s]+@/.test(text) || /-----BEGIN /.test(text)) {
     return '操作失败。详细信息已隐藏。';
   }
   text = text.replace(/\s+/g, ' ').trim();
