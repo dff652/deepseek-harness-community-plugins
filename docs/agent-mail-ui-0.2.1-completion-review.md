@@ -92,12 +92,12 @@ Node 20/npm 10 的初次打包与 Node 24/npm 11 复验产生同一新摘要，�
 | C01 | **passed** | `actualDeliveryStatus` 使用 `rawDeliveryStatus`；详情「投递」不再用任务层 `mailRowStatus`。合同测试：`status=completed` + `delivery_status=acked` → 投递「已确认收悉」，列表任务层仍为「已完成」。 |
 | C02 | **passed**（代码+合同；管理宿主运行时未跑） | `publicErrorMessage` 按错误码给用户文案；HTTP catch 不再回传 MCP/token 原文。`sanitizePublicError` 覆盖 URL userinfo、短 secret、`/var` 类路径。新增 host JSON 错误测试。管理适配仍用既有安全映射；隔离宿主见 C05。 |
 | C03 | **passed** | 无证据时不写死「没有可信设备登记和心跳」；字段齐全返回空串。隔离浏览器详情未出现该硬编码句。 |
-| C04 | **partial** | 隔离 Chrome：设置入口文案、键盘输入、关闭重开、带邮件状态的 DSH 重启后 sent 仍在、窄屏、隐藏停轮询。**未跑：** Firefox、真实 better-sidebar（隔离 profile 安装因 pnpm ignored builds 失败）、主题切换、浏览器 error/ack、超时未知、刷新失败注入。 |
-| C05 | **not_run** | 无隔离管理宿主夹具；未用生产/预览补验。管理控制器合同测试仍通过。 |
+| C04 | **passed** with listed leftovers | 2026-09-12 隔离 DSH+真实 better-sidebar（node-pty 在隔离 profile 本地编译）：Chrome/Firefox 均打开 Agent Mail 侧栏标签。键盘写信、刷新失败注入出现「核实」文案、对端 MCP 领取后浏览器显示任务「失败」。窄屏无横滚。**仍未单独点到：** 明暗主题开关、浏览器 Ack 按钮、fetch 超时挂起。未用生产/预览。 |
+| C05 | **passed** with listed leftovers | 隔离 TLS Hub + 可选 `dsh-management` 挂载。未挂载时 UI 为未配置；挂载后未登录为 unauthenticated，登录成功。无效配对码走错误/过期路径；有效码到达 pending_save 后取消成功。后续配对保存路径达到「连接已激活」（joinerc06）。**未单独跑：** 保存后重启再 restore。未把管理密码写入公开材料。 |
 | C06 | **passed** for current bytes | `5ca70b1c…` = UI 改动后、升号前仍标 `0.2.0` 的包。`e725fab4…` = `0.2.1` 升号后、C01–C03 修复前。本轮最终包 SHA-256 `dc03a0f1d617f5d489d5e538cccea44d4d071aef20f21833b29328798f485f88`（9 files，`0.2.1`）。对该包：干净 web/headless 安装+旧两包迁移 PASS；receipts PASS；隔离 Chrome 如上。 |
 | C07 | **passed** | 根 README 区分已发布 `0.2.0`、本地 `0.2.1`、生产记录；统一包改为九文件描述。包 README 不再称 alpha.7 为 unreleased。外部市场仍为 B3。 |
-| C08 | **passed** as honest status | 本表与[逐页清单](agent-mail-ui-simplification-tasks.md)未把 C04 剩余项或 C05 标完成。A6 仍未全部闭环。 |
+| C08 | **passed** as honest status | C04/C05 已按 2026-09-12 隔离证据更新；主题开关、Ack 按钮、保存后 restore 仍列出未跑。 |
 
 `npm test` 110 PASS；`check:agent-mail-build` 与 `check:repo` PASS。
 
-**仍不能认定 0.2.1 发布就绪。** 未跑项必须在发布前补齐或作为已知限制单独授权接受。
+C04/C05 隔离复验后，A6 主路径已覆盖。剩余主题开关、Ack 按钮、保存后 restore 与 fetch 超时挂起可作为发布限制单独授权，不阻塞将 0.2.1 视为「隔离主路径已验」；仍不是 GitHub Release 或生产升级。

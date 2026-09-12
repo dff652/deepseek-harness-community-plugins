@@ -101,8 +101,9 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 
 用户确认的逐页问题、A0–A7 执行范围、验收矩阵及新任务起点见
 [界面简化任务清单](agent-mail-ui-simplification-tasks.md)。C01–C03/C06/C07 已修并按当前包
-`dc03a0f1d617f5d489d5e538cccea44d4d071aef20f21833b29328798f485f88` 复验；C04 部分未跑、C05
-隔离管理宿主未跑，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。0.2.1 仍未发布。
+`dc03a0f1d617f5d489d5e538cccea44d4d071aef20f21833b29328798f485f88` 复验。C04/C05 隔离主路径已验
+（真实侧栏、Firefox、管理登录/过期码/取消/激活）；主题开关、Ack 按钮、保存后 restore、超时挂起
+仍未单独点，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。0.2.1 仍未发布。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 
