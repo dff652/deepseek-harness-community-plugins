@@ -105,7 +105,9 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 统一包 SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23`。
 118 项测试、精确包安装/迁移/TLS receipts、Chrome/Firefox、主题与键盘、Ack、超时、
 保存后重启恢复和显式激活全部通过，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。
-源码和文档仅本地提交；0.2.1 未 push、发布或部署，下一步按对应授权处理发布与生产升级。
+源码和既有验收文档已推送至 `fa4f22f`，Node 22/24 远端 CI 全部通过。
+[0.2.1 发布材料](agent-mail-0.2.1-release-preparation.md)已在本地准备，包含发布正文、精确归档与摘要、
+目录草案及回滚说明；新材料尚未提交。0.2.1 未创建 tag、发布或部署。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 

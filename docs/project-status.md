@@ -7,14 +7,17 @@ passed same-machine gates and [cross-host isolated acceptance](agent-mail-accept
 GitHub Releases and anonymous-download installation checks passed. Host A
 production cutover of 0.2.0 is in
 [production acceptance](agent-mail-0.2.0-production-acceptance.md).
-Local source `267584e` has completed C01–C08 and A0–A7 for unreleased
+Source `267584e`, pushed through `fa4f22f`, has completed C01–C08 and A0–A7 for unreleased
 `@dff652/dsh-agent-mail@0.2.1`: 118 tests, exact-archive installation/migration,
 TLS receipts, Chrome/Firefox, and management save/restart/restore/activation.
 The unpushed-range review also corrected approval-card summaries for approved
 and rejected records. This is not a Release or production upgrade. See the
 [0.2.1 completion review](agent-mail-ui-0.2.1-completion-review.md).
-The unified catalog PR was last recorded as updated but open; its remote status
-was not rechecked in this local review. npm publication remains separate.
+The [source CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/34750682071)
+passed on Node 22.19.0 and 24.19.0. The [0.2.1 release materials](agent-mail-0.2.1-release-preparation.md)
+are prepared locally. Catalog PR #4837 was rechecked September 13: still open,
+targeting 0.2.0, with its last site-build check failing on unrelated added-date
+derivation. No 0.2.1 tag or Release exists. npm publication remains separate.
 
 ## Earlier Agent Mail milestones
 
@@ -77,12 +80,12 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; state rechecked September 9 | Public artifact not installed live; private companion 0.1.1 is separate |
-| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837) last recorded as updated to unified 0.2.0 and open; not rechecked here | Host A production cutover recorded 2026-09-11; see production acceptance |
-| `@dff652/dsh-agent-mail@0.2.1` | C01–C08 / A0–A7 complete; 118 tests and full isolated acceptance PASS | Local source `267584e`; not pushed | Not released | Not published | Do not treat as catalog target | Not live; packed SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23` |
+| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837) targets unified 0.2.0 and remains open; rechecked September 13 | Host A production cutover recorded 2026-09-11; see production acceptance |
+| `@dff652/dsh-agent-mail@0.2.1` | C01–C08 / A0–A7 complete; 118 tests and full isolated acceptance PASS | `267584e` included in pushed `fa4f22f`; both CI jobs PASS | Materials prepared; not released | Not published | Local draft only; Release URL not yet published | Not live; packed SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23` |
 | `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Historical September 5 live profile; standalone UI was removed in the September 11 Host A unified 0.2.0 cutover |
 | `@dff652/dsh-agent-mail-ui@0.1.5` | Historical candidate: 99 tests, real standalone/sidebar and uninstrumented workspace/Quote/tab remount PASS; exact digest recorded | Source `a2057fc` is in `origin/main` history | Not released | Not published | Not submitted | Historical preview candidate; superseded there by 0.1.6, with its archive/evidence retained |
 | `@dff652/dsh-agent-mail-ui@0.1.6` | Historical P0 acceptance: 100 portable tests per Node version, 16 scenarios per fixture browser, real DSH and independent review PASS | Source archived before the current review | Not released | Not published | Not submitted | Historical isolated preview upgrade; the current task did not inspect or alter that preview |
-| `@dff652/dsh-agent-mail-ui@0.1.9` | Shared compatibility UI source used by the accepted unified 0.2.1 | Local; not pushed | Not released | Not published | Not submitted | Separate compatibility-package release is not implied by unified-package acceptance |
+| `@dff652/dsh-agent-mail-ui@0.1.9` | Shared compatibility UI source used by the accepted unified 0.2.1 | Pushed in `fa4f22f` | Not released | Not published | Not submitted | Separate compatibility-package release is not implied by unified-package acceptance |
 | `@dff652/dsh-agentmemory@0.1.0` | Public configuration candidate plus separate adapter candidate complete | Bundle source complete; adapter local only | Blocked on public adapter Release | Not published | Not submitted; public adapter bytes and bundle Release pending | Private deployment remains separate; public package not installed live |
 
 ## AI Asset Hub

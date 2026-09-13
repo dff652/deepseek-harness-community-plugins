@@ -6,6 +6,8 @@
 > Released: [Agent Mail 0.2.0](docs/agent-mail-0.2.0-release.md) combines MCP
 > and the mailbox UI. The unreleased [0.2.1 UI candidate](docs/agent-mail-ui-0.2.1-completion-review.md)
 > has completed C01–C08 local fixes and isolated acceptance, including 118 tests.
+> Source is pushed and CI passed; [0.2.1 release materials](docs/agent-mail-0.2.1-release-preparation.md)
+> are prepared for review.
 > Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
 > Catalog merge remains separate. Production cutover of 0.2.0 is recorded in
 > [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).

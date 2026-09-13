@@ -1,5 +1,9 @@
 # Agent Mail UI 0.2.1 完成度复核
 
+后续交接（2026-09-13）：下文的“未推送”保留修复归档时的状态。其后用户已授权推送，
+`fa4f22f` 的 [Node 22/24 CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/34750682071)
+全部通过；[发布材料](agent-mail-0.2.1-release-preparation.md)已准备，0.2.1 仍未发布或部署。
+
 初次评估日期：2026-09-11。评估对象为源码提交 `6bbaf7291402802a92493dfa86698cffb03dec98`，
 归档提交 `0997be5` 后的工作区；复核开始时工作区干净。
 初次评估只更新并提交评估文档；后续授权修复与验收见下面的当前记录。

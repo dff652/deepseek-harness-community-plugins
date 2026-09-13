@@ -1,5 +1,9 @@
 # Agent Mail release preparation (T2)
 
+This is the historical 0.2.0 preparation snapshot. Current 0.2.1 notes,
+exact artifacts, catalog draft and rollback handoff are in
+[0.2.1 release preparation](agent-mail-0.2.1-release-preparation.md).
+
 Execution results supersede the preparation snapshot below: see the
 [0.2.0 release and catalog handoff](agent-mail-0.2.0-release.md).
 
