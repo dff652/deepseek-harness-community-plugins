@@ -2,10 +2,8 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { handleApiMethod } from '../packages/dsh-agent-mail/ui-host.js';
-import { sentItems } from '../packages/dsh-agent-mail/view.js';
 import { pathToFileURL } from 'node:url';
-import { execFileAsync, initMailHome, parseTool, resolveReviewedProvider, startSession } from '../scripts/lib/agent-mail-host.mjs';
+import { execFileAsync, initMailHome, parseTool, resolveReviewedProvider, sha256File, startSession } from '../scripts/lib/agent-mail-host.mjs';
 
 const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-unified-receipts.'));
 const fixture = JSON.parse(await readFile(new URL('./fixtures/agent-mail-provider-identity.json', import.meta.url), 'utf8'));
@@ -30,6 +28,16 @@ function context(session) {
   } };
 }
 try {
+  const tarball = process.env.DSH_AGENT_MAIL_UNIFIED_TARBALL;
+  let moduleBase = new URL('../packages/dsh-agent-mail/', import.meta.url);
+  if (tarball) {
+    assert.ok(path.isAbsolute(tarball), 'unified tarball path must be absolute');
+    await execFileAsync('tar', ['-xzf', tarball, '-C', work]);
+    moduleBase = pathToFileURL(path.join(work, 'package') + path.sep);
+    console.log(`Unified receipt artifact SHA-256: ${await sha256File(tarball)}`);
+  }
+  const { handleApiMethod } = await import(new URL('ui-host.js', moduleBase));
+  const { sentItems, sentRecord, actualDeliveryStatus, mailRowStatus } = await import(new URL('view.js', moduleBase));
   const provider = await resolveReviewedProvider(work, fixture);
   const { home } = await initMailHome(provider.cli, work, [origin, recipient, stranger]);
   const clientHomes = new Map();
@@ -74,6 +82,11 @@ try {
   const created = await handleApiMethod(sender.ctx, 'send', {
     to: recipient, type: 'task', body: 'Durable unified receipt acceptance', effect: 'read',
   });
+  const localSubmission = sentRecord(created, {
+    to: recipient, type: 'task', body: 'Durable unified receipt acceptance', effect: 'read',
+  }, origin);
+  assert.equal(actualDeliveryStatus(localSubmission), 'submitted');
+  assert.equal(mailRowStatus(localSubmission, 'sent').label, '已提交');
   async function ownReceipt() {
     const result = await handleApiMethod(sender.ctx, 'sent');
     const row = result.items.find((entry) => entry.message_id === created.id);
@@ -82,7 +95,11 @@ try {
     assert.equal(ui?.deliveryStatus, row.status, 'UI must display the provider-derived sender status');
     return row;
   }
-  assert.equal((await ownReceipt()).status, 'submitted');
+  const pending = await ownReceipt();
+  assert.equal(pending.status, 'submitted');
+  const initialUi = sentItems({ agent_id: origin, items: [pending] }, origin).items[0];
+  assert.equal(actualDeliveryStatus(initialUi), 'pending');
+  assert.equal(mailRowStatus(initialUi, 'sent').label, '待领取');
   assert.equal((await handleApiMethod(other.ctx, 'sent')).items.length, 0);
   if (restartHub) {
     await new Promise((resolve) => hub.server.close(resolve));

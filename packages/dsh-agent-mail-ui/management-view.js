@@ -247,7 +247,7 @@ export function enrollmentPhaseLabel(enrollment) {
 
 export function managementErrorMessage(error) {
   if (error == null) return '';
-  return messageFor(safeText(error.code), safeText(error.message) || undefined);
+  return messageFor(safeText(error.code));
 }
 
 export class ManagementClientError extends Error {
@@ -372,8 +372,10 @@ export class ManagementController {
     }
     let parsed = null;
     try { parsed = await response.json(); } catch { /* handled below */ }
-    if (response.status === 404) {
-      throw new ManagementClientError('management_unavailable', { status: 404 });
+    // DSH's static fallback answers an unregistered POST route with an empty
+    // 405. A structured management error must still follow its own code.
+    if (response.status === 404 || (response.status === 405 && parsed == null)) {
+      throw new ManagementClientError('management_unavailable', { status: response.status });
     }
     if (!response.ok) {
       const code = safeText(parsed?.error?.code) || (response.status === 403 ? 'management_denied' : 'management_error');

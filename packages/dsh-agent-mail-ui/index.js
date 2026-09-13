@@ -15,6 +15,10 @@ export { API_METHODS, HUMAN_ONLY_TOOLS };
 
 const MAX_BODY_BYTES = 1 << 20;
 const TOOL_TIMEOUT_MS = 60000;
+const PUBLIC_API_ERRORS = new Map([
+  ['forbidden', 403], ['not-found', 404], ['bad-request', 400],
+  ['mcp-unavailable', 503], ['mcp-tool-error', 502], ['timeout', 504],
+]);
 
 export function apply(ctx) {
   // Cordis only exposes webServer after inject; a bare ctx.get() skips the API.
@@ -48,11 +52,11 @@ export function apply(ctx) {
           }, method, payload);
           writeJson(res, 200, { ok: true, value: result });
         } catch (error) {
-          const code = error?.code ?? 'internal';
-          const status = error?.status ?? (code === 'mcp-unavailable' ? 503 : 400);
+          const code = PUBLIC_API_ERRORS.has(error?.code) ? error.code : 'internal';
+          const status = PUBLIC_API_ERRORS.get(code) ?? 500;
           writeJson(res, status, {
             ok: false,
-            error: { code, message: publicErrorMessage(error) },
+            error: { code, message: publicErrorMessage({ code }) },
           });
         }
       },
@@ -146,13 +150,19 @@ export async function invokeMailTool(ctx, rawName, args) {
     throw apiError('mcp-unavailable', `${publicToolName(rawName)} is not registered`, 503);
   }
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TOOL_TIMEOUT_MS);
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(apiError('timeout', 'tool outcome unknown', 504));
+      controller.abort();
+    }, TOOL_TIMEOUT_MS);
+  });
   try {
-    const value = await definition.execute(args, {
+    const value = await Promise.race([timeout, definition.execute(args, {
       signal: controller.signal,
       deferContext() {},
       concludeTurn() {},
-    });
+    })]);
     if (value?.isError === true) {
       const parsed = parseToolPayload(value);
       const detail = parsed?.error;

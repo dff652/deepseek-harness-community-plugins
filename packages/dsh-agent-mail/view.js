@@ -39,6 +39,7 @@ export const SENT_POLL_MAX_ATTEMPTS = 12;
 export const SENT_HISTORY_LIMIT = 50;
 
 const UNREAD_DELIVERY_STATUSES = new Set(['pending', 'claimed']);
+const RAW_DELIVERY_STATUSES = new Set(['pending', 'claimed', 'acked', 'submitted', 'outbound']);
 const SENT_DELIVERY_STATUSES = new Set([
   'submitted',
   'claimed',
@@ -60,6 +61,8 @@ const DELIVERY_STATUS_LABELS = new Map([
 ]);
 
 const SENT_DELIVERY_STATUS_LABELS = new Map([
+  ['pending', '待领取'],
+  ['outbound', '已提交，待核实'],
   ['submitted', '已提交'],
   ['claimed', '已领取'],
   ['acked', '已确认收悉'],
@@ -307,14 +310,17 @@ export function mailRowStatus(item, folder = 'inbox') {
 }
 
 export function actualDeliveryStatus(item) {
-  const raw = String(item?.rawDeliveryStatus ?? '').trim().toLowerCase();
-  if (raw) {
-    const normalized = sentDeliveryStatus(raw);
-    return normalized === 'unknown' ? 'unknown' : normalized;
-  }
-  const derived = String(item?.deliveryStatus ?? '').trim().toLowerCase();
-  if (['pending', 'claimed', 'acked', 'submitted'].includes(derived)) return derived;
-  return derived ? sentDeliveryStatus(derived) : 'unknown';
+  // A successful send proves this local submission even before history can
+  // supply a delivery receipt. Durable history still requires its raw field.
+  if (item?.localOnly === true && item?.durable !== true
+    && item.rawDeliveryStatus == null && item.deliveryStatus === 'submitted') return 'submitted';
+  // Durable sender rows carry a separate raw field, including null when no
+  // delivery is known. Never substitute the provider's derived task status.
+  const value = item != null && Object.hasOwn(item, 'rawDeliveryStatus')
+    ? item.rawDeliveryStatus
+    : item?.deliveryStatus;
+  const raw = String(value ?? '').trim().toLowerCase();
+  return RAW_DELIVERY_STATUSES.has(raw) ? raw : 'unknown';
 }
 
 export function recipientCapabilitySummary(details) {
@@ -330,7 +336,7 @@ export function recipientCapabilitySummary(details) {
   const unknownFields = Array.isArray(details.fieldsUnknown) ? details.fieldsUnknown : [];
   const names = missing.join('、');
   if (evidence.registration === false && evidence.heartbeat === false) {
-    return `${names}当前不可用：没有可信设备登记和心跳。`;
+    return `${names}当前未知；服务未提供身份登记或心跳证据。`;
   }
   if (unknownFields.length > 0) {
     return `${names}当前未知。`;
@@ -338,7 +344,7 @@ export function recipientCapabilitySummary(details) {
   if (details.connection === 'unavailable') {
     return `${names}当前不可用。`;
   }
-  return `${names}当前未知。原因未说明，刷新不能补齐。`;
+  return `${names}当前未知。`;
 }
 
 const PUBLIC_ERROR_MESSAGES = new Map([
@@ -348,8 +354,9 @@ const PUBLIC_ERROR_MESSAGES = new Map([
   ['bad-request', '请求无效。'],
   ['mcp-unavailable', '邮箱服务未加载。'],
   ['mcp-tool-error', '邮箱操作失败。'],
-  ['internal', '操作失败，请重试。'],
+  ['internal', '操作结果未知，请核实后再试。'],
   ['timeout', '操作超时，请核实结果后再试。'],
+  ['network-error', '连接中断，操作结果未知，请核实后再试。'],
   ['unconfigured', '尚未配置该项。'],
 ]);
 
@@ -357,13 +364,41 @@ export function publicErrorMessage(error) {
   const code = error && typeof error === 'object'
     ? String(error.code ?? error.error?.code ?? '').trim()
     : '';
-  if (code && PUBLIC_ERROR_MESSAGES.has(code)) return PUBLIC_ERROR_MESSAGES.get(code);
-  const raw = error instanceof Error
-    ? error.message
-    : error && typeof error === 'object'
-      ? error.message ?? error.error?.message
-      : error;
-  return sanitizePublicError(raw);
+  return PUBLIC_ERROR_MESSAGES.get(code) ?? PUBLIC_ERROR_MESSAGES.get('internal');
+}
+
+export async function requestMailApi(method, payload = {}, fetchImpl = globalThis.fetch) {
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(Object.assign(new Error(publicErrorMessage({ code: 'timeout' })), { code: 'timeout' }));
+      controller.abort();
+    }, 65000);
+  });
+  try {
+    return await Promise.race([timeout, (async () => {
+      let response;
+      try {
+        response = await fetchImpl(`${API_PREFIX}/${method}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+      } catch {
+        throw Object.assign(new Error(publicErrorMessage({ code: 'network-error' })), { code: 'network-error' });
+      }
+      const parsed = await response.json().catch(() => null);
+      if (!response.ok || parsed?.ok !== true) {
+        const code = PUBLIC_ERROR_MESSAGES.has(parsed?.error?.code) ? parsed.error.code : 'internal';
+        throw Object.assign(new Error(publicErrorMessage({ code })), { code, status: response.status });
+      }
+      return parsed.value;
+    })()]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function sanitizePublicError(value) {
@@ -379,7 +414,7 @@ export function sanitizePublicError(value) {
   text = text.replace(new RegExp(String.raw`(?:\/(?:${home}|Users|root|etc|var|opt|tmp|usr|mnt|srv|data)|[A-Za-z]:\\)[^\s"'\`]+`, 'g'), '[path]');
   text = text.replace(/(?:^|[\s"'`])(\/(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+)/g, ' [path]');
   text = text.replace(/\bat\s+\S+(?:\s+\([^)]+\))?/g, '');
-  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization|passwd)\s*[:=]\s*\S{4,}/i.test(text)) {
+  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization|passwd)["']?\s*[:=]\s*\S+/i.test(text)) {
     return '操作失败。详细信息已隐藏。';
   }
   if (/:[^\/\s]+@/.test(text) || /-----BEGIN /.test(text)) {
@@ -393,6 +428,34 @@ export function sanitizePublicError(value) {
 export function sentDeliveryStatus(status) {
   const value = String(status ?? '').trim().toLowerCase();
   return SENT_DELIVERY_STATUSES.has(value) ? value : 'unknown';
+}
+
+let localSentSequence = 0;
+
+export function sentRecord(result, payload, from) {
+  const value = result != null && typeof result === 'object' ? result : {};
+  const providerStatus = value.status ?? value.delivery_status ?? 'submitted';
+  const normalizedStatus = sentDeliveryStatus(providerStatus);
+  return {
+    localKey: `sent-${Date.now()}-${++localSentSequence}`,
+    messageId: String(value.id ?? value.message_id ?? ''),
+    threadId: String(value.thread_id ?? payload.thread_id ?? ''),
+    taskId: String(value.task_id ?? payload.task_id ?? ''),
+    type: String(value.type ?? payload.type ?? 'message'),
+    from: String(value.from ?? from ?? ''),
+    to: String(value.to ?? payload.to ?? ''),
+    body: String(value.body_md ?? value.body ?? payload.body ?? ''),
+    effect: String(value.effect_level ?? value.effect ?? payload.effect ?? 'read'),
+    sentAt: value.sent_at ?? value.ts ?? null,
+    deliveryStatus: normalizedStatus === 'unknown' ? 'submitted' : normalizedStatus,
+    rawDeliveryStatus: value.delivery_status == null ? null : String(value.delivery_status),
+    taskStatus: value.task_status == null ? '' : String(value.task_status),
+    statusEvidence: value.status_evidence ?? null,
+    unread: false,
+    durable: false,
+    claimed: false,
+    localOnly: true,
+  };
 }
 
 export function isPendingSentItem(item) {
@@ -500,10 +563,10 @@ export function recipientDetails(payload, expectedAgentId = '') {
     : 'unknown';
   const evidence = value?.evidence != null && typeof value.evidence === 'object'
     ? {
-      registration: value.evidence.registration === true,
-      heartbeat: value.evidence.heartbeat === true,
+      registration: typeof value.evidence.registration === 'boolean' ? value.evidence.registration : null,
+      heartbeat: typeof value.evidence.heartbeat === 'boolean' ? value.evidence.heartbeat : null,
     }
-    : { registration: false, heartbeat: false };
+    : { registration: null, heartbeat: null };
   return {
     agentId,
     deviceName: value?.device_name == null ? null : String(value.device_name),

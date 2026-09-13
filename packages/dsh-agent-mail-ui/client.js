@@ -46,6 +46,7 @@ window.__ModuleLoader__.load({
 		const SENT_HISTORY_LIMIT = 50;
 
 		const UNREAD_DELIVERY_STATUSES = new Set(['pending', 'claimed']);
+		const RAW_DELIVERY_STATUSES = new Set(['pending', 'claimed', 'acked', 'submitted', 'outbound']);
 		const SENT_DELIVERY_STATUSES = new Set([
 		  'submitted',
 		  'claimed',
@@ -67,6 +68,8 @@ window.__ModuleLoader__.load({
 		]);
 
 		const SENT_DELIVERY_STATUS_LABELS = new Map([
+		  ['pending', '待领取'],
+		  ['outbound', '已提交，待核实'],
 		  ['submitted', '已提交'],
 		  ['claimed', '已领取'],
 		  ['acked', '已确认收悉'],
@@ -314,14 +317,17 @@ window.__ModuleLoader__.load({
 		}
 
 		function actualDeliveryStatus(item) {
-		  const raw = String(item?.rawDeliveryStatus ?? '').trim().toLowerCase();
-		  if (raw) {
-		    const normalized = sentDeliveryStatus(raw);
-		    return normalized === 'unknown' ? 'unknown' : normalized;
-		  }
-		  const derived = String(item?.deliveryStatus ?? '').trim().toLowerCase();
-		  if (['pending', 'claimed', 'acked', 'submitted'].includes(derived)) return derived;
-		  return derived ? sentDeliveryStatus(derived) : 'unknown';
+		  // A successful send proves this local submission even before history can
+		  // supply a delivery receipt. Durable history still requires its raw field.
+		  if (item?.localOnly === true && item?.durable !== true
+		    && item.rawDeliveryStatus == null && item.deliveryStatus === 'submitted') return 'submitted';
+		  // Durable sender rows carry a separate raw field, including null when no
+		  // delivery is known. Never substitute the provider's derived task status.
+		  const value = item != null && Object.hasOwn(item, 'rawDeliveryStatus')
+		    ? item.rawDeliveryStatus
+		    : item?.deliveryStatus;
+		  const raw = String(value ?? '').trim().toLowerCase();
+		  return RAW_DELIVERY_STATUSES.has(raw) ? raw : 'unknown';
 		}
 
 		function recipientCapabilitySummary(details) {
@@ -337,7 +343,7 @@ window.__ModuleLoader__.load({
 		  const unknownFields = Array.isArray(details.fieldsUnknown) ? details.fieldsUnknown : [];
 		  const names = missing.join('、');
 		  if (evidence.registration === false && evidence.heartbeat === false) {
-		    return `${names}当前不可用：没有可信设备登记和心跳。`;
+		    return `${names}当前未知；服务未提供身份登记或心跳证据。`;
 		  }
 		  if (unknownFields.length > 0) {
 		    return `${names}当前未知。`;
@@ -345,7 +351,7 @@ window.__ModuleLoader__.load({
 		  if (details.connection === 'unavailable') {
 		    return `${names}当前不可用。`;
 		  }
-		  return `${names}当前未知。原因未说明，刷新不能补齐。`;
+		  return `${names}当前未知。`;
 		}
 
 		const PUBLIC_ERROR_MESSAGES = new Map([
@@ -355,8 +361,9 @@ window.__ModuleLoader__.load({
 		  ['bad-request', '请求无效。'],
 		  ['mcp-unavailable', '邮箱服务未加载。'],
 		  ['mcp-tool-error', '邮箱操作失败。'],
-		  ['internal', '操作失败，请重试。'],
+		  ['internal', '操作结果未知，请核实后再试。'],
 		  ['timeout', '操作超时，请核实结果后再试。'],
+		  ['network-error', '连接中断，操作结果未知，请核实后再试。'],
 		  ['unconfigured', '尚未配置该项。'],
 		]);
 
@@ -364,13 +371,41 @@ window.__ModuleLoader__.load({
 		  const code = error && typeof error === 'object'
 		    ? String(error.code ?? error.error?.code ?? '').trim()
 		    : '';
-		  if (code && PUBLIC_ERROR_MESSAGES.has(code)) return PUBLIC_ERROR_MESSAGES.get(code);
-		  const raw = error instanceof Error
-		    ? error.message
-		    : error && typeof error === 'object'
-		      ? error.message ?? error.error?.message
-		      : error;
-		  return sanitizePublicError(raw);
+		  return PUBLIC_ERROR_MESSAGES.get(code) ?? PUBLIC_ERROR_MESSAGES.get('internal');
+		}
+
+		async function requestMailApi(method, payload = {}, fetchImpl = globalThis.fetch) {
+		  const controller = new AbortController();
+		  let timer;
+		  const timeout = new Promise((_, reject) => {
+		    timer = setTimeout(() => {
+		      reject(Object.assign(new Error(publicErrorMessage({ code: 'timeout' })), { code: 'timeout' }));
+		      controller.abort();
+		    }, 65000);
+		  });
+		  try {
+		    return await Promise.race([timeout, (async () => {
+		      let response;
+		      try {
+		        response = await fetchImpl(`${API_PREFIX}/${method}`, {
+		          method: 'POST',
+		          headers: { 'content-type': 'application/json' },
+		          body: JSON.stringify(payload),
+		          signal: controller.signal,
+		        });
+		      } catch {
+		        throw Object.assign(new Error(publicErrorMessage({ code: 'network-error' })), { code: 'network-error' });
+		      }
+		      const parsed = await response.json().catch(() => null);
+		      if (!response.ok || parsed?.ok !== true) {
+		        const code = PUBLIC_ERROR_MESSAGES.has(parsed?.error?.code) ? parsed.error.code : 'internal';
+		        throw Object.assign(new Error(publicErrorMessage({ code })), { code, status: response.status });
+		      }
+		      return parsed.value;
+		    })()]);
+		  } finally {
+		    clearTimeout(timer);
+		  }
 		}
 
 		function sanitizePublicError(value) {
@@ -386,7 +421,7 @@ window.__ModuleLoader__.load({
 		  text = text.replace(new RegExp(String.raw`(?:\/(?:${home}|Users|root|etc|var|opt|tmp|usr|mnt|srv|data)|[A-Za-z]:\\)[^\s"'\`]+`, 'g'), '[path]');
 		  text = text.replace(/(?:^|[\s"'`])(\/(?:[A-Za-z0-9._-]+\/)+[A-Za-z0-9._-]+)/g, ' [path]');
 		  text = text.replace(/\bat\s+\S+(?:\s+\([^)]+\))?/g, '');
-		  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization|passwd)\s*[:=]\s*\S{4,}/i.test(text)) {
+		  if (/(?:api[_-]?key|access[_-]?token|\btoken\b|password|secret|authorization|passwd)["']?\s*[:=]\s*\S+/i.test(text)) {
 		    return '操作失败。详细信息已隐藏。';
 		  }
 		  if (/:[^\/\s]+@/.test(text) || /-----BEGIN /.test(text)) {
@@ -400,6 +435,34 @@ window.__ModuleLoader__.load({
 		function sentDeliveryStatus(status) {
 		  const value = String(status ?? '').trim().toLowerCase();
 		  return SENT_DELIVERY_STATUSES.has(value) ? value : 'unknown';
+		}
+
+		let localSentSequence = 0;
+
+		function sentRecord(result, payload, from) {
+		  const value = result != null && typeof result === 'object' ? result : {};
+		  const providerStatus = value.status ?? value.delivery_status ?? 'submitted';
+		  const normalizedStatus = sentDeliveryStatus(providerStatus);
+		  return {
+		    localKey: `sent-${Date.now()}-${++localSentSequence}`,
+		    messageId: String(value.id ?? value.message_id ?? ''),
+		    threadId: String(value.thread_id ?? payload.thread_id ?? ''),
+		    taskId: String(value.task_id ?? payload.task_id ?? ''),
+		    type: String(value.type ?? payload.type ?? 'message'),
+		    from: String(value.from ?? from ?? ''),
+		    to: String(value.to ?? payload.to ?? ''),
+		    body: String(value.body_md ?? value.body ?? payload.body ?? ''),
+		    effect: String(value.effect_level ?? value.effect ?? payload.effect ?? 'read'),
+		    sentAt: value.sent_at ?? value.ts ?? null,
+		    deliveryStatus: normalizedStatus === 'unknown' ? 'submitted' : normalizedStatus,
+		    rawDeliveryStatus: value.delivery_status == null ? null : String(value.delivery_status),
+		    taskStatus: value.task_status == null ? '' : String(value.task_status),
+		    statusEvidence: value.status_evidence ?? null,
+		    unread: false,
+		    durable: false,
+		    claimed: false,
+		    localOnly: true,
+		  };
 		}
 
 		function isPendingSentItem(item) {
@@ -507,10 +570,10 @@ window.__ModuleLoader__.load({
 		    : 'unknown';
 		  const evidence = value?.evidence != null && typeof value.evidence === 'object'
 		    ? {
-		      registration: value.evidence.registration === true,
-		      heartbeat: value.evidence.heartbeat === true,
+		      registration: typeof value.evidence.registration === 'boolean' ? value.evidence.registration : null,
+		      heartbeat: typeof value.evidence.heartbeat === 'boolean' ? value.evidence.heartbeat : null,
 		    }
-		    : { registration: false, heartbeat: false };
+		    : { registration: null, heartbeat: null };
 		  return {
 		    agentId,
 		    deviceName: value?.device_name == null ? null : String(value.device_name),
@@ -926,7 +989,7 @@ window.__ModuleLoader__.load({
 
 		function managementErrorMessage(error) {
 		  if (error == null) return '';
-		  return messageFor(safeText(error.code), safeText(error.message) || undefined);
+		  return messageFor(safeText(error.code));
 		}
 
 		class ManagementClientError extends Error {
@@ -1051,8 +1114,10 @@ window.__ModuleLoader__.load({
 		    }
 		    let parsed = null;
 		    try { parsed = await response.json(); } catch { /* handled below */ }
-		    if (response.status === 404) {
-		      throw new ManagementClientError('management_unavailable', { status: 404 });
+		    // DSH's static fallback answers an unregistered POST route with an empty
+		    // 405. A structured management error must still follow its own code.
+		    if (response.status === 404 || (response.status === 405 && parsed == null)) {
+		      throw new ManagementClientError('management_unavailable', { status: response.status });
 		    }
 		    if (!response.ok) {
 		      const code = safeText(parsed?.error?.code) || (response.status === 403 ? 'management_denied' : 'management_error');
@@ -1653,6 +1718,7 @@ window.__ModuleLoader__.load({
 		}
 		// Sessions is a core DSH client service, independent of Agent Mail MCP.
 		const inject = ['sessions'];
+		const api = requestMailApi;
 
 		const CARD_TOOLS = [
 		  publicToolName('comm_inbox'),
@@ -1662,7 +1728,6 @@ window.__ModuleLoader__.load({
 		];
 
 		const unreadCache = { count: null, listeners: new Set() };
-		let localSentSequence = 0;
 
 		function apply(ctx) {
 		  ctx.effect(() => bindSurfaces(ctx));
@@ -1910,15 +1975,15 @@ window.__ModuleLoader__.load({
 		    setClaimReady(false);
 		  }, []);
 
-		  const resetSentHistory = useCallback(() => {
+		  const resetSentHistory = useCallback((keepLocal = false) => {
 		    sentGenerationRef.current += 1;
 		    sentRefreshInFlightRef.current = null;
-		    setSentRecords([]);
+		    setSentRecords((current) => keepLocal ? current.filter((item) => item.localOnly === true) : []);
 		    setSentCapability('unknown');
 		    setSentLastRefresh(null);
 		    setSentError('');
 		    setSentPollStopped(false);
-		    clearSelectedSent();
+		    if (!keepLocal || selectedRef.current?.localOnly !== true) clearSelectedSent();
 		  }, [clearSelectedSent]);
 
 		  useEffect(() => {
@@ -1931,6 +1996,12 @@ window.__ModuleLoader__.load({
 		  }, []);
 
 		  useEffect(() => {
+		    if (!selfId) {
+		      // A failed read cannot undo a successful submission. Hide durable
+		      // history until identity is verified, keeping only local send facts.
+		      resetSentHistory(true);
+		      return;
+		    }
 		    if (sentIdentityRef.current === selfId) return;
 		    sentIdentityRef.current = selfId;
 		    resetSentHistory();
@@ -1948,8 +2019,8 @@ window.__ModuleLoader__.load({
 		        setItems([]);
 		        setAgents([]);
 		        setDiagnose(null);
-		        setThread([]);
-		        setSelected(null);
+		        setThread((current) => selectedRef.current?.localOnly ? current : []);
+		        setSelected((current) => current?.localOnly ? current : null);
 		        setClaimReady(false);
 		        setLastRefresh({ at: Date.now(), ok: true });
 		        unreadCache.count = null;
@@ -2033,7 +2104,7 @@ window.__ModuleLoader__.load({
 		      setItems([]);
 		      setAgents([]);
 		      setDiagnose(null);
-		      setThread([]);
+		      setThread((current) => selectedRef.current?.localOnly ? current : []);
 		      setClaimReady(false);
 		      unreadCache.count = null;
 		      notifyBadge();
@@ -2047,6 +2118,7 @@ window.__ModuleLoader__.load({
 		  }, [unreadOnly]);
 
 		  const refreshSent = useCallback(async ({ manageBusy = false, silent = false } = {}) => {
+		    if (!selfId) return { ok: false, unavailable: true };
 		    if (sentRefreshInFlightRef.current !== null) return { ok: false, skipped: true };
 		    const requestId = ++sentRequestSequenceRef.current;
 		    const requestGeneration = sentGenerationRef.current;
@@ -3366,7 +3438,7 @@ window.__ModuleLoader__.load({
 		    const title = model.state === 'stopped' ? '已停止' : `${action}失败`;
 		    return h('div', { style: cardStyle },
 		      h('div', { style: { fontWeight: 600, color: 'var(--dsh-danger, #c44)' } }, title),
-		      h('div', { style: snippetStyle }, sanitizePublicError(model.text || '工具返回错误')),
+		      h('div', { style: snippetStyle }, publicErrorMessage({ code: 'mcp-tool-error' })),
 		    );
 		  }
 		  if (kind === 'inbox') {
@@ -3395,10 +3467,10 @@ window.__ModuleLoader__.load({
 		      h('div', { style: snippetStyle }, summary.agentId || '诊断完成'),
 		    );
 		  }
-		  const pending = Array.isArray(payload.items) ? payload.items.length : Array.isArray(payload.approvals) ? payload.approvals.length : 0;
+		  const count = Array.isArray(payload.items) ? payload.items.length : Array.isArray(payload.approvals) ? payload.approvals.length : 0;
 		  return h('div', { style: cardStyle },
-		    h('div', { style: { fontWeight: 600 } }, '待人类审批'),
-		    h('div', { style: snippetStyle }, pending > 0 ? `${pending} 项等待审批` : '没有待审批项'),
+		    h('div', { style: { fontWeight: 600 } }, '审批记录'),
+		    h('div', { style: snippetStyle }, count > 0 ? `${count} 项审批记录` : '没有审批记录'),
 		  );
 		}
 
@@ -3450,53 +3522,6 @@ window.__ModuleLoader__.load({
 		  if (value === true || ['available', 'enabled', 'supported'].includes(String(value ?? '').trim().toLowerCase())) return '可用';
 		  if (value === false || ['unavailable', 'disabled', 'unsupported'].includes(String(value ?? '').trim().toLowerCase())) return '不可用';
 		  return '未知';
-		}
-
-		async function api(method, payload = {}) {
-		  let response;
-		  try {
-		    response = await fetch(`${API_PREFIX}/${method}`, {
-		      method: 'POST',
-		      headers: { 'content-type': 'application/json' },
-		      body: JSON.stringify(payload),
-		    });
-		  } catch (error) {
-		    throw new Error(error instanceof Error ? error.message : String(error));
-		  }
-		  const parsed = await response.json().catch(() => null);
-		  if (!response.ok || parsed?.ok !== true) {
-		    const error = new Error(parsed?.error?.message ?? `HTTP ${response.status}`);
-		    error.code = parsed?.error?.code;
-		    error.status = response.status;
-		    throw error;
-		  }
-		  return parsed.value;
-		}
-
-		function sentRecord(result, payload, from) {
-		  const value = result != null && typeof result === 'object' ? result : {};
-		  const providerStatus = value.status ?? value.delivery_status ?? 'submitted';
-		  const normalizedStatus = sentDeliveryStatus(providerStatus);
-		  return {
-		    localKey: `sent-${Date.now()}-${++localSentSequence}`,
-		    messageId: String(value.id ?? value.message_id ?? ''),
-		    threadId: String(value.thread_id ?? payload.thread_id ?? ''),
-		    taskId: String(value.task_id ?? payload.task_id ?? ''),
-		    type: String(value.type ?? payload.type ?? 'message'),
-		    from: String(value.from ?? from ?? ''),
-		    to: String(value.to ?? payload.to ?? ''),
-		    body: String(value.body_md ?? value.body ?? payload.body ?? ''),
-		    effect: String(value.effect_level ?? value.effect ?? payload.effect ?? 'read'),
-		    sentAt: value.sent_at ?? value.ts ?? null,
-		    deliveryStatus: normalizedStatus === 'unknown' ? 'submitted' : normalizedStatus,
-		    rawDeliveryStatus: value.delivery_status == null ? null : String(value.delivery_status),
-		    taskStatus: value.task_status == null ? '' : String(value.task_status),
-		    statusEvidence: value.status_evidence ?? null,
-		    unread: false,
-		    durable: false,
-		    claimed: false,
-		    localOnly: true,
-		  };
 		}
 
 		function formatRefreshTime(value) {

@@ -21,10 +21,14 @@ function assertUnified(config) {
   assert.doesNotMatch(config, /name: ['"]?@dff652\/dsh-agent-mail-ui\b/);
 }
 try {
-  const { stdout } = await execFileAsync('npm', [
-    'pack', '--json', '--ignore-scripts', '--pack-destination', work,
-  ], { cwd: path.join(root, 'packages/dsh-agent-mail') });
-  const tarball = path.join(work, JSON.parse(stdout)[0].filename);
+  let tarball = process.env.DSH_AGENT_MAIL_UNIFIED_TARBALL;
+  if (!tarball) {
+    const { stdout } = await execFileAsync('npm', [
+      'pack', '--json', '--ignore-scripts', '--pack-destination', work,
+    ], { cwd: path.join(root, 'packages/dsh-agent-mail') });
+    tarball = path.join(work, JSON.parse(stdout)[0].filename);
+  }
+  assert.ok(path.isAbsolute(tarball), 'unified tarball path must be absolute');
   console.log(`Unified artifact SHA-256: ${await sha256File(tarball)}`);
   for (const profile of ['web', 'headless']) {
     await run(['plugin', '--profile', profile, 'add', '-w', tarball]);

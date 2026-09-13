@@ -6,6 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { runInNewContext } from 'node:vm';
 import {
   apply,
   handleApiMethod,
@@ -42,9 +43,11 @@ import {
   sentDeliveryStatus,
   sentDeliveryStatusLabel,
   sentItems,
+  sentRecord,
   actualDeliveryStatus,
   mailRowStatus,
   publicErrorMessage,
+  requestMailApi,
   recipientCapabilitySummary,
   sanitizePublicError,
   statusTone,
@@ -60,6 +63,7 @@ import {
 } from '../packages/dsh-agent-mail-ui/view.js';
 import {
   ManagementController,
+  managementErrorMessage,
   RECOVERY_STORAGE_KEY,
 } from '../packages/dsh-agent-mail-ui/management-view.js';
 
@@ -296,7 +300,7 @@ test('sent status mapping, merge and polling policy stay bounded', () => {
     deviceIp: null,
     connection: 'unknown',
     evidence: { registration: false, heartbeat: false },
-  }), /没有可信设备登记和心跳/);
+  }), /服务未提供身份登记或心跳证据/);
   assert.equal(recipientCapabilitySummary({
     deviceName: 'desk',
     deviceIp: '192.0.2.8',
@@ -336,6 +340,120 @@ test('recipient details keep identity, device and Hub fields separate', () => {
   assert.equal(recipientDetails({ agent_id: 'peer@local', connection: 'online' }, 'peer@local').connection, 'unknown');
   assert.equal(recipientDetails({ agent_id: 'other@local' }, 'peer@local').error, 'agent-identity-mismatch');
   assert.equal(recipientDetails({ agent_id: 'peer@local' }, 'peer@local').deviceIp, null);
+});
+
+test('provider-shaped sender rows never substitute task results for delivery evidence', () => {
+  const row = (type, status, delivery, task = null) => sentItems({
+    agent_id: 'sender@local',
+    items: [{ message_id: 'receipt-fixture', to: 'peer@local', type, status,
+      delivery_status: delivery, task_status: task }],
+  }, 'sender@local').items[0];
+  for (const type of ['message', 'task', 'done', 'error']) {
+    const item = row(type, 'submitted', 'pending');
+    assert.equal(actualDeliveryStatus(item), 'pending');
+    assert.deepEqual(mailRowStatus(item, 'sent'), {
+      kind: 'pending', label: '待领取', layer: 'delivery', tone: 'neutral',
+    });
+  }
+  for (const [status, delivery, task] of [
+    ['processing', 'claimed', 'in_progress'],
+    ['completed', 'acked', 'completed'],
+    ['failed', 'claimed', 'failed'],
+  ]) {
+    assert.equal(actualDeliveryStatus(row('task', status, delivery, task)), delivery);
+    assert.equal(actualDeliveryStatus(row('task', status, null, task)), 'unknown');
+    const notification = row('done', status, 'pending', task);
+    assert.equal(mailRowStatus(notification, 'sent').layer, 'delivery');
+    assert.equal(mailRowStatus(notification, 'sent').label, '待领取');
+  }
+  assert.equal(actualDeliveryStatus(row('message', 'completed', 'acked')), 'acked');
+  assert.equal(actualDeliveryStatus(row('message', 'completed', null)), 'unknown');
+  assert.equal(actualDeliveryStatus({ deliveryStatus: 'completed' }), 'unknown');
+  assert.equal(actualDeliveryStatus({ deliveryStatus: 'submitted', localOnly: true }), 'submitted');
+  assert.equal(actualDeliveryStatus({ deliveryStatus: 'outbound' }), 'outbound');
+  assert.equal(actualDeliveryStatus(inboxItems({ items: [{ id: 'inbox-fixture', delivery_status: 'pending' }] })[0]), 'pending');
+  const local = sentRecord({ id: 'send-fixture', type: 'task', to: 'peer@local',
+    thread_id: 'thread-fixture', task_id: 'task-fixture', approval_id: null,
+    requires_human_approval: false, in_reply_to: null },
+  { to: 'peer@local', type: 'task', body: 'Synthetic successful submission', effect: 'read' }, 'sender@local');
+  assert.equal(local.rawDeliveryStatus, null);
+  assert.equal(actualDeliveryStatus(local), 'submitted');
+  assert.equal(mailRowStatus(local, 'sent').label, '已提交');
+  assert.equal(mailRowStatus(local, 'sent').tone, 'neutral');
+  assert.equal(actualDeliveryStatus({ ...local, localOnly: false, durable: true }), 'unknown');
+});
+
+test('recipient evidence remains tri-state through normalization and summary', () => {
+  for (const evidence of [undefined, {}, { registration: 'false', heartbeat: 0 }]) {
+    const details = recipientDetails({ agent_id: 'peer@local', evidence }, 'peer@local');
+    assert.deepEqual(details.evidence, { registration: null, heartbeat: null });
+    assert.equal(recipientCapabilitySummary(details), '设备名称、设备地址、在线状态当前未知。');
+  }
+  const negative = recipientDetails({ agent_id: 'peer@local', evidence: { registration: false, heartbeat: false } });
+  assert.deepEqual(negative.evidence, { registration: false, heartbeat: false });
+  assert.match(recipientCapabilitySummary(negative), /服务未提供身份登记或心跳证据/);
+  const registered = recipientDetails({ agent_id: 'peer@local', evidence: { registration: true } });
+  assert.deepEqual(registered.evidence, { registration: true, heartbeat: null });
+  assert.doesNotMatch(recipientCapabilitySummary(registered), /没有|刷新|未提供/);
+});
+
+test('unknown mail and management errors never display untrusted exception text', () => {
+  const marker = 'SYNTHETIC_BOUNDARY_VALUE';
+  for (const error of [new Error(marker), { message: JSON.stringify({ password: marker }) },
+    { code: marker, message: marker }, marker]) {
+    assert.equal(publicErrorMessage(error), '操作结果未知，请核实后再试。');
+    assert.doesNotMatch(managementErrorMessage(error), /SYNTHETIC_BOUNDARY_VALUE/);
+  }
+  for (const value of ['a', marker]) {
+    assert.equal(sanitizePublicError(JSON.stringify({ password: value })), '操作失败。详细信息已隐藏。');
+  }
+});
+
+test('browser API errors are mapped before main, send and details consumers receive them', async () => {
+  for (const method of ['diagnose', 'send', 'agent-details']) {
+    await assert.rejects(requestMailApi(method, {}, async () => ({
+      ok: false, status: 500,
+      json: async () => ({ ok: false, error: { code: 'SYNTHETIC_CODE', message: 'SYNTHETIC_BOUNDARY_VALUE' } }),
+    })), (error) => error.code === 'internal' && error.message === '操作结果未知，请核实后再试。');
+  }
+  await assert.rejects(requestMailApi('send', {}, async () => { throw new Error('SYNTHETIC_BOUNDARY_VALUE'); }),
+    (error) => error.code === 'network-error' && /结果未知/.test(error.message));
+});
+
+test('browser deadline covers hanging fetch and response body without resubmitting', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  for (const phase of ['fetch', 'body']) {
+    let calls = 0;
+    let signal;
+    const pending = requestMailApi('send', { body: 'synthetic deadline' }, async (_url, options) => {
+      calls += 1;
+      signal = options.signal;
+      return phase === 'fetch' ? new Promise(() => {}) : { ok: true, json: () => new Promise(() => {}) };
+    });
+    const rejected = assert.rejects(pending, (error) => error.code === 'timeout' && /核实结果/.test(error.message));
+    await Promise.resolve();
+    t.mock.timers.tick(65000);
+    await rejected;
+    assert.equal(signal.aborted, true);
+    assert.equal(calls, 1);
+  }
+});
+
+test('host deadline terminates waiting even when the provider ignores abort', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let signal;
+  let calls = 0;
+  const ctx = toolsCtx({ [publicToolName('comm_send')]: (_args, exec) => {
+    signal = exec.signal;
+    calls += 1;
+    return new Promise(() => {});
+  } });
+  const rejected = assert.rejects(invokeMailTool(ctx, 'comm_send', {}),
+    (error) => error.code === 'timeout' && error.status === 504);
+  t.mock.timers.tick(60000);
+  await rejected;
+  assert.equal(signal.aborted, true);
+  assert.equal(calls, 1);
 });
 
 test('UI state labels keep mailbox delivery separate from client presence and task outcome', () => {
@@ -496,6 +614,7 @@ test('apply waits for webServer via inject instead of skipping the host API', ()
 
 test('host API JSON errors use public messages and drop tool payloads', async () => {
   const leaked = ['tok', 'en', '=', 'supersecretvalue'].join('');
+  let thrown;
   const registered = [];
   apply({
     get() { return undefined; },
@@ -512,10 +631,11 @@ test('host API JSON errors use public messages and drop tool payloads', async ()
           return {
             get() {
               return {
-                execute: async () => ({
-                  isError: true,
-                  content: [{ type: 'text', text: JSON.stringify({ error: leaked }) }],
-                }),
+                execute: async () => {
+                  if (thrown) throw thrown;
+                  return { isError: true,
+                    content: [{ type: 'text', text: JSON.stringify({ error: leaked }) }] };
+                },
               };
             },
           };
@@ -546,6 +666,16 @@ test('host API JSON errors use public messages and drop tool payloads', async ()
   assert.equal(parsed.error.message, '邮箱操作失败。');
   assert.doesNotMatch(parsed.error.message, /tok(?:en)=/);
   assert.doesNotMatch(res.body, /supersecretvalue/);
+  const synthetic = 'SYNTHETIC_BOUNDARY_VALUE';
+  for (const value of [new Error(JSON.stringify({ password: synthetic })),
+    Object.assign(new Error(leaked), { code: 'SYNTHETIC_BOUNDARY_VALUE', status: 200 })]) {
+    thrown = value;
+    await registered[0].handler(req, res);
+    assert.equal(res.status, 500);
+    assert.deepEqual(JSON.parse(res.body), { ok: false,
+      error: { code: 'internal', message: '操作结果未知，请核实后再试。' } });
+    assert.doesNotMatch(res.body, /SYNTHETIC_BOUNDARY_VALUE|supersecretvalue/);
+  }
 });
 
 test('apply stays headless-safe when webServer never appears', () => {
@@ -732,6 +862,83 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(source, /身份登记证据/);
   assert.match(source, /await refresh\(false\)/);
   assert.doesNotMatch(source, /already claimed is not fatal/);
+});
+
+test('generated factory renders safe tool summaries and starts the mailbox API', async () => {
+  let loaded;
+  let tab;
+  const cards = new Map();
+  const effects = [];
+  const cleanups = [];
+  const requests = [];
+  const react = {
+    createElement: (type, props, ...children) => ({ type, props, children }),
+    useState: (initial) => [typeof initial === 'function' ? initial() : initial, () => {}],
+    useRef: (current) => ({ current }), useCallback: (fn) => fn, useMemo: (fn) => fn(),
+    useSyncExternalStore: (_subscribe, snapshot) => snapshot(),
+    useEffect: (fn) => effects.push(fn),
+  };
+  runInNewContext(await readFile(path.join(packageDir, 'client.js'), 'utf8'), {
+    window: { __ModuleLoader__: { load(value) { loaded = value; } } },
+    AbortController, setTimeout, clearTimeout, console,
+    fetch: async (url) => {
+      requests.push(url);
+      return { ok: true, status: 200, json: async () => ({ ok: true, value: { live: false } }) };
+    },
+  });
+  const plugin = loaded.factory((id) => id === 'react' ? react : {});
+  const ctx = {
+    effect(fn) { cleanups.push(fn()); },
+    get(name) {
+      if (name === 'betterSidebar') return { registerTab(value) { tab = value; return () => {}; } };
+      if (name === 'slots') return {
+        inject(_name, fn) { fn(); },
+        register(options, render) { if (options.key) cards.set(options.key, render); },
+      };
+      return undefined;
+    },
+  };
+  plugin.apply(ctx);
+  assert.equal(cards.size, 4);
+  for (const render of cards.values()) {
+    const element = render({ block: { kind: 'tool-result', isError: true,
+      content: [{ type: 'text', text: 'SYNTHETIC_BOUNDARY_VALUE' }] } });
+    const rendered = JSON.stringify(element.type(element.props));
+    assert.match(rendered, /邮箱操作失败/);
+    assert.doesNotMatch(rendered, /SYNTHETIC_BOUNDARY_VALUE/);
+  }
+  const renderApprovals = cards.get(publicToolName('comm_approvals'));
+  for (const status of ['approved', 'rejected', 'pending']) {
+    const element = renderApprovals({ block: { kind: 'tool-result',
+      content: [{ type: 'text', text: JSON.stringify({ approvals: [
+        { id: 'approval-fixture', task_id: 'task-fixture', requested_for: 'peer@local', status },
+      ] }) }] } });
+    const rendered = JSON.stringify(element.type(element.props));
+    assert.match(rendered, /1 项审批记录/);
+    assert.doesNotMatch(rendered, /待人类审批|等待审批/);
+  }
+  const panel = tab.component({ visible: true, ctx });
+  panel.type(panel.props);
+  for (const effect of effects) cleanups.push(effect());
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.ok(requests.includes(`${API_PREFIX}/status`), 'generated client must resolve and call the API helper');
+  for (const cleanup of cleanups.reverse()) if (typeof cleanup === 'function') cleanup();
+});
+
+test('management distinguishes the absent DSH POST route from structured host errors', async () => {
+  const missing = new ManagementController({ fetchImpl: async () => ({
+    ok: false, status: 405, json: async () => { throw new SyntaxError('empty body'); },
+  }) });
+  await missing.status();
+  assert.equal(missing.getSnapshot().managementStatus, 'unconfigured');
+  missing.dispose();
+  const configured = new ManagementController({ fetchImpl: async () => ({
+    ok: false, status: 405, json: async () => ({ error: { code: 'protocol_error', message: 'SYNTHETIC_BOUNDARY_VALUE' } }),
+  }) });
+  await configured.status();
+  assert.equal(configured.getSnapshot().managementStatus, 'error');
+  assert.doesNotMatch(configured.getSnapshot().error, /SYNTHETIC_BOUNDARY_VALUE/);
+  configured.dispose();
 });
 
 test('management controller pairs, persists safe recovery metadata, restores, and activates', async () => {

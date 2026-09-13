@@ -9,7 +9,6 @@ import {
 } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
-  API_PREFIX,
   DEFAULT_DONE_BODY,
   SENT_POLL_INTERVAL_MS,
   SENT_POLL_MAX_ATTEMPTS,
@@ -27,14 +26,15 @@ import {
   messageTypeLabel,
   inboxItems,
   publicErrorMessage,
+  requestMailApi,
   publicToolName,
   quoteComposerText,
   recipientCapabilitySummary,
   recipientDetails,
   sanitizePublicError,
   sentDeliveryStatusLabel,
-  sentDeliveryStatus,
   sentItems,
+  sentRecord,
   statusBadgeStyle,
   statusGlyph,
   statusTone,
@@ -56,6 +56,7 @@ import {
 
 // Sessions is a core DSH client service, independent of Agent Mail MCP.
 export const inject = ['sessions'];
+const api = requestMailApi;
 
 const CARD_TOOLS = [
   publicToolName('comm_inbox'),
@@ -65,7 +66,6 @@ const CARD_TOOLS = [
 ];
 
 const unreadCache = { count: null, listeners: new Set() };
-let localSentSequence = 0;
 
 export function apply(ctx) {
   ctx.effect(() => bindSurfaces(ctx));
@@ -313,15 +313,15 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
     setClaimReady(false);
   }, []);
 
-  const resetSentHistory = useCallback(() => {
+  const resetSentHistory = useCallback((keepLocal = false) => {
     sentGenerationRef.current += 1;
     sentRefreshInFlightRef.current = null;
-    setSentRecords([]);
+    setSentRecords((current) => keepLocal ? current.filter((item) => item.localOnly === true) : []);
     setSentCapability('unknown');
     setSentLastRefresh(null);
     setSentError('');
     setSentPollStopped(false);
-    clearSelectedSent();
+    if (!keepLocal || selectedRef.current?.localOnly !== true) clearSelectedSent();
   }, [clearSelectedSent]);
 
   useEffect(() => {
@@ -334,6 +334,12 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   }, []);
 
   useEffect(() => {
+    if (!selfId) {
+      // A failed read cannot undo a successful submission. Hide durable
+      // history until identity is verified, keeping only local send facts.
+      resetSentHistory(true);
+      return;
+    }
     if (sentIdentityRef.current === selfId) return;
     sentIdentityRef.current = selfId;
     resetSentHistory();
@@ -351,8 +357,8 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
         setItems([]);
         setAgents([]);
         setDiagnose(null);
-        setThread([]);
-        setSelected(null);
+        setThread((current) => selectedRef.current?.localOnly ? current : []);
+        setSelected((current) => current?.localOnly ? current : null);
         setClaimReady(false);
         setLastRefresh({ at: Date.now(), ok: true });
         unreadCache.count = null;
@@ -436,7 +442,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
       setItems([]);
       setAgents([]);
       setDiagnose(null);
-      setThread([]);
+      setThread((current) => selectedRef.current?.localOnly ? current : []);
       setClaimReady(false);
       unreadCache.count = null;
       notifyBadge();
@@ -450,6 +456,7 @@ function MailPanel({ pluginCtx, ctx, scope, visible }) {
   }, [unreadOnly]);
 
   const refreshSent = useCallback(async ({ manageBusy = false, silent = false } = {}) => {
+    if (!selfId) return { ok: false, unavailable: true };
     if (sentRefreshInFlightRef.current !== null) return { ok: false, skipped: true };
     const requestId = ++sentRequestSequenceRef.current;
     const requestGeneration = sentGenerationRef.current;
@@ -1769,7 +1776,7 @@ function ToolCard({ toolName, owner }) {
     const title = model.state === 'stopped' ? '已停止' : `${action}失败`;
     return h('div', { style: cardStyle },
       h('div', { style: { fontWeight: 600, color: 'var(--dsh-danger, #c44)' } }, title),
-      h('div', { style: snippetStyle }, sanitizePublicError(model.text || '工具返回错误')),
+      h('div', { style: snippetStyle }, publicErrorMessage({ code: 'mcp-tool-error' })),
     );
   }
   if (kind === 'inbox') {
@@ -1798,10 +1805,10 @@ function ToolCard({ toolName, owner }) {
       h('div', { style: snippetStyle }, summary.agentId || '诊断完成'),
     );
   }
-  const pending = Array.isArray(payload.items) ? payload.items.length : Array.isArray(payload.approvals) ? payload.approvals.length : 0;
+  const count = Array.isArray(payload.items) ? payload.items.length : Array.isArray(payload.approvals) ? payload.approvals.length : 0;
   return h('div', { style: cardStyle },
-    h('div', { style: { fontWeight: 600 } }, '待人类审批'),
-    h('div', { style: snippetStyle }, pending > 0 ? `${pending} 项等待审批` : '没有待审批项'),
+    h('div', { style: { fontWeight: 600 } }, '审批记录'),
+    h('div', { style: snippetStyle }, count > 0 ? `${count} 项审批记录` : '没有审批记录'),
   );
 }
 
@@ -1853,53 +1860,6 @@ function deliveryReceiptLabel(value) {
   if (value === true || ['available', 'enabled', 'supported'].includes(String(value ?? '').trim().toLowerCase())) return '可用';
   if (value === false || ['unavailable', 'disabled', 'unsupported'].includes(String(value ?? '').trim().toLowerCase())) return '不可用';
   return '未知';
-}
-
-async function api(method, payload = {}) {
-  let response;
-  try {
-    response = await fetch(`${API_PREFIX}/${method}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    throw new Error(error instanceof Error ? error.message : String(error));
-  }
-  const parsed = await response.json().catch(() => null);
-  if (!response.ok || parsed?.ok !== true) {
-    const error = new Error(parsed?.error?.message ?? `HTTP ${response.status}`);
-    error.code = parsed?.error?.code;
-    error.status = response.status;
-    throw error;
-  }
-  return parsed.value;
-}
-
-function sentRecord(result, payload, from) {
-  const value = result != null && typeof result === 'object' ? result : {};
-  const providerStatus = value.status ?? value.delivery_status ?? 'submitted';
-  const normalizedStatus = sentDeliveryStatus(providerStatus);
-  return {
-    localKey: `sent-${Date.now()}-${++localSentSequence}`,
-    messageId: String(value.id ?? value.message_id ?? ''),
-    threadId: String(value.thread_id ?? payload.thread_id ?? ''),
-    taskId: String(value.task_id ?? payload.task_id ?? ''),
-    type: String(value.type ?? payload.type ?? 'message'),
-    from: String(value.from ?? from ?? ''),
-    to: String(value.to ?? payload.to ?? ''),
-    body: String(value.body_md ?? value.body ?? payload.body ?? ''),
-    effect: String(value.effect_level ?? value.effect ?? payload.effect ?? 'read'),
-    sentAt: value.sent_at ?? value.ts ?? null,
-    deliveryStatus: normalizedStatus === 'unknown' ? 'submitted' : normalizedStatus,
-    rawDeliveryStatus: value.delivery_status == null ? null : String(value.delivery_status),
-    taskStatus: value.task_status == null ? '' : String(value.task_status),
-    statusEvidence: value.status_evidence ?? null,
-    unread: false,
-    durable: false,
-    claimed: false,
-    localOnly: true,
-  };
 }
 
 function formatRefreshTime(value) {
