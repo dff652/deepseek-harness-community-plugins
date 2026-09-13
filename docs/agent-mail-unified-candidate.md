@@ -1,5 +1,9 @@
 # Unified Agent Mail 0.2.0 acceptance
 
+This file retains the 0.2.0 acceptance baseline. The subsequent
+[0.2.1 Release](agent-mail-0.2.1-release.md) includes its own exact-artifact
+and public-download installation checks; production upgrades remain separate.
+
 The released `@dff652/dsh-agent-mail@0.2.0` package contains the MCP
 configuration and mailbox UI. The standalone UI remains a compatibility
 package. See the [release and catalog handoff](agent-mail-0.2.0-release.md)

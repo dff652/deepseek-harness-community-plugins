@@ -3,11 +3,9 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="DeepSeek Harness Plugins connects DSH to reviewed configuration-only MCP bundles">
 </p>
 
-> Released: [Agent Mail 0.2.0](docs/agent-mail-0.2.0-release.md) combines MCP
-> and the mailbox UI. The unreleased [0.2.1 UI candidate](docs/agent-mail-ui-0.2.1-completion-review.md)
-> has completed C01–C08 local fixes and isolated acceptance, including 118 tests.
-> Source is pushed and CI passed; [0.2.1 release materials](docs/agent-mail-0.2.1-release-preparation.md)
-> are prepared for review.
+> Released: [Agent Mail 0.2.1](docs/agent-mail-0.2.1-release.md) combines MCP
+> and the mailbox UI. C01–C08 fixes and isolated acceptance include 118 tests;
+> source/tag CI and anonymous-download installation/migration checks passed.
 > Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
 > Catalog merge remains separate. Production cutover of 0.2.0 is recorded in
 > [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
@@ -15,7 +13,7 @@
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
-  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.1.0"><img alt="Agent Mail release 0.1.0" src="https://img.shields.io/badge/Agent%20Mail-release%200.1.0-5fa04e"></a>
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.2.1"><img alt="Agent Mail release 0.2.1" src="https://img.shields.io/badge/Agent%20Mail-release%200.2.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4"><img alt="Agent Mail UI release 0.1.4" src="https://img.shields.io/badge/Agent%20Mail%20UI-release%200.1.4-5fa04e"></a>
   <img alt="AgentMemory candidate 0.1.1" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.1-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
@@ -44,10 +42,9 @@ package is a small configuration bundle with its own version and allowlist.
 > passed disposable Web/headless install/remove checks. Current live-use
 > observations are tracked separately below.
 
-Released Agent Mail is `@dff652/dsh-agent-mail@0.2.0` plus provider
-`1.0.0-alpha.7`. Local source also contains unreleased `@dff652/dsh-agent-mail@0.2.1`
-and compatibility UI `0.1.9`. Those candidate versions are not a GitHub Release
-and are not a production upgrade. Host A production cutover of 0.2.0 is in
+Released Agent Mail is `@dff652/dsh-agent-mail@0.2.1` plus the separately
+installed provider `1.0.0-alpha.7`. Compatibility UI `0.1.9` remains unreleased.
+The GitHub Release is separate from a production upgrade. Host A production cutover of 0.2.0 is in
 [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
 Historical rc.2 records remain valid as history: AIAH `0.1.2` / Agent Mail `0.1.1`
@@ -81,18 +78,21 @@ credentials, start automatic wake, or inject sessions.
 Pack from a reviewed checkout, record the resulting digest, and install only
 that exact tarball into a disposable DSH profile:
 
+Use separate disposable profiles for the unified Agent Mail and compatibility
+UI examples below; installing both in one profile is rejected as a duplicate UI.
+
 ```bash
 npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts
 sha256sum dff652-dsh-ai-asset-hub-0.1.2.tgz
 dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts
-sha256sum dff652-dsh-agent-mail-0.1.1.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.1.1.tgz
+sha256sum dff652-dsh-agent-mail-0.2.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.1.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts
-sha256sum dff652-dsh-agent-mail-ui-0.1.6.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.6.tgz
+sha256sum dff652-dsh-agent-mail-ui-0.1.9.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.9.tgz
 
 npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
 sha256sum dff652-dsh-agentmemory-0.1.1.tgz

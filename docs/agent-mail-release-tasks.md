@@ -1,10 +1,11 @@
 # Agent Mail：验收收尾、发布准备与生产迁移任务清单
 
 更新时间：2026-09-13。0.2.0 主验收记录见[统一候选验收](agent-mail-unified-candidate.md)，
-当前 0.2.1 本地候选见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。
+0.2.1 已发布并通过公开下载包验收，见[发布记录](agent-mail-0.2.1-release.md)与
+[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。下方 T1–T5 保留原 0.2.0 执行记录。
 T1 收尾及 T2/T3 准备材料已提交：插件仓 `9cd36ef`，provider 仓 `6bdcc67`。本轮四项修订经主代理审查后纳入文档归档。T4 已完成 GitHub 发布、匿名下载验收及现有目录 PR 更新；目录合并待上游处理。随后另行授权的 T5 生产切换已完成，见[生产验收](agent-mail-0.2.0-production-acceptance.md)。详见[发布记录](agent-mail-0.2.0-release.md)。
 
-## 当前基线和范围
+## 原 0.2.0 基线和范围
 
 - Provider `1.0.0-alpha.7`：候选验收基线提交 `bdaa0fa`，归档 117 文件。
 - 统一插件 `@dff652/dsh-agent-mail@0.2.0`：候选验收基线提交 `7369952`，归档 9 文件。
@@ -106,8 +107,9 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 118 项测试、精确包安装/迁移/TLS receipts、Chrome/Firefox、主题与键盘、Ack、超时、
 保存后重启恢复和显式激活全部通过，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。
 源码和既有验收文档已推送至 `fa4f22f`，Node 22/24 远端 CI 全部通过。
-[0.2.1 发布材料](agent-mail-0.2.1-release-preparation.md)已在本地准备，包含发布正文、精确归档与摘要、
-目录草案及回滚说明；新材料尚未提交。0.2.1 未创建 tag、发布或部署。
+[0.2.1 发布材料](agent-mail-0.2.1-release-preparation.md)已提交并推送为 `dfa0d5e`，其 CI 全部通过。
+`dsh-agent-mail-v0.2.1` tag 与 GitHub Latest Release 已创建，tag CI、匿名下载及下载包
+安装/移除/迁移验收均通过，详见[发布记录](agent-mail-0.2.1-release.md)。目录草案尚未提交到目录仓；生产未升级。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 

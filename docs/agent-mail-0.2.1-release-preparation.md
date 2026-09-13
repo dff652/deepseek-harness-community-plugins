@@ -3,7 +3,9 @@
 核对日期：2026-09-13。源码与既有验收文档已推送至 `fa4f22f`，
 [远端 CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/34750682071)
 的 Node 22.19.0、24.19.0 测试、公开边界和打包检查全部通过。
-本轮准备发布材料；没有创建 tag、GitHub Release、npm 包或目录更新，没有生产操作。
+本文件保留发布准备时的核对与方案。后续授权执行已完成：材料提交为 `dfa0d5e`，
+tag、GitHub Release 与公开下载包安装/移除/迁移验收均通过，见
+[0.2.1 发布记录](agent-mail-0.2.1-release.md)。目录、npm 和生产操作未执行。
 
 ## 可审阅的发布对象
 
@@ -99,7 +101,8 @@ patch 已在隔离副本通过 `git apply --check`，实际应用后的文件与
 
 ## 发布执行与发布后验收
 
-下面是待授权的执行顺序。本仓工作流只有 `public-staging-ci`，tag push 不会自动创建 Release。
+下面保留原执行顺序；第 1–4 步已按后续授权完成，执行结果见顶部发布记录。
+本仓工作流只有 `public-staging-ci`，tag push 不会自动创建 Release。
 创建/推送 tag、发布 Release、更新目录和生产升级分别遵循 [AGENTS.md](../AGENTS.md) 的授权边界。
 
 1. 重新读取远端目标和版本，确认拟用 tag 对象、上述 CI 与精确归档未变。
@@ -144,8 +147,8 @@ patch 已在隔离副本通过 `git apply --check`，实际应用后的文件与
 - [x] 拟发布版本、tag 对象、远端 CI、九文件和摘要已绑定。
 - [x] 发布正文、SHA256SUMS、目录 YAML/patch 与回滚材料已准备。
 - [x] 现有公开版本、provider、npm 名称与目录 PR 已只读复查。
-- [ ] 新材料本地提交和推送。
-- [ ] 0.2.1 tag、GitHub Release、匿名下载与下载包安装验收。
+- [x] 新材料本地提交和推送：`dfa0d5e`，Node 22/24 CI 通过。
+- [x] 0.2.1 tag、GitHub Release、匿名下载与下载包安装验收：发布记录已归档。
 - [ ] 目录更新、检查、合并及商店刷新验收。
 - [ ] 生产现场核查、备份、升级及验收。
 
