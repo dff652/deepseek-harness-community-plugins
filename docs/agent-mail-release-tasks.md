@@ -1,6 +1,7 @@
 # Agent Mail：验收收尾、发布准备与生产迁移任务清单
 
-更新时间：2026-09-11。主验收记录见[统一候选验收](agent-mail-unified-candidate.md)。
+更新时间：2026-09-13。0.2.0 主验收记录见[统一候选验收](agent-mail-unified-candidate.md)，
+当前 0.2.1 本地候选见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。
 T1 收尾及 T2/T3 准备材料已提交：插件仓 `9cd36ef`，provider 仓 `6bdcc67`。本轮四项修订经主代理审查后纳入文档归档。T4 已完成 GitHub 发布、匿名下载验收及现有目录 PR 更新；目录合并待上游处理。随后另行授权的 T5 生产切换已完成，见[生产验收](agent-mail-0.2.0-production-acceptance.md)。详见[发布记录](agent-mail-0.2.0-release.md)。
 
 ## 当前基线和范围
@@ -97,17 +98,18 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 [会话复盘与后续总清单](agent-mail-2026-09-11-retrospective.md)汇总踩坑、解决过程和 F01–F10；
 [SOP 与产品化清单](agent-mail-sop-productization.md)整理 S1–S7 与 O1–O8。
 
-## 下一阶段：逐页界面优化
+## 逐页界面优化（本地实施与隔离验收完成）
 
 用户确认的逐页问题、A0–A7 执行范围、验收矩阵及新任务起点见
-[界面简化任务清单](agent-mail-ui-simplification-tasks.md)。C01–C03/C06/C07 已修并按当前包
-`dc03a0f1d617f5d489d5e538cccea44d4d071aef20f21833b29328798f485f88` 复验。C04/C05 隔离主路径已验
-（真实侧栏、Firefox、管理登录/过期码/取消/激活）；主题开关、Ack 按钮、保存后 restore、超时挂起
-仍未单独点，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。0.2.1 仍未发布。
+[界面简化任务清单](agent-mail-ui-simplification-tasks.md)。C01–C08 / A0–A7 已闭环，最终源码 `267584e`，
+统一包 SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23`。
+118 项测试、精确包安装/迁移/TLS receipts、Chrome/Firefox、主题与键盘、Ack、超时、
+保存后重启恢复和显式激活全部通过，见[完成度复核](agent-mail-ui-0.2.1-completion-review.md)。
+源码和文档仅本地提交；0.2.1 未 push、发布或部署，下一步按对应授权处理发布与生产升级。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 
-- U1：网络超时后“结果待核实”交互及重复发送防护，先确定幂等性契约。
+- U1：客户端超时后结果待核实、草稿保留及不自动重发已在 0.2.1 验证；服务端幂等键与去重契约仍是独立后端任务。
 - U2：已发送历史翻页，使用 provider 稳定游标并验证跨页身份隔离。
 - U3：可信设备注册、设备名/IP 与心跳，先定义身份绑定及过期语义。
 - U4：自动唤醒/消费任务，先确定接收端调度、权限、幂等和失败恢复；不把邮箱提交视作模型已执行。

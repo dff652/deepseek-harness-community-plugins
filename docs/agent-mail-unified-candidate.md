@@ -62,6 +62,11 @@ The install/migration gate accepts the old artifact paths through
 node tests/dsh-agent-mail-unified.acceptance.mjs
 ```
 
+Set `DSH_AGENT_MAIL_UNIFIED_TARBALL` to the absolute path of the final reviewed
+unified archive for both install/migration and receipt gates. The receipt gate
+then imports its host and view modules from that archive, and both gates print
+the same SHA-256 for comparison with the browser installation.
+
 The real receipt gate uses `DSH_AGENT_MAIL_COMMAND` and
 `DSH_AGENT_MAIL_CLI` for the reviewed candidate provider. Without additional
 settings it uses a disposable local mailbox. Setting
