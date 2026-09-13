@@ -16,9 +16,12 @@ and rejected records. See the
 The [source CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/34750682071)
 passed on Node 22.19.0 and 24.19.0. The [0.2.1 GitHub Release](agent-mail-0.2.1-release.md)
 is published as Latest; materials/tag CI and anonymous-download installation,
-removal and migration checks passed. Catalog PR #4837 was rechecked during September 13 preparation: still open,
-targeting 0.2.0, with its last site-build check failing on unrelated added-date
-derivation. The release operation did not update the catalog or upgrade production.
+removal and migration checks passed. The later authorized
+[catalog update](agent-mail-0.2.1-catalog-handoff.md) has pushed PR #4837 to
+`180993ae`, targeting 0.2.1 and incorporating current upstream main. Local full
+site build and the new PR check pass. The PR is mergeable but remains open, and production
+still uses a local 0.2.0 archive. The agreed market-source switch waits for the
+merge and a verified refreshed catalog target.
 npm publication remains separate.
 
 ## Earlier Agent Mail milestones
@@ -82,8 +85,8 @@ requires owner authorization.
 |---|---|---|---|---|---|---|
 | `@dff652/dsh-ai-asset-hub@0.1.1` | Complete | Complete | Released | Not published | Listed; merged [#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957), post-merge verifier PASS | Separate decision |
 | `@dff652/dsh-agent-mail@0.1.0` | Complete; separate provider required | Complete | Released | Not published | [#2988](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2988) merged; state rechecked September 9 | Public artifact not installed live; private companion 0.1.1 is separate |
-| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837) targets unified 0.2.0 and remains open; rechecked September 13 | Host A production cutover recorded 2026-09-11; see production acceptance |
-| `@dff652/dsh-agent-mail@0.2.1` | C01–C08 / A0–A7 complete; 118 tests and full isolated acceptance PASS | Tag source `fa4f22f`; materials `dfa0d5e`; both CI matrices PASS | [Released as Latest; public-download checks PASS](agent-mail-0.2.1-release.md) | Not published | Draft prepared, not submitted; verified Release URL now exists | No 0.2.1 live upgrade performed; SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23` |
+| `@dff652/dsh-agent-mail@0.2.0` | Unified MCP+UI; isolation and downloaded-artifact checks PASS | Pushed; tag source `47c5589` | [Released](agent-mail-0.2.0-release.md) | Not published | The same pending PR now targets 0.2.1; 0.2.0 was not merged into the catalog | Host A production cutover recorded 2026-09-11; see production acceptance |
+| `@dff652/dsh-agent-mail@0.2.1` | C01–C08 / A0–A7 complete; 118 tests and full isolated acceptance PASS | Tag source `fa4f22f`; materials `dfa0d5e`; both CI matrices PASS | [Released as Latest; public-download checks PASS](agent-mail-0.2.1-release.md) | Not published | [#4837 update pushed at 180993ae](agent-mail-0.2.1-catalog-handoff.md); local full build and new CI PASS, merge pending | No 0.2.1 live upgrade performed; SHA-256 `6ab01c2d9a287cd991aa4380f0375d89b743101c86cb2ef71f2de6ae7c58fb23` |
 | `@dff652/dsh-agent-mail-ui@0.1.4` | Complete; acceptance PASS | `e179d893` on `origin/main` | [Released](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4) | Not published | Not submitted | Historical September 5 live profile; standalone UI was removed in the September 11 Host A unified 0.2.0 cutover |
 | `@dff652/dsh-agent-mail-ui@0.1.5` | Historical candidate: 99 tests, real standalone/sidebar and uninstrumented workspace/Quote/tab remount PASS; exact digest recorded | Source `a2057fc` is in `origin/main` history | Not released | Not published | Not submitted | Historical preview candidate; superseded there by 0.1.6, with its archive/evidence retained |
 | `@dff652/dsh-agent-mail-ui@0.1.6` | Historical P0 acceptance: 100 portable tests per Node version, 16 scenarios per fixture browser, real DSH and independent review PASS | Source archived before the current review | Not released | Not published | Not submitted | Historical isolated preview upgrade; the current task did not inspect or alter that preview |

@@ -109,7 +109,10 @@ T4 发布窗口实际执行：文档及源码 push、两个 tag/GitHub Release�
 源码和既有验收文档已推送至 `fa4f22f`，Node 22/24 远端 CI 全部通过。
 [0.2.1 发布材料](agent-mail-0.2.1-release-preparation.md)已提交并推送为 `dfa0d5e`，其 CI 全部通过。
 `dsh-agent-mail-v0.2.1` tag 与 GitHub Latest Release 已创建，tag CI、匿名下载及下载包
-安装/移除/迁移验收均通过，详见[发布记录](agent-mail-0.2.1-release.md)。目录草案尚未提交到目录仓；生产未升级。
+安装/移除/迁移验收均通过，详见[发布记录](agent-mail-0.2.1-release.md)。后续获授权的
+[目录更新](agent-mail-0.2.1-catalog-handoff.md)已推送至 PR #4837 的 `180993ae`；
+本地完整站点构建及新提交 CI 全部通过，PR 可合并但仍开放。
+PR 合并与目录刷新后再切换线上来源；生产仍为 0.2.0。
 
 ## 独立产品积压（不阻塞本轮收尾，未领取）
 
