@@ -4,13 +4,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileAsync, resolveDsh, runDsh, sha256File } from '../scripts/lib/agent-mail-host.mjs';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const work = await mkdtemp(path.join(os.tmpdir(), 'dsh-agent-mail-unified.'));
 const dsh = resolveDsh();
+const migrationDsh = process.env.DSH_AGENT_MAIL_MIGRATION_DSH_BIN || dsh;
 const env = { ...process.env, DSH_HOME: path.join(work, 'dsh-home') };
-async function run(args) {
-  const result = await runDsh(dsh, args, env, work, 180000);
+async function run(args, binary = dsh) {
+  const result = await runDsh(binary, args, env, work, 180000);
   assert.equal(result.code, 0, `${args.join(' ')}: ${result.stderr}\n${result.stdout}`);
   return result.stdout;
 }
@@ -21,6 +23,7 @@ function assertUnified(config) {
   assert.doesNotMatch(config, /name: ['"]?@dff652\/dsh-agent-mail-ui\b/);
 }
 try {
+  assert.ok(path.isAbsolute(migrationDsh), 'migration dsh path must be absolute');
   let tarball = process.env.DSH_AGENT_MAIL_UNIFIED_TARBALL;
   if (!tarball) {
     const { stdout } = await execFileAsync('npm', [
@@ -39,15 +42,33 @@ try {
   const oldMail = process.env.DSH_AGENT_MAIL_OLD_TARBALL;
   const oldUi = process.env.DSH_AGENT_MAIL_OLD_UI_TARBALL;
   assert.ok(oldMail && oldUi, 'migration gate requires both reviewed old tarballs');
-  await run(['plugin', '--profile', 'web', 'add', '-w', oldMail]);
-  await run(['plugin', '--profile', 'web', 'add', '-w', oldUi]);
+  if (migrationDsh !== dsh) {
+    const before = await run(['--profile', 'web', '--dump-config']);
+    const incompatible = await runDsh(dsh, ['plugin', '--profile', 'web', 'add', '-w', oldMail], env, work, 180000);
+    assert.notEqual(incompatible.code, 0, 'old MCP exact peer must be rejected on the new runtime');
+    assert.match(`${incompatible.stdout}\n${incompatible.stderr}`, /@dff652\/dsh-agent-mail[^\n]*incompatible/);
+    assert.equal(await run(['--profile', 'web', '--dump-config']), before, 'rejected installation must restore the profile');
+  }
+  env.DSH_HOME = path.join(work, 'migration-home');
+  await run(['plugin', '--profile', 'web', 'add', '-w', oldMail], migrationDsh);
+  await run(['plugin', '--profile', 'web', 'add', '-w', oldUi], migrationDsh);
   await run(['plugin', '--profile', 'web', 'add', '-w', tarball]);
-  const duplicate = await runDsh(dsh, ['--profile', 'web', '--port', '0'], {
+  const negativeEnv = {
     ...env, DSH_AGENT_MAIL_COMMAND: '/bin/false',
     DSH_AGENT_MAIL_HOME: work, DSH_AGENT_MAIL_ID: 'migration-check@local',
-  }, work, 30000);
-  assert.notEqual(duplicate.code, 0);
-  assert.match(`${duplicate.stdout}\n${duplicate.stderr}`, /duplicate loader entry id: dsh-agent-mail-ui/);
+  };
+  if (migrationDsh !== dsh) {
+    const activation = await probeActivation(dsh, [], negativeEnv, work, ['dsh-agent-mail-ui', 'mcp-agent-mail']);
+    assert.match(activation.output, /skipping profile bundle "@dff652\/dsh-agent-mail-ui"[^\n]*incompatible/);
+    assert.equal(activation.rows.filter(row => row.id === 'dsh-agent-mail-ui').length, 1);
+    assert.equal(activation.rows.find(row => row.id === 'dsh-agent-mail-ui')?.state, 2);
+    assert.equal(activation.rows.find(row => row.id === 'mcp-agent-mail')?.state, 3);
+    assert.deepEqual(activation.tools.filter(name => name.startsWith('mcp__agent-mail__')), []);
+  } else {
+    const duplicate = await runDsh(dsh, ['--profile', 'web', '--port', '0'], negativeEnv, work, 30000);
+    assert.notEqual(duplicate.code, 0);
+    assert.match(`${duplicate.stdout}\n${duplicate.stderr}`, /duplicate loader entry id: dsh-agent-mail-ui/);
+  }
   await run(['plugin', '--profile', 'web', 'remove', '@dff652/dsh-agent-mail-ui']);
   await run(['plugin', '--profile', 'web', 'add', '-w', tarball]);
   assertUnified(await run(['--profile', 'web', '--dump-config']));

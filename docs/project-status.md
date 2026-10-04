@@ -25,6 +25,8 @@ merged on September 15 and still targets the published Agent Mail `0.2.1`,
 whose exact MCP peer is `0.1.1-rc.2`. The current adaptation does not update
 that catalog entry or publish new Release/npm artifacts.
 
+Mail 0.2.2 release execution is authorized; [release materials](agent-mail-0.2.2-release-preparation.md) bind the accepted archive to the reviewed source. Public download and catalog updates are checked after publication.
+
 ## September release evidence
 
 The following dated record describes the September releases.
