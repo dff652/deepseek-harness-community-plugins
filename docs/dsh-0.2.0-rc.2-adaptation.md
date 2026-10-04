@@ -1,6 +1,6 @@
 # DSH 0.2.0-rc.2 adaptation
 
-Status date: 2026-10-04. These are local, unreleased candidates.
+Status date: 2026-10-04. Candidate source is pushed; packages remain unreleased.
 
 The target is the official DSH `0.2.0-rc.2` release, upstream commit
 `639ed015397290b3745d163aafe02ffee4aa3f84`. The base runtime's 278 official
@@ -114,6 +114,11 @@ adaptation gate. The complete business-write fixture uses isolated stores.
 
 The published Agent Mail `0.2.1` Release and merged catalog entry retain the
 old exact MCP peer. They are not evidence of DSH 0.2 compatibility. This
-adaptation is recorded in local commits. Push, tags, npm publication,
-Release artifacts and catalog changes remain separate owner-authorized
-transitions and have not been performed for these candidates.
+adaptation source was pushed to public `main` as
+[`0e1f29e`](https://github.com/dff652/deepseek-harness-community-plugins/commit/0e1f29e8b1a93ef82bff53b2314f9d64439a825d).
+Its [source CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/37206627888)
+passed on Node 22.19.0 and 24.19.0, including contracts, repository boundary
+checks and dry-run packing of all four public packages. Source synchronization
+does not publish an installable Release/npm artifact or change the catalog.
+Tags, npm publication, Release artifacts and catalog changes remain separate
+owner-authorized transitions and have not been performed for these candidates.

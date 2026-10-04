@@ -4,7 +4,7 @@ Status date: 2026-10-04.
 
 ## DSH 0.2 adaptation
 
-Local candidates target DSH and MCP client `0.2.0-rc.2`: Agent Mail `0.2.2`,
+Unreleased candidates target DSH and MCP client `0.2.0-rc.2`: Agent Mail `0.2.2`,
 compatibility UI `0.2.0`, AI Asset Hub `0.1.3`, and AgentMemory `0.1.2`.
 Portable contracts pass on Node 22.19.0 and 24.19.0, and exact packed
 artifacts have passed isolated installation and runtime checks. See the
@@ -16,7 +16,9 @@ now fixes the upstream manifest's missing credential inclusion. The live HTML
 check and isolated browser regression passed. Authenticated public post-fix
 verification passed with manifest HTTP 200, zero console/runtime errors and
 all 20 original session IDs retained. Public bundle bytes are unchanged
-by this override. These source changes are local and unreleased.
+by this override. Source commit `0e1f29e` is pushed to public `main`; its
+[source CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/37206627888)
+passed on Node 22.19.0 and 24.19.0. These package candidates remain unreleased.
 
 Catalog PR [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837)
 merged on September 15 and still targets the published Agent Mail `0.2.1`,
@@ -46,7 +48,7 @@ removal and migration checks passed. The later authorized
 [catalog update](agent-mail-0.2.1-catalog-handoff.md) has pushed PR #4837 to
 `180993ae`, targeting 0.2.1 and incorporating current upstream main. Local full
 site build and the new PR check pass. The PR later merged on September 15. The published catalog target remains
-0.2.1; the DSH 0.2 adaptation above is a separate local candidate.
+0.2.1; the DSH 0.2 adaptation above is a separate unreleased candidate.
 npm publication remains separate.
 
 ## Earlier Agent Mail milestones

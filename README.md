@@ -7,7 +7,7 @@
 > and the mailbox UI. C01–C08 fixes and isolated acceptance include 118 tests;
 > source/tag CI and anonymous-download installation/migration checks passed.
 > Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
-> Catalog targets 0.2.1. The local, unreleased DSH 0.2 adaptation passed its
+> Catalog targets 0.2.1. The unreleased DSH 0.2 adaptation passed its
 > authorized deployment, restart and public login/core UI checks. An upstream
 > manifest authentication issue has a guarded local HTML fix; public post-fix
 > verification passed with manifest HTTP 200 and zero console errors. See
