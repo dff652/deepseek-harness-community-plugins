@@ -1,6 +1,6 @@
 {
   "name": "@dff652/dsh-agent-mail-ui",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "description": "Agent Mail · AI 协作邮箱界面：收发消息、交接任务并查看处理回执（兼容包）",
   "keywords": [
     "deepseek-harness",
@@ -45,15 +45,16 @@
     },
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-modules",
         "@deepseek-ai/dsh-client-ui-slots",
-        "@deepseek-ai/dsh-client-ui-conversation"
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
       ],
       "platform": "web"
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-mcp-client": "0.1.1-rc.2"
+    "@deepseek-ai/dsh-mcp-client": "0.2.0-rc.2"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-mcp-client": {

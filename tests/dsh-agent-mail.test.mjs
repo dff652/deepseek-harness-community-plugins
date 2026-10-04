@@ -45,7 +45,7 @@ test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed file
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
 
   assert.equal(manifest.name, '@dff652/dsh-agent-mail');
-  assert.equal(manifest.version, '0.2.1');
+  assert.equal(manifest.version, '0.2.2');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(
@@ -60,9 +60,15 @@ test('manifest pins the rc.2 MCP client as a peer and exposes only reviewed file
   assert.equal(manifest.engines.node, '^22.19.0 || >=24.0.0');
   assert.equal(manifest.dependencies, undefined);
   assert.deepEqual(manifest.peerDependencies, {
-    '@deepseek-ai/dsh-mcp-client': '0.1.1-rc.2',
+    '@deepseek-ai/dsh-mcp-client': '0.2.0-rc.2',
   });
   assert.deepEqual(manifest.dsh.bundle, { patch: './cordis.patch.yml' });
+  assert.deepEqual(manifest.dsh.client.inject, [
+    '@deepseek-ai/dsh-client-modules',
+    '@deepseek-ai/dsh-client-ui-slots',
+    '@deepseek-ai/dsh-client-ui-conversation',
+    '@deepseek-ai/dsh-client-ui-sidebar-right',
+  ]);
   assert.deepEqual(manifest.files, [
     'index.js',
     'ui-host.js',
@@ -112,7 +118,7 @@ test('unified entry mounts the UI bridge without copying provider handlers', asy
   assert.match(readme, /mcp__agent-mail__comm_send/);
   assert.match(readme, /not provided here/);
   assert.match(readme, /Automatic\s+wake/);
-  assert.match(notice, /@deepseek-ai\/dsh-mcp-client@0\.1\.1-rc\.2/);
+  assert.match(notice, /@deepseek-ai\/dsh-mcp-client@0\.2\.0-rc\.2/);
   assert.doesNotMatch(readme, /\/home\//);
   assert.doesNotMatch(readme, /Bearer\s+[A-Za-z0-9._~+/=-]{12,}/i);
 });

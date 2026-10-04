@@ -91,6 +91,36 @@ function toolsCtx(handlers) {
           const execute = handlers[toolName];
           return execute ? { execute } : undefined;
         },
+        async execute(input) {
+          const execute = handlers[input.name];
+          if (!execute) {
+            return { isError: true, error: { message: 'unknown tool' }, content: [] };
+          }
+          try {
+            const value = await execute(input.arguments, {
+              callId: input.callId,
+              name: input.name,
+              arguments: input.arguments,
+              signal: input.signal,
+              deferContext() {},
+              concludeTurn() {},
+            });
+            if (value?.isError === true) {
+              return {
+                isError: true,
+                error: { message: value.content?.[0]?.text ?? 'tool returned an error' },
+                content: value.content ?? [],
+              };
+            }
+            return { isError: false, value, content: [] };
+          } catch (error) {
+            return {
+              isError: true,
+              error: { message: error?.message ?? 'tool failed' },
+              content: [],
+            };
+          }
+        },
       };
     },
   };
@@ -99,14 +129,20 @@ function toolsCtx(handlers) {
 test('manifest is an independent UI package with a plain bundle patch', async () => {
   const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@dff652/dsh-agent-mail-ui');
-  assert.equal(manifest.version, '0.1.9');
+  assert.equal(manifest.version, '0.2.0');
   assert.equal(manifest.private, undefined);
   assert.equal(manifest.license, 'MIT');
   assert.equal(manifest.repository.directory, 'packages/dsh-agent-mail-ui');
   assert.deepEqual(manifest.dsh.bundle, { patch: './cordis.patch.yml' });
   assert.equal(manifest.dsh.client.platform, 'web');
+  assert.deepEqual(manifest.dsh.client.inject, [
+    '@deepseek-ai/dsh-client-modules',
+    '@deepseek-ai/dsh-client-ui-slots',
+    '@deepseek-ai/dsh-client-ui-conversation',
+    '@deepseek-ai/dsh-client-ui-sidebar-right',
+  ]);
   assert.deepEqual(manifest.peerDependencies, {
-    '@deepseek-ai/dsh-mcp-client': '0.1.1-rc.2',
+    '@deepseek-ai/dsh-mcp-client': '0.2.0-rc.2',
   });
   assert.equal(manifest.dependencies, undefined);
   assert.deepEqual(manifest.files, [
@@ -492,28 +528,23 @@ test('UI state labels keep mailbox delivery separate from client presence and ta
   assert.deepEqual(threadParticipants(task, tailed), ['worker@local', 'ui@local']);
 });
 
-test('standalone Quote scope follows current session navigation and rejects stale ids', () => {
-  const first = {
-    ids: ['session-a', 'session-b'],
-    byId: { 'session-a': { sessionId: 'session-a' }, 'session-b': { sessionId: 'session-b' } },
-    current: 'session-a',
-  };
-  const second = { ...first, current: 'session-b' };
-  assert.equal(currentSessionId(first), 'session-a');
-  assert.deepEqual(sessionScope(first), { sessionId: 'session-a' });
-  assert.equal(currentSessionId(second), 'session-b');
-  assert.deepEqual(sessionScope(second), { sessionId: 'session-b' });
-  assert.deepEqual(sessionScope({ ...second, current: 'session-stale' }), {});
-  assert.deepEqual(sessionScope({ ids: first.ids, byId: first.byId }), {});
+test('standalone Quote scope follows sidebarRight.mounted, not the session catalog', () => {
+  assert.equal(currentSessionId('session-a'), 'session-a');
+  assert.deepEqual(sessionScope('session-a'), { sessionId: 'session-a' });
+  assert.equal(currentSessionId('session-b'), 'session-b');
+  assert.deepEqual(sessionScope('session-b'), { sessionId: 'session-b' });
+  assert.deepEqual(sessionScope(undefined), {});
+  assert.deepEqual(sessionScope(''), {});
+  assert.deepEqual(sessionScope({ current: 'stale-session' }), {},
+    'the sessions.list catalog does not provide selected-session state');
 });
 
-test('tool cards consume DSH rc.2 owner.block lifecycle and preserve send failures', () => {
+test('tool cards consume DSH rc.2 owner phase/block lifecycle and preserve send failures', () => {
   const toolName = publicToolName('comm_send');
   const running = toolCardModel(toolName, {
+    phase: 'start',
     callId: 'call-1',
-    name: 'comm_send',
-    argsRaw: '{}',
-    subCalls: [],
+    block: { callId: 'call-1', name: 'comm_send', argsRaw: '{}', subCalls: [] },
   });
   assert.equal(running.state, 'running');
   assert.deepEqual(running.payload, {});
@@ -526,7 +557,7 @@ test('tool cards consume DSH rc.2 owner.block lifecycle and preserve send failur
     isError: false,
     subCalls: [],
   };
-  const success = toolCardModel(toolName, successBlock);
+  const success = toolCardModel(toolName, { phase: 'result', callId: 'call-1', block: successBlock });
   assert.equal(success.state, 'ok');
   assert.equal(success.payload.message_id, 'm-1');
   assert.match(toolResultText(successBlock), /message_id/);
@@ -537,7 +568,7 @@ test('tool cards consume DSH rc.2 owner.block lifecycle and preserve send failur
     isError: true,
     error: { name: 'McpError', code: 'mcp-tool-error' },
   };
-  const failed = toolCardModel(toolName, failedBlock);
+  const failed = toolCardModel(toolName, { phase: 'result', callId: 'call-1', block: failedBlock });
   assert.equal(failed.state, 'error');
   assert.equal(failed.payload.error, 'delivery rejected');
   assert.notEqual(failed.state, 'ok', 'a failed send must never render as success');
@@ -630,13 +661,11 @@ test('host API JSON errors use public messages and drop tool payloads', async ()
           if (name !== 'tools') return undefined;
           return {
             get() {
-              return {
-                execute: async () => {
-                  if (thrown) throw thrown;
-                  return { isError: true,
-                    content: [{ type: 'text', text: JSON.stringify({ error: leaked }) }] };
-                },
-              };
+              return { execute: async () => ({}) };
+            },
+            async execute() {
+              const message = thrown?.message ?? JSON.stringify({ error: leaked });
+              return { isError: true, error: { message }, content: [] };
             },
           };
         },
@@ -671,9 +700,9 @@ test('host API JSON errors use public messages and drop tool payloads', async ()
     Object.assign(new Error(leaked), { code: 'SYNTHETIC_BOUNDARY_VALUE', status: 200 })]) {
     thrown = value;
     await registered[0].handler(req, res);
-    assert.equal(res.status, 500);
+    assert.equal(res.status, 502);
     assert.deepEqual(JSON.parse(res.body), { ok: false,
-      error: { code: 'internal', message: '操作结果未知，请核实后再试。' } });
+      error: { code: 'mcp-tool-error', message: '邮箱操作失败。' } });
     assert.doesNotMatch(res.body, /SYNTHETIC_BOUNDARY_VALUE|supersecretvalue/);
   }
 });
@@ -693,7 +722,13 @@ test('host reuses the registered MCP tool execute path', async () => {
   const calls = [];
   const ctx = toolsCtx({
     [publicToolName('comm_inbox')]: async (args, exec) => {
-      calls.push({ args, aborted: exec.signal.aborted });
+      calls.push({
+        args,
+        arguments: exec.arguments,
+        name: exec.name,
+        callId: exec.callId,
+        aborted: exec.signal.aborted,
+      });
       return { structuredContent: { count: 0, items: [] } };
     },
   });
@@ -701,6 +736,9 @@ test('host reuses the registered MCP tool execute path', async () => {
   assert.equal(result.count, 0);
   assert.equal(calls.length, 1);
   assert.equal(calls[0].aborted, false);
+  assert.equal(calls[0].name, publicToolName('comm_inbox'));
+  assert.deepEqual(calls[0].arguments, { unread_only: true });
+  assert.match(calls[0].callId, /^[0-9a-f-]{36}$/i);
 });
 
 test('host binds durable sent history and recipient details to additive MCP tools', async () => {
@@ -828,19 +866,22 @@ test('client registers a sidebar tab rather than a top-right window button', asy
   assert.match(client, /id: TAB_ID/);
   assert.match(client, /standalone/);
   assert.match(client, /ctx\.inject\(\['betterSidebar'\]/);
-  assert.match(client, /const inject = \['sessions'\];/);
+  assert.match(client, /const inject = \['sessions', 'sidebarRight'\];/);
   assert.match(view, /dsh-agent-mail:inbox/);
   assert.doesNotMatch(client, /toggleCluster/);
   assert.doesNotMatch(client, /IconPanelRight/);
   assert.match(client, /引用到对话/);
   assert.match(client, /human@local/);
   const source = await readFile(path.join(packageDir, 'client-src.js'), 'utf8');
-  assert.match(source, /export const inject = \['sessions'\];/);
+  assert.match(source, /export const inject = \['sessions', 'sidebarRight'\];/);
   assert.match(source, /appendToDraft\(ctx, sessionId/);
   assert.match(source, /appendToDraft\(pluginCtx, sessionId/);
   assert.match(source, /useSyncExternalStore/);
-  assert.match(source, /list\.subscribe/);
-  assert.match(source, /owner\?\.block/);
+  assert.match(source, /mounted\.subscribe/);
+  assert.match(source, /toolCardModel\(toolName, owner\)/);
+  assert.match(view, /owner\?\.phase/);
+  assert.match(view, /owner\?\.block/);
+  assert.match(source, /sidebarRight\?\.mounted/);
   assert.doesNotMatch(source, /snap\?\.items\?\.\[0\]/);
   assert.match(source, /DEFAULT_DONE_BODY/);
   assert.match(source, /任务完成、报错或取消后才可以确认收悉/);
@@ -901,18 +942,20 @@ test('generated factory renders safe tool summaries and starts the mailbox API',
   plugin.apply(ctx);
   assert.equal(cards.size, 4);
   for (const render of cards.values()) {
-    const element = render({ block: { kind: 'tool-result', isError: true,
-      content: [{ type: 'text', text: 'SYNTHETIC_BOUNDARY_VALUE' }] } });
+    const element = render({ phase: 'result', callId: 'call-failed',
+      block: { kind: 'tool-result', isError: true,
+        content: [{ type: 'text', text: 'SYNTHETIC_BOUNDARY_VALUE' }] } });
     const rendered = JSON.stringify(element.type(element.props));
     assert.match(rendered, /邮箱操作失败/);
     assert.doesNotMatch(rendered, /SYNTHETIC_BOUNDARY_VALUE/);
   }
   const renderApprovals = cards.get(publicToolName('comm_approvals'));
   for (const status of ['approved', 'rejected', 'pending']) {
-    const element = renderApprovals({ block: { kind: 'tool-result',
-      content: [{ type: 'text', text: JSON.stringify({ approvals: [
+    const element = renderApprovals({ phase: 'result', callId: 'call-approval',
+      block: { kind: 'tool-result',
+        content: [{ type: 'text', text: JSON.stringify({ approvals: [
         { id: 'approval-fixture', task_id: 'task-fixture', requested_for: 'peer@local', status },
-      ] }) }] } });
+        ] }) }] } });
     const rendered = JSON.stringify(element.type(element.props));
     assert.match(rendered, /1 项审批记录/);
     assert.doesNotMatch(rendered, /待人类审批|等待审批/);

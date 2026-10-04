@@ -3,7 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveDsh, runDsh } from '../scripts/lib/agent-mail-host.mjs';
+import { resolveDsh } from '../scripts/lib/agent-mail-host.mjs';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const patchPath = path.join(root, 'packages', 'dsh-agent-mail', 'cordis.patch.yml');
@@ -74,18 +75,25 @@ try {
       DSH_AGENT_MAIL_ID: 'dsh-export@local',
     };
     item.mutate(env);
-    const result = await runDsh(
+    const result = await probeActivation(
       dshBin,
-      ['--patch', patchPath, '--profile', 'web', '--port', '0'],
+      [patchPath],
       env,
       work,
+      ['mcp-agent-mail'],
     );
-    const output = `${result.stdout}\n${result.stderr}`;
-    assert.notEqual(result.code, 0, `${item.name} unexpectedly activated DSH`);
-    assert.match(output, item.expected, item.name);
+    const mcp = result.rows.find((row) => row.id === 'mcp-agent-mail');
+    assert.equal(mcp?.state, 3, `${item.name}: ${JSON.stringify(mcp)}`);
+    assert.match(mcp?.error ?? '', item.expected, item.name);
+    assert.match(result.output, /entries? did not activate/i, item.name);
+    assert.deepEqual(
+      result.tools.filter((name) => name.startsWith('mcp__agent-mail__')),
+      [],
+      `${item.name}: invalid provider config must expose no Agent Mail tools`,
+    );
   }
 
-  console.log('Agent Mail DSH activation negative checks: PASS (7 cases)');
+  console.log('Agent Mail DSH activation negative checks: PASS (7 failed MCP rows, web host retained)');
 } finally {
   await rm(work, { recursive: true, force: true });
 }

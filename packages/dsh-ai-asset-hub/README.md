@@ -9,8 +9,8 @@ store credentials, ship a provider binary or expose build/apply/rollback.
 
 | Item | Pin |
 |---|---|
-| DeepSeek Harness | `0.1.1-rc.2` |
-| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
+| DeepSeek Harness | `0.2.0-rc.2` |
+| `@deepseek-ai/dsh-mcp-client` | `0.2.0-rc.2` |
 
 ## Deployment contract
 
@@ -21,11 +21,16 @@ provider command through `PATH`. That executable, its version and its SHA-256
 belong to the deployment, not this package. The package always passes `mcp` as
 the only argument.
 
+DSH `0.2.0-rc.2` reports a failed optional plugin as an activation warning
+and can keep other plugins running. Rejection means this entry exposes no
+AIAH tools; it does not require the whole Web host to exit. The activation
+check inspects the settled Loader entry and tool registry.
+
 Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.3.tgz
 dsh --profile <profile> --dump-config
 ```
 

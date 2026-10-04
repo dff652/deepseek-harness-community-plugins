@@ -144,22 +144,17 @@ window.__ModuleLoader__.load({
 		}
 
 		/**
-		 * Select the current DSH session from the rc.2 sessions.list snapshot.
-		 * `current` may address a breadcrumb-only child that is absent from `ids`,
-		 * but every usable current id is still present in `byId`.
+		 * DSH 0.2 exposes the selected seat through sidebarRight.mounted. The
+		 * sessions.list catalog has no current-session field.
 		 */
-		function currentSessionId(snapshot) {
-		  const current = snapshot?.current;
-		  if (typeof current !== 'string' || current === '') return undefined;
-		  if (snapshot?.byId == null || typeof snapshot.byId !== 'object') return undefined;
-		  return Object.prototype.hasOwnProperty.call(snapshot.byId, current)
-		    && snapshot.byId[current] != null
-		    ? current
+		function currentSessionId(mountedSessionId) {
+		  return typeof mountedSessionId === 'string' && mountedSessionId !== ''
+		    ? mountedSessionId
 		    : undefined;
 		}
 
-		function sessionScope(snapshot) {
-		  const sessionId = currentSessionId(snapshot);
+		function sessionScope(mountedSessionId) {
+		  const sessionId = currentSessionId(mountedSessionId);
 		  return sessionId ? { sessionId } : {};
 		}
 
@@ -722,11 +717,15 @@ window.__ModuleLoader__.load({
 		 * RunningToolCall has no `kind`; ToolResultNode has `kind: 'tool-result'` and
 		 * carries serialized MCP output in `content`.
 		 */
-		function toolCardModel(toolName, block) {
-		  const settled = isToolResultBlock(block);
+		function toolCardModel(toolName, owner) {
+		  const block = owner?.block;
+		  const hasResultPhase = owner?.phase === 'result';
+		  const settled = hasResultPhase && isToolResultBlock(block);
 		  const text = settled ? toolResultText(block) : '';
-		  const state = !settled
+		  const state = !hasResultPhase
 		    ? 'running'
+		    : !settled
+		      ? 'error'
 		    : block.error?.code === 'interrupted'
 		      ? 'stopped'
 		      : block.isError === true
@@ -735,7 +734,7 @@ window.__ModuleLoader__.load({
 		  return {
 		    kind: toolCardKind(toolName),
 		    state,
-		    callId: String(block?.callId ?? ''),
+		    callId: String(owner?.callId ?? block?.callId ?? ''),
 		    payload: settled && text !== '' ? parseToolPayload(text) : {},
 		    text,
 		  };
@@ -1716,8 +1715,8 @@ window.__ModuleLoader__.load({
 		  }
 		  return controller;
 		}
-		// Sessions is a core DSH client service, independent of Agent Mail MCP.
-		const inject = ['sessions'];
+		// These DSH client services are independent of the Agent Mail MCP namespace.
+		const inject = ['sessions', 'sidebarRight'];
 		const api = requestMailApi;
 
 		const CARD_TOOLS = [
@@ -1847,18 +1846,19 @@ window.__ModuleLoader__.load({
 
 		function currentScope(ctx) {
 		  try {
-		    return sessionScope(ctx?.sessions?.list?.getSnapshot?.());
+		    const sidebarRight = ctx?.get?.('sidebarRight') ?? ctx?.sidebarRight;
+		    return sessionScope(sidebarRight?.mounted?.getSnapshot?.());
 		  } catch {
 		    return {};
 		  }
 		}
 
 		function useCurrentScope(ctx, enabled) {
-		  const list = ctx?.sessions?.list;
+		  const mounted = ctx?.get?.('sidebarRight')?.mounted ?? ctx?.sidebarRight?.mounted;
 		  const subscribe = useCallback((listener) => {
-		    if (!enabled || typeof list?.subscribe !== 'function') return () => {};
-		    return list.subscribe(listener);
-		  }, [enabled, list]);
+		    if (!enabled || typeof mounted?.subscribe !== 'function') return () => {};
+		    return mounted.subscribe(listener);
+		  }, [enabled, mounted]);
 		  const getSnapshot = useCallback(() => {
 		    return currentScope(ctx).sessionId;
 		  }, [ctx]);
@@ -3426,7 +3426,7 @@ window.__ModuleLoader__.load({
 		}
 
 		function ToolCard({ toolName, owner }) {
-		  const model = toolCardModel(toolName, owner?.block);
+		  const model = toolCardModel(toolName, owner);
 		  const { kind, payload } = model;
 		  const action = { inbox: '读取收件箱', send: '发送', approvals: '查询审批', diagnose: '诊断' }[kind] ?? '工具调用';
 		  if (model.state === 'running') {
@@ -3631,7 +3631,7 @@ window.__ModuleLoader__.load({
 		const viewHeadingStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingBottom: 12 };
 		const titleRowStyle = { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, minWidth: 0, fontSize: 14 };
 		const countStyle = { padding: '2px 7px', borderRadius: 999, background: 'color-mix(in srgb, currentColor 10%, transparent)', fontSize: 12, fontVariantNumeric: 'tabular-nums' };
-		const mailboxStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
+		const mailboxStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, overflow: 'auto', padding: '14px 16px 16px' };
 		const recipientsStyle = { display: 'flex', flexDirection: 'column', flex: '1 1 auto', minHeight: 0, padding: '14px 16px 16px' };
 		const recipientListStyle = { display: 'flex', flexDirection: 'column', gap: 4, minHeight: 0, overflow: 'auto' };
 		const recipientRowContainerStyle = { display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '8px 0' };
@@ -3642,8 +3642,8 @@ window.__ModuleLoader__.load({
 		const recipientDetailsStyle = { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10, padding: 10, border: '1px solid color-mix(in srgb, currentColor 14%, transparent)', borderRadius: 6 };
 		const recipientDetailIdentityStyle = { fontSize: 12, fontWeight: 600, overflowWrap: 'anywhere' };
 		const recipientDetailGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere' };
-		const listStyle = { overflow: 'auto', flex: '0 1 auto', minHeight: 0 };
-		const threadStyle = { overflow: 'auto', flex: '1 1 0', minHeight: 0, borderTop: '1px solid color-mix(in srgb, currentColor 16%, transparent)', padding: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 10 };
+		const listStyle = { overflow: 'auto', flex: '1 1 0', minHeight: MIN_LIST_PANE };
+		const threadStyle = { overflow: 'auto', flex: '1 1 0', minHeight: MIN_LIST_PANE, borderTop: '1px solid color-mix(in srgb, currentColor 16%, transparent)', padding: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 10 };
 		const composeStyle = { display: 'flex', flexDirection: 'column', gap: 12, flex: '1 1 auto', minHeight: 0, overflow: 'auto', padding: '14px 16px 16px' };
 		const composeHeaderStyle = { display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 2 };
 		const composeFooterStyle = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingTop: 4 };

@@ -4,6 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 import {
   agentmemoryEnv,
   descendantPidsMatching,
@@ -34,29 +35,31 @@ try {
 
   const missing = path.join(work, 'missing-agentmemory-adapter');
   const missingEnv = agentmemoryEnv(missing, { DSH_HOME: path.join(work, 'dsh-missing') });
-  const missingResult = await runDsh(
+  const missingResult = await probeActivation(
     dshBin,
-    ['--patch', patchPath, '--profile', 'web', '--port', '0'],
+    [patchPath],
     missingEnv,
     work,
+    ['mcp-agentmemory'],
   );
-  const missingOut = `${missingResult.stdout}\n${missingResult.stderr}`;
-  assert.notEqual(missingResult.code, 0);
-  assert.match(missingOut, /ENOENT|not found|spawn|initial connection/i);
+  assert.notEqual(missingResult.rows[0].state, 2);
+  assert.match(missingResult.output, /ENOENT|not found|spawn|initial connection/i);
+  assert.ok(missingResult.tools.every(name => !name.startsWith('mcp__agentmemory__')));
   assert.deepEqual(await pidsMatching(missing), []);
 
   const dupPatch = path.join(work, 'dup.patch.yml');
   await writeDupPatch(dupPatch, 'mcp-agentmemory-dup', 'agentmemory');
   const dupEnv = agentmemoryEnv(command, { DSH_HOME: path.join(work, 'dsh-dup') });
-  const dupResult = await runDsh(
+  const dupResult = await probeActivation(
     dshBin,
-    ['--patch', patchPath, '--patch', dupPatch, '--profile', 'web', '--port', '0'],
+    [patchPath, dupPatch],
     dupEnv,
     work,
+    ['mcp-agentmemory', 'mcp-agentmemory-dup'],
   );
-  const dupOut = `${dupResult.stdout}\n${dupResult.stderr}`;
-  assert.notEqual(dupResult.code, 0);
-  assert.match(dupOut, /already in use|serverName/);
+  assert.equal(dupResult.rows.filter(row => row.state === 2).length, 1);
+  assert.equal(dupResult.rows.filter(row => row.state !== 2).length, 1);
+  assert.match(dupResult.output, /already in use|serverName/);
   await waitFor(
     async () => (await pidsMatching(pattern)).length === 0,
     10000,

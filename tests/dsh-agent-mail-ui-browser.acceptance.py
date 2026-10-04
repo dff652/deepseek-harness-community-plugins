@@ -330,6 +330,7 @@ class Fixture:
                     for item in self.sent_history:
                         if item["status"] in {"submitted", "processing"}:
                             item["status"] = "completed"
+                            item["task_status"] = "completed"
                             item["delivery_status"] = "claimed"
                             item["status_evidence"] = {
                                 "kind": "provider-confirmed",
@@ -559,6 +560,12 @@ window.__ModuleLoader__ = {
       return () => sessionListeners.delete(listener);
     },
   };
+  const sidebarRight = {
+    mounted: {
+      getSnapshot: () => sessionSnapshot.current,
+      subscribe: (listener) => sessionList.subscribe(listener),
+    },
+  };
   const sessionScope = (id) => sessionIds.includes(id) ? { sessionId: id } : undefined;
   const openSession = (id) => {
     if (!sessionIds.includes(id)) throw new Error('unknown fixture session: ' + id);
@@ -610,6 +617,7 @@ window.__ModuleLoader__ = {
     sessions: { list: sessionList, scope: sessionScope },
     get(name) {
       if (name === 'betterSidebar') return sidebar;
+      if (name === 'sidebarRight') return sidebarRight;
       if (name === 'slots') return slots;
       if (name === 'conversation') return conversation;
       return undefined;
@@ -691,24 +699,25 @@ window.__ModuleLoader__ = {
       subCalls: [],
     };
     const cards = [
-      ['mcp__agent-mail__comm_inbox', running],
-      ['mcp__agent-mail__comm_send', success],
-      ['mcp__agent-mail__comm_send', failure],
+      ['mcp__agent-mail__comm_inbox', { phase: 'start', callId: running.callId, block: running }],
+      ['mcp__agent-mail__comm_send', { phase: 'result', callId: success.callId, block: success }],
+      ['mcp__agent-mail__comm_send', { phase: 'result', callId: failure.callId, block: failure }],
     ];
-    const views = cards.map(([toolName, block], index) => {
+    const views = cards.map(([toolName, owner], index) => {
       const view = window.__HARNESS__.toolViews.get(toolName);
       if (!view) throw new Error('tool view was not registered: ' + toolName);
-      const owner = {
-        callId: block.callId,
+      const ownerProps = {
+        phase: owner.phase,
+        callId: owner.callId,
         toolName,
-        block,
+        block: owner.block,
         cwd: '/fixture',
         openFile() {},
         inspect() {},
       };
-      window.__HARNESS__.toolOwners.push(owner);
+      window.__HARNESS__.toolOwners.push(ownerProps);
       return window.React.createElement(
-        () => view.component(owner),
+        () => view.component(ownerProps),
         { key: index },
       );
     });
@@ -948,31 +957,17 @@ def assert_no_standalone(driver) -> None:
 
 
 def expand_diagnostics(driver) -> None:
-    controls = [
-        button for button in driver.find_elements(By.TAG_NAME, "button")
-        if button.get_attribute("aria-expanded") == "false"
-        and ("连接" in button.text or "诊断" in button.text)
-    ]
-    if controls:
-        controls[0].click()
-        wait_for(
-            driver,
-            lambda current: any(
-                button.get_attribute("aria-expanded") == "true"
-                for button in current.find_elements(By.TAG_NAME, "button")
-                if "连接" in button.text or "诊断" in button.text
-            ),
-            "expanded connection diagnostics",
-        )
-        return
-    details = [
-        item for item in driver.find_elements(By.TAG_NAME, "details")
-        if item.find_elements(By.TAG_NAME, "summary")
-        and ("连接" in item.find_element(By.TAG_NAME, "summary").text
-             or "诊断" in item.find_element(By.TAG_NAME, "summary").text)
-    ]
-    if details:
-        details[0].find_element(By.TAG_NAME, "summary").click()
+    control = driver.find_element(By.CSS_SELECTOR, 'button[data-agent-mail-action="diagnostics"]')
+    if control.get_attribute("aria-expanded") != "true":
+        control.click()
+    wait_for(
+        driver,
+        lambda current: current.find_element(
+            By.CSS_SELECTOR,
+            'button[data-agent-mail-action="diagnostics"]',
+        ).get_attribute("aria-expanded") == "true",
+        "expanded connection diagnostics",
+    )
 
 
 def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
@@ -986,7 +981,7 @@ def run_sidebar_done_ack(driver, server: FixtureServer) -> dict[str, object]:
     expand_diagnostics(driver)
     wait_for(driver, lambda current: "客户端连接：未知" in text_of(current), "presence status")
     wait_for(driver, lambda current: "自动唤醒：关闭" in text_of(current), "auto-wake status")
-    wait_for(driver, lambda current: "最后刷新：" in text_of(current), "refresh timestamp")
+    wait_for(driver, lambda current: "刷新：" in text_of(current), "refresh timestamp")
     assert not driver.find_elements(By.CSS_SELECTOR, 'textarea[placeholder="请输入只读任务内容"]'), (
         "new-message composer unexpectedly opened"
     )
@@ -1104,9 +1099,9 @@ def run_external_ack_refresh(driver, server: FixtureServer) -> dict[str, object]
 
     with server.fixture.lock:
         server.fixture.external_ack = True
-    click_button(driver, "手动刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(driver, lambda current: "暂无邮件" in text_of(current), "externally acknowledged inbox")
-    wait_for(driver, lambda current: "投递/签收：已确认收悉" in text_of(current), "refreshed acknowledgement state")
+    wait_for(driver, lambda current: "投递：已确认收悉" in text_of(current), "refreshed acknowledgement state")
     assert not driver.find_elements(By.XPATH, "//button[normalize-space()='确认收悉']"), (
         "confirmation action remained available after external acknowledgement"
     )
@@ -1133,7 +1128,7 @@ def run_sent_history_poll_and_reload(driver, server: FixtureServer) -> dict[str,
         "sent-history draft textarea",
     )
     composer.send_keys("Durable sent history should survive a panel reload.")
-    click_button(driver, "发送只读任务")
+    action_button(driver, "send-mail").click()
     wait_api_call(server.fixture, "send")
     sent_call = wait_api_call(
         server.fixture,
@@ -1147,6 +1142,71 @@ def run_sent_history_poll_and_reload(driver, server: FixtureServer) -> dict[str,
         driver,
         lambda current: "已完成" in text_of(current) and server.fixture.sent_calls >= 3,
         "polled provider delivery state",
+    )
+
+    # Real DSH sidebar panes can be only about 300px tall. The mailbox must
+    # give its scroll pane room so a durable sent row remains visible there.
+    driver.execute_script("document.querySelector('#sidebar-panel').style.height = '308px'")
+    click_button_containing(driver, "已发送")
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-mail-folder="sent"] button[data-message-id]'),
+        "sent row after compact resize",
+    )
+    geometry = driver.execute_script("""
+      const list = document.querySelector('[data-mail-folder="sent"]');
+      const row = list?.querySelector('button[data-message-id]');
+      const listRect = list?.getBoundingClientRect();
+      const rowRect = row?.getBoundingClientRect();
+      return {
+        listHeight: list?.clientHeight ?? 0,
+        listScrollHeight: list?.scrollHeight ?? 0,
+        rowHeight: rowRect?.height ?? 0,
+        rowVisible: Boolean(listRect && rowRect && rowRect.bottom > listRect.top && rowRect.top < listRect.bottom),
+      };
+    """)
+    assert geometry["listHeight"] > 0, geometry
+    assert geometry["rowHeight"] > 0 and geometry["rowVisible"], geometry
+    sent_row = driver.find_element(By.CSS_SELECTOR, '[data-mail-folder="sent"] button[data-message-id]')
+    sent_row.click()
+    wait_for(
+        driver,
+        lambda current: "已完成" in text_of(current)
+        and current.find_element(By.CSS_SELECTOR, '[data-status-layer="delivery"]').is_displayed(),
+        "selected completed sent receipt in a compact sidebar",
+    )
+    detail_geometry = driver.execute_script("""
+      const view = document.querySelector('[data-mail-view="sent"]');
+      const list = view?.querySelector('[data-mail-folder="sent"]');
+      const separator = view?.querySelector('[role="separator"]');
+      const detail = separator?.nextElementSibling;
+      const status = detail?.querySelector('[data-status-layer="delivery"]');
+      const task = detail?.querySelector('[data-status-layer="task"]');
+      const rect = status?.getBoundingClientRect();
+      return {
+        listHeight: list?.clientHeight ?? 0,
+        detailHeight: detail?.clientHeight ?? 0,
+        statusVisible: Boolean(status && rect && rect.height > 0),
+        statusText: status?.textContent ?? '',
+        taskText: task?.textContent ?? '',
+      };
+    """)
+    assert detail_geometry["listHeight"] >= 64, detail_geometry
+    assert detail_geometry["detailHeight"] >= 64, detail_geometry
+    assert detail_geometry["statusVisible"] and "已领取" in detail_geometry["statusText"], detail_geometry
+    assert "处理结果" in detail_geometry["taskText"], detail_geometry
+    separator = driver.find_element(By.CSS_SELECTOR, '[role="separator"][aria-label*="调整收件箱与详情高度"]')
+    separator.send_keys(Keys.ARROW_UP)
+    wait_for(
+        driver,
+        lambda current: current.find_element(By.CSS_SELECTOR, '[role="separator"]').get_attribute("aria-valuenow") is not None,
+        "compact sent list/detail resize",
+    )
+    separator.send_keys(Keys.ESCAPE)
+    wait_for(
+        driver,
+        lambda current: current.find_element(By.CSS_SELECTOR, '[role="separator"]').get_attribute("aria-valuenow") is None,
+        "automatic sent list/detail size reset",
     )
 
     # The fixture keeps provider history while the browser panel is recreated.
@@ -1168,6 +1228,8 @@ def run_sent_history_poll_and_reload(driver, server: FixtureServer) -> dict[str,
         "recentLimit": 50,
         "pollCompleted": True,
         "historySurvivedReload": True,
+        "compactSidebarSentRowVisible": True,
+        "compactSidebarDetailResize": True,
         "sentCalls": server.fixture.sent_calls,
         "backend": "synthetic local HTTP fixture",
     }
@@ -1181,11 +1243,22 @@ def run_standalone(driver, server: FixtureServer) -> dict[str, object]:
         "standalone surface",
     )
     assert not driver.find_elements(By.ID, "sidebar-open"), "standalone mode registered sidebar control"
-    fab = wait_for(driver, lambda current: current.find_element(By.CSS_SELECTOR, 'button[title="Agent Mail"]'), "mail FAB")
-    fab.click()
+    action_button(driver, "open-mail").click()
     wait_for(driver, lambda current: "Agent Mail" in text_of(current), "standalone panel")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "standalone fixture inbox")
     click_button_containing(driver, "Fixture task: verify the Agent Mail UI.")
+    details = wait_for(
+        driver,
+        lambda current: next(
+            (
+                element for element in current.find_elements(By.TAG_NAME, "details")
+                if "内部编号与投递说明" in element.text
+            ),
+            False,
+        ),
+        "standalone thread details",
+    )
+    details.find_element(By.TAG_NAME, "summary").click()
     wait_for(driver, lambda current: "参与者：worker@local、ui-harness@local" in text_of(current), "standalone fixture thread")
     click_button(driver, "Open session 2")
     wait_for(
@@ -1215,21 +1288,21 @@ def run_tool_cards(driver, server: FixtureServer) -> dict[str, object]:
         "tool-card registrations",
     )
     driver.execute_script("window.__HARNESS__.renderToolCards()")
-    wait_for(driver, lambda current: "执行中" in text_of(current), "running tool card")
+    wait_for(driver, lambda current: "读取收件箱中" in text_of(current), "running tool card")
     wait_for(driver, lambda current: "已提交到邮箱" in text_of(current), "successful tool card")
     wait_for(driver, lambda current: "发送失败" in text_of(current), "failed tool card")
     owners = driver.execute_script("return window.__HARNESS__.toolOwners")
     assert len(owners) == 3, owners
-    assert all(owner.get("block") for owner in owners), owners
-    assert owners[0]["block"].get("kind") is None, owners[0]
-    assert owners[1]["block"].get("kind") == "tool-result", owners[1]
-    assert owners[2]["block"].get("isError") is True, owners[2]
+    assert all(owner.get("phase") and owner.get("block") for owner in owners), owners
+    assert owners[0]["phase"] == "start" and owners[0]["block"].get("kind") is None, owners[0]
+    assert owners[1]["phase"] == "result" and owners[1]["block"].get("kind") == "tool-result", owners[1]
+    assert owners[2]["phase"] == "result" and owners[2]["block"].get("isError") is True, owners[2]
     return {
         "surface": "fixture-tool-cards",
         "running": True,
         "success": True,
         "error": True,
-        "ownerShape": "DSH ToolCallOwnerProps with block",
+        "ownerShape": "DSH ToolCallOwnerProps with phase and block",
         "backend": "synthetic local HTTP fixture",
     }
 
@@ -1243,8 +1316,7 @@ def run_failed_claim(driver, server: FixtureServer) -> dict[str, object]:
     wait_api_call(server.fixture, "claim")
 
     def visible_claim_error(current) -> bool:
-        body = text_of(current).lower()
-        return "claim" in body and ("failure" in body or "failed" in body or "error" in body)
+        return "操作结果未知" in text_of(current)
 
     wait_for(driver, visible_claim_error, "claim failure message")
     ack_buttons = driver.find_elements(By.XPATH, "//button[normalize-space()='确认收悉']")
@@ -1266,7 +1338,12 @@ def open_sidebar(driver, server: FixtureServer, scenario: str) -> None:
     driver.get(f"http://127.0.0.1:{server.server_port}/?mode=sidebar&scenario={scenario}")
     wait_for(driver, lambda current: current.execute_script("return Boolean(window.__HARNESS__.tab)"), f"{scenario} sidebar")
     click_button(driver, "Agent Mail")
-    wait_for(driver, lambda current: "当前邮箱：" in text_of(current), f"{scenario} panel")
+    wait_for(
+        driver,
+        lambda current: current.find_elements(By.CSS_SELECTOR, '[data-mail-view="inbox"]')
+        and "ui-harness@local" in text_of(current),
+        f"{scenario} inbox panel",
+    )
 
 
 def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
@@ -1274,16 +1351,14 @@ def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
     wait_for(
         driver,
         lambda current: (
-            "当前邮箱：ui-harness@local" in text_of(current)
-            or "当前身份：ui-harness@local" in text_of(current)
+            "ui-harness@local" in text_of(current)
         ),
         "current identity",
     )
-    diagnostic_controls = [
-        button for button in driver.find_elements(By.TAG_NAME, "button")
-        if button.get_attribute("aria-expanded") is not None
-        and ("连接" in button.text or "诊断" in button.text)
-    ]
+    diagnostic_controls = driver.find_elements(
+        By.CSS_SELECTOR,
+        'button[data-agent-mail-action="diagnostics"]',
+    )
     diagnostic_details = [
         details for details in driver.find_elements(By.TAG_NAME, "details")
         if "诊断" in details.text
@@ -1300,8 +1375,14 @@ def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
     node = recipient_element(driver, "peer-b@local")
     assert "human@local" not in node.text, node.text
     assert "在线" not in node.text, node.text
-    assert not driver.find_elements(By.XPATH, "//*[normalize-space()='human@local']"), "human identity leaked into recipient view"
-    assert not driver.find_elements(By.XPATH, "//*[normalize-space()='ui-harness@local']"), "current identity leaked into recipient rows"
+    assert not driver.find_elements(
+        By.CSS_SELECTOR,
+        '[data-recipient-view] [data-recipient-id="human@local"]',
+    ), "human identity leaked into recipient rows"
+    assert not driver.find_elements(
+        By.CSS_SELECTOR,
+        '[data-recipient-view] [data-recipient-id="ui-harness@local"]',
+    ), "current identity leaked into recipient rows"
 
     click_button(driver, "收件箱")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "inbox view")
@@ -1313,6 +1394,15 @@ def run_recipient_directory(driver, server: FixtureServer) -> dict[str, object]:
     node = recipient_element(driver, "peer-b@local")
     details_button = node.find_element(By.CSS_SELECTOR, '[data-agent-mail-action="recipient-details"]')
     details_button.click()
+    evidence = wait_for(
+        driver,
+        lambda current: current.find_element(
+            By.CSS_SELECTOR,
+            '[data-recipient-details] details',
+        ),
+        "recipient technical evidence",
+    )
+    evidence.find_element(By.TAG_NAME, "summary").click()
     wait_for(
         driver,
         lambda current: "peer-b-fixture" in text_of(current)
@@ -1380,12 +1470,12 @@ def run_recipient_refresh_retry(driver, server: FixtureServer) -> dict[str, obje
     click_button(driver, "收件人")
     wait_for(driver, lambda current: "peer-b@local" in text_of(current), "recipient refresh initial list")
     click_button_containing(driver, "刷新收件人")
-    wait_for(driver, lambda current: "recipient directory failed" in text_of(current), "recipient refresh failure")
+    wait_for(driver, lambda current: "收件人读取失败" in text_of(current), "recipient refresh failure")
     assert "peer-b@local" not in text_of(driver), "stale recipients remained after directory refresh failed"
     click_button_containing(driver, "刷新收件人")
     wait_for(
         driver,
-        lambda current: "peer-b@local" in text_of(current) and "recipient directory failed" not in text_of(current),
+        lambda current: "peer-b@local" in text_of(current) and "收件人读取失败" not in text_of(current),
         "recipient refresh retry",
     )
     return {
@@ -1421,14 +1511,14 @@ def run_identity_loss_disables_send(driver, server: FixtureServer) -> dict[str, 
         "identity-loss",
         "Keep this draft while identity diagnostics recover.",
     )
-    click_button(driver, "手动刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(driver, lambda current: "诊断读取失败" in text_of(current), "diagnostic failure")
     assert "peer-b@local" not in select_values(driver), "stale recipient remained after identity loss"
-    send = button_with_text(driver, "发送只读任务")
+    send = action_button(driver, "send-mail", enabled=False)
     assert button_disabled(send), "send remained enabled without a confirmed sender identity"
     assert len(api_calls(server.fixture, "send")) == 0, api_calls(server.fixture, "send")
 
-    click_button_containing(driver, "重试")
+    action_button(driver, "mail-refresh").click()
     wait_for(
         driver,
         lambda current: "peer-b@local" in select_values(current)
@@ -1438,7 +1528,7 @@ def run_identity_loss_disables_send(driver, server: FixtureServer) -> dict[str, 
     composer = driver.find_element(By.TAG_NAME, "textarea")
     assert composer.get_attribute("value") == draft, "identity recovery discarded the draft"
     assert driver.find_element(By.CSS_SELECTOR, "select").get_attribute("value") == "peer-b@local"
-    send = button_with_text(driver, "发送只读任务")
+    send = action_button(driver, "send-mail")
     assert not button_disabled(send), "send stayed disabled after identity recovery"
     send.click()
     wait_api_call(server.fixture, "send")
@@ -1462,18 +1552,18 @@ def run_recipient_loss_disables_send(driver, server: FixtureServer) -> dict[str,
         "recipient-loss",
         "Keep this draft while the recipient directory recovers.",
     )
-    click_button(driver, "手动刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(
         driver,
         lambda current: "peer-b@local" not in select_values(current)
         and server.fixture.agents_calls >= 2,
         "recipient removal",
     )
-    send = button_with_text(driver, "发送只读任务")
+    send = action_button(driver, "send-mail", enabled=False)
     assert button_disabled(send), "send remained enabled for a recipient removed from the roster"
     assert len(api_calls(server.fixture, "send")) == 0, api_calls(server.fixture, "send")
 
-    click_button(driver, "手动刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(
         driver,
         lambda current: "peer-b@local" in select_values(current)
@@ -1483,7 +1573,7 @@ def run_recipient_loss_disables_send(driver, server: FixtureServer) -> dict[str,
     composer = driver.find_element(By.TAG_NAME, "textarea")
     assert composer.get_attribute("value") == draft, "recipient recovery discarded the draft"
     assert driver.find_element(By.CSS_SELECTOR, "select").get_attribute("value") == "peer-b@local"
-    send = button_with_text(driver, "发送只读任务")
+    send = action_button(driver, "send-mail")
     assert not button_disabled(send), "send stayed disabled after recipient recovery"
     send.click()
     wait_api_call(server.fixture, "send")
@@ -1516,13 +1606,10 @@ def run_send_retry(driver, server: FixtureServer) -> dict[str, object]:
     )
     draft = "Keep this draft while the first send fails."
     composer.send_keys(draft)
-    send = next(
-        element for element in driver.find_elements(By.TAG_NAME, "button")
-        if "发送" in element.text and not button_disabled(element)
-    )
+    send = action_button(driver, "send-mail")
     send.click()
     wait_api_call(server.fixture, "send")
-    wait_for(driver, lambda current: "send fixture failure" in text_of(current), "send failure")
+    wait_for(driver, lambda current: "操作结果未知" in text_of(current), "send failure")
     composer = driver.find_element(By.TAG_NAME, "textarea")
     assert composer.get_attribute("value") == draft, "failed send discarded the draft"
     wait_for(
@@ -1531,7 +1618,7 @@ def run_send_retry(driver, server: FixtureServer) -> dict[str, object]:
                             for element in current.find_elements(By.TAG_NAME, "button")),
         "retry action enabled",
     )
-    click_button_containing(driver, "发送")
+    action_button(driver, "send-mail").click()
     wait_for(driver, lambda current: len(api_calls(server.fixture, "send")) == 2, "successful retry")
     wait_for(driver, lambda current: "已发送" in text_of(current), "sent view after retry")
     return {
@@ -1558,10 +1645,7 @@ def run_duplicate_send_guard(driver, server: FixtureServer) -> dict[str, object]
         "duplicate draft textarea",
     )
     composer.send_keys("Only one request should be issued.")
-    send = next(
-        element for element in driver.find_elements(By.TAG_NAME, "button")
-        if "发送" in element.text and not button_disabled(element)
-    )
+    send = action_button(driver, "send-mail")
     driver.execute_script("arguments[0].click(); arguments[0].click();", send)
     wait_api_call(server.fixture, "send")
     wait_for(driver, lambda _current: server.fixture.send_completed, "single send completion")
@@ -1578,14 +1662,14 @@ def run_duplicate_send_guard(driver, server: FixtureServer) -> dict[str, object]
 def run_refresh_retry(driver, server: FixtureServer) -> dict[str, object]:
     open_sidebar(driver, server, "refresh-failure")
     wait_for(driver, lambda current: "Fixture task" in text_of(current), "initial refresh")
-    click_button_containing(driver, "刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(
         driver,
         lambda current: "directory refresh failed" in text_of(current)
         or "收件箱读取失败" in text_of(current),
         "refresh failure",
     )
-    click_button_containing(driver, "刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(
         driver,
         lambda current: "Fixture task" in text_of(current)
@@ -1615,7 +1699,7 @@ def run_send_refresh_failure(driver, server: FixtureServer) -> dict[str, object]
         "post-send-refresh draft textarea",
     )
     composer.send_keys("Mutation succeeds before the refresh fails.")
-    click_button_containing(driver, "发送")
+    action_button(driver, "send-mail").click()
     wait_api_call(server.fixture, "send")
     wait_for(
         driver,
@@ -1648,13 +1732,15 @@ def run_offline_clears_recipients(driver, server: FixtureServer) -> dict[str, ob
     open_sidebar(driver, server, "offline")
     click_button(driver, "收件人")
     wait_for(driver, lambda current: "peer-b@local" in text_of(current), "initial roster")
-    click_button_containing(driver, "刷新")
+    action_button(driver, "mail-refresh").click()
     wait_for(driver, lambda current: "通信工具未加载" in text_of(current), "offline state")
     assert "peer-b@local" not in text_of(driver), "stale roster remained after MCP went offline"
-    send_buttons = [
-        element for element in driver.find_elements(By.TAG_NAME, "button")
-        if element.text.strip() in {"写消息", "发送只读任务", "发送消息"}
-    ]
+    send_buttons = driver.find_elements(
+        By.CSS_SELECTOR,
+        'button[data-agent-mail-action="open-composer"], '
+        'button[data-agent-mail-action="send-mail"], '
+        'button[data-recipient-compose]',
+    )
     assert not send_buttons or all(button_disabled(button) for button in send_buttons), (
         "send action remained enabled while MCP was offline"
     )
@@ -1864,7 +1950,7 @@ def run_management_enrollment(driver, server: FixtureServer) -> dict[str, object
         driver,
         lambda current: next(
             (
-                element for element in current.find_elements(By.CSS_SELECTOR, '[data-recipient-id="worker@local"]')
+                element for element in current.find_elements(By.CSS_SELECTOR, '[data-recipient-compose="worker@local"]')
                 if not button_disabled(element)
             ),
             False,
@@ -1890,7 +1976,11 @@ def run_management_enrollment(driver, server: FixtureServer) -> dict[str, object
     )
     assert sent_call["payload"]["effect"] == "read", sent_call
     assert sent_call["payload"]["to"] == "worker@local", sent_call
-    wait_for(driver, lambda current: "已提交到邮箱" in text_of(current) and "已发送" in text_of(current), "explicit test task result")
+    wait_for(
+        driver,
+        lambda current: "已提交" in text_of(current) and "已发送（1）" in text_of(current),
+        "explicit test task result",
+    )
     with server.fixture.lock:
         activation_calls = [
             call for call in server.fixture.management_calls
@@ -1938,7 +2028,12 @@ def run_theme_and_narrow_geometry(driver, server: FixtureServer) -> dict[str, ob
                 f"{theme} theme",
             )
             click_button(driver, "Agent Mail")
-            wait_for(driver, lambda current: "当前邮箱：" in text_of(current) or "当前身份：" in text_of(current), f"{theme} panel")
+            wait_for(
+                driver,
+                lambda current: current.find_elements(By.CSS_SELECTOR, '[data-mail-view="inbox"]')
+                and "ui-harness@local" in text_of(current),
+                f"{theme} inbox panel",
+            )
             measurements[theme] = driver.execute_script("""
           const panel = document.querySelector('#sidebar-panel > div');
           const rect = panel?.getBoundingClientRect();

@@ -29,6 +29,7 @@
     "test:activation:agentmemory": "node tests/dsh-agentmemory-activation.acceptance.mjs",
     "test:lifecycle:agentmemory": "node tests/dsh-agentmemory-lifecycle.acceptance.mjs",
     "test:clean-profile:agentmemory": "node tests/dsh-agentmemory-clean-profile.acceptance.mjs",
+    "test:runtime:agentmemory": "node tests/dsh-agentmemory-runtime.acceptance.mjs",
     "test:activation:agent-mail-ui": "node tests/dsh-agent-mail-ui-activation.acceptance.mjs",
     "test:clean-profile:agent-mail-ui": "node tests/dsh-agent-mail-ui-clean-profile.acceptance.mjs",
     "test:coexistence": "node tests/dsh-agent-mail-coexistence.acceptance.mjs",

@@ -20,6 +20,7 @@ import {
   waitFor,
   writeDupPatch,
 } from '../scripts/lib/agent-mail-host.mjs';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const identity = JSON.parse(
@@ -57,7 +58,31 @@ try {
   const tarball = await resolvePluginTarball(work, cache);
   const provider = await resolveReviewedProvider(work, identity);
   const { home } = await initMailHome(provider.cli, work, [sender]);
-  const pattern = provider.pattern;
+  // Script shims may replace argv[0] with the shim name; in that case use the
+  // actual provider entry path so PID checks identify the spawned process.
+  const processPattern = String(process.env.DSH_AGENT_MAIL_PROCESS_PATTERN || '').trim();
+  assert.ok(!processPattern || path.isAbsolute(processPattern),
+    'DSH_AGENT_MAIL_PROCESS_PATTERN must be absolute when provided');
+  const pattern = processPattern || provider.pattern;
+  async function hasTestHome(pid) {
+    try {
+      const environment = await readFile('/proc/' + pid + '/environ', 'utf8');
+      return environment.split('\0').some((entry) =>
+        entry === 'AGENT_MAIL_HOME=' + home || entry === 'DSH_AGENT_MAIL_HOME=' + home);
+    } catch {
+      return false;
+    }
+  }
+  async function liveProviderPids() {
+    const pids = await pidsMatching(pattern);
+    const owned = await Promise.all(pids.map(async (pid) => (await hasTestHome(pid)) ? pid : null));
+    return owned.filter((pid) => pid !== null);
+  }
+  async function descendantProviderPids(rootPid) {
+    const pids = await descendantPidsMatching(rootPid, pattern);
+    const owned = await Promise.all(pids.map(async (pid) => (await hasTestHome(pid)) ? pid : null));
+    return owned.filter((pid) => pid !== null);
+  }
   async function installWeb(env) {
     const installed = await runDsh(dshBin,
       ['plugin', '--profile', 'web', 'add', '-w', tarball], env, work, 180000);
@@ -67,36 +92,46 @@ try {
   const missing = path.join(work, 'missing-agent-mail-mcp');
   const missingEnv = mailEnv(home, sender, missing, { DSH_HOME: path.join(work, 'dsh-missing') });
   await installWeb(missingEnv);
-  const missingResult = await runDsh(
+  const missingResult = await probeActivation(
     dshBin,
-    ['--profile', 'web', '--port', '0'],
+    [],
     missingEnv,
     work,
+    ['mcp-agent-mail', 'dsh-agent-mail-ui'],
   );
-  const missingOut = `${missingResult.stdout}\n${missingResult.stderr}`;
-  assert.notEqual(missingResult.code, 0);
-  assert.match(missingOut, /ENOENT|not found|spawn|initial connection/i);
+  const missingMcp = missingResult.rows.find((row) => row.id === 'mcp-agent-mail');
+  assert.equal(missingMcp?.state, 3, JSON.stringify(missingMcp));
+  assert.match(missingMcp?.error ?? '', /ENOENT|not found|spawn|initial connection/i);
+  assert.match(missingResult.output, /1 entry did not activate/i);
+  assert.equal(missingResult.rows.find((row) => row.id === 'dsh-agent-mail-ui')?.state, 2);
+  assert.deepEqual(missingResult.tools.filter((name) => name.startsWith('mcp__agent-mail__')), []);
   assert.deepEqual(await pidsMatching(missing), []);
 
   const dupPatch = path.join(work, 'dup.patch.yml');
   await writeDupPatch(dupPatch, 'mcp-agent-mail-dup', 'agent-mail');
   const dupEnv = mailEnv(home, sender, provider.command, { DSH_HOME: path.join(work, 'dsh-dup') });
   await installWeb(dupEnv);
-  const dupResult = await runDsh(
+  const dupResult = await probeActivation(
     dshBin,
-    ['--patch', dupPatch, '--profile', 'web', '--port', '0'],
+    [dupPatch],
     dupEnv,
     work,
+    ['mcp-agent-mail', 'mcp-agent-mail-dup', 'dsh-agent-mail-ui'],
   );
-  const dupOut = `${dupResult.stdout}\n${dupResult.stderr}`;
-  assert.notEqual(dupResult.code, 0);
-  assert.match(dupOut, /already in use|serverName/);
+  assert.equal(dupResult.rows.find((row) => row.id === 'mcp-agent-mail')?.state, 2);
+  const duplicate = dupResult.rows.find((row) => row.id === 'mcp-agent-mail-dup');
+  assert.equal(duplicate?.state, 3, JSON.stringify(duplicate));
+  assert.match(duplicate?.error ?? '', /already in use|serverName/i);
+  assert.match(dupResult.output, /1 entry did not activate/i);
+  assert.equal(dupResult.rows.find((row) => row.id === 'dsh-agent-mail-ui')?.state, 2);
+  assert.ok(dupResult.tools.some((name) => name.startsWith('mcp__agent-mail__')),
+    'the first MCP row retains its tools after the duplicate row fails');
   await waitFor(
-    async () => (await pidsMatching(pattern)).length === 0,
+    async () => (await liveProviderPids()).length === 0,
     10000,
     'duplicate-namespace provider cleanup',
   );
-  assert.deepEqual(await pidsMatching(pattern), []);
+  assert.deepEqual(await liveProviderPids(), []);
 
   const reconnHome = path.join(work, 'dsh-reconn');
   const env = mailEnv(home, sender, provider.command, { DSH_HOME: reconnHome });
@@ -120,12 +155,12 @@ try {
   const ownedProviderPids = new Set();
   try {
     const firstPids = await waitFor(async () => {
-      const pids = await descendantPidsMatching(child.pid, pattern);
+      const pids = await descendantProviderPids(child.pid);
       return pids.length > 0 ? pids : null;
     }, 25000, 'initial agent-mail mcp child');
     assert.ok(!firstPids.includes(child.pid), 'refusing to treat the dsh pid as the provider');
     await new Promise((resolve) => setTimeout(resolve, 4000));
-    const settled = await descendantPidsMatching(child.pid, pattern);
+    const settled = await descendantProviderPids(child.pid);
     assert.ok(settled.length > 0, `provider exited before ready: ${output.slice(-500)}`);
     for (const pid of settled) {
       ownedProviderPids.add(pid);
@@ -133,7 +168,7 @@ try {
     }
 
     const secondPids = await waitFor(async () => {
-      const pids = (await descendantPidsMatching(child.pid, pattern)).filter(
+      const pids = (await descendantProviderPids(child.pid)).filter(
         (pid) => !settled.includes(pid),
       );
       return pids.length > 0 ? pids : null;
@@ -145,8 +180,8 @@ try {
     await stopProcessGroup(child);
   }
 
-  await waitFor(async () => (await pidsMatching(pattern)).length === 0, 10000, 'provider cleanup');
-  assert.deepEqual(await pidsMatching(pattern), []);
+  await waitFor(async () => (await liveProviderPids()).length === 0, 10000, 'provider cleanup');
+  assert.deepEqual(await liveProviderPids(), []);
   assert.equal([...ownedProviderPids].some((pid) => pidExists(pid)), false);
 
   const installEnv = mailEnv(home, sender, provider.command, {
@@ -178,10 +213,10 @@ try {
   const after = await runDsh(dshBin, ['--profile', 'headless', '--dump-config'], installEnv, work);
   assert.equal(after.code, 0, after.stderr);
   assert.doesNotMatch(after.stdout, /id: mcp-agent-mail/);
-  assert.deepEqual(await pidsMatching(pattern), []);
+  assert.deepEqual(await liveProviderPids(), []);
 
   console.log(
-    'Agent Mail DSH lifecycle checks: PASS (missing, duplicate namespace, reconnect, cleanup, install/remove)',
+    'Agent Mail DSH lifecycle checks: PASS (missing row, duplicate namespace, reconnect, cleanup, install/remove)',
   );
 } finally {
   await rm(work, { recursive: true, force: true });

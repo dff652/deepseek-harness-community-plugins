@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const patchPath = path.join(root, 'packages', 'dsh-ai-asset-hub', 'cordis.patch.yml');
@@ -142,26 +143,28 @@ try {
   );
 
   const missing = path.join(work, 'missing-aiah');
-  const missingResult = await runDsh(
+  const missingResult = await probeActivation(
     dshBin,
-    ['--patch', patchPath, '--profile', 'web', '--port', '0'],
+    [patchPath],
     { ...process.env, DSH_HOME: path.join(work, 'dsh-missing'), DSH_AIAH_COMMAND: missing },
     work,
+    ['mcp-aiah'],
   );
-  const missingOut = `${missingResult.stdout}\n${missingResult.stderr}`;
-  assert.notEqual(missingResult.code, 0);
-  assert.match(missingOut, /ENOENT|not found|spawn|initial connection/i);
+  assert.notEqual(missingResult.rows[0].state, 2);
+  assert.match(missingResult.output, /ENOENT|not found|spawn|initial connection/i);
+  assert.ok(missingResult.tools.every(name => !name.startsWith('mcp__aiah__')));
   assert.deepEqual(await pidsMatching(missing), []);
 
-  const dupResult = await runDsh(
+  const dupResult = await probeActivation(
     dshBin,
-    ['--patch', patchPath, '--patch', dupPatch, '--profile', 'web', '--port', '0'],
+    [patchPath, dupPatch],
     { ...process.env, DSH_HOME: path.join(work, 'dsh-dup'), DSH_AIAH_COMMAND: command },
     work,
+    ['mcp-aiah', 'mcp-aiah-dup'],
   );
-  const dupOut = `${dupResult.stdout}\n${dupResult.stderr}`;
-  assert.notEqual(dupResult.code, 0);
-  assert.match(dupOut, /already in use|serverName/);
+  assert.equal(dupResult.rows.filter(row => row.state === 2).length, 1);
+  assert.equal(dupResult.rows.filter(row => row.state !== 2).length, 1);
+  assert.match(dupResult.output, /already in use|serverName/);
   await waitFor(
     async () => (await pidsMatching(pattern)).length === 0,
     10000,

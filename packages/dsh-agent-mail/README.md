@@ -9,9 +9,9 @@ provided here.
 
 ## Development candidate
 
-Version `0.2.1` is a local unified candidate after the released `0.2.0`
-mailbox UI simplification. It still targets DSH `0.1.1-rc.2`.
-The exact MCP peer remains `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2`.
+Version `0.2.2` is a local unified candidate adapting the mailbox UI to DSH
+`0.2.0-rc.2`.
+The exact MCP peer is `@deepseek-ai/dsh-mcp-client@0.2.0-rc.2`.
 Persistent sent receipts and recipient details use the released provider
 `1.0.0-alpha.7`, exposing
 `comm_sent` and `comm_agent_details`; older providers retain their existing
@@ -57,7 +57,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.2.tgz
 dsh --profile <profile> --dump-config
 ```
 

@@ -3,7 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveDsh, runDsh } from '../scripts/lib/agentmemory-host.mjs';
+import { resolveDsh } from '../scripts/lib/agentmemory-host.mjs';
+import { probeActivation } from '../scripts/lib/dsh-activation-probe.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const patchPath = path.join(root, 'packages', 'dsh-agentmemory', 'cordis.patch.yml');
@@ -44,15 +45,16 @@ try {
       DSH_AGENTMEMORY_COMMAND: path.join(work, 'unused-agentmemory-adapter'),
     };
     item.mutate(env);
-    const result = await runDsh(
+    const result = await probeActivation(
       dshBin,
-      ['--patch', patchPath, '--profile', 'web', '--port', '0'],
+      [patchPath],
       env,
       work,
+      ['mcp-agentmemory'],
     );
-    const output = `${result.stdout}\n${result.stderr}`;
-    assert.notEqual(result.code, 0, `${item.name} unexpectedly activated DSH`);
-    assert.match(output, item.expected, item.name);
+    assert.notEqual(result.rows[0].state, 2, `${item.name} unexpectedly activated AgentMemory`);
+    assert.match(result.output, item.expected, item.name);
+    assert.ok(result.tools.every(name => !name.startsWith('mcp__agentmemory__')), item.name);
   }
 
   console.log('AgentMemory DSH activation negative checks: PASS (3 cases)');

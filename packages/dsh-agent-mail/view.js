@@ -137,22 +137,17 @@ export function parseToolPayload(value) {
 }
 
 /**
- * Select the current DSH session from the rc.2 sessions.list snapshot.
- * `current` may address a breadcrumb-only child that is absent from `ids`,
- * but every usable current id is still present in `byId`.
+ * DSH 0.2 exposes the selected seat through sidebarRight.mounted. The
+ * sessions.list catalog has no current-session field.
  */
-export function currentSessionId(snapshot) {
-  const current = snapshot?.current;
-  if (typeof current !== 'string' || current === '') return undefined;
-  if (snapshot?.byId == null || typeof snapshot.byId !== 'object') return undefined;
-  return Object.prototype.hasOwnProperty.call(snapshot.byId, current)
-    && snapshot.byId[current] != null
-    ? current
+export function currentSessionId(mountedSessionId) {
+  return typeof mountedSessionId === 'string' && mountedSessionId !== ''
+    ? mountedSessionId
     : undefined;
 }
 
-export function sessionScope(snapshot) {
-  const sessionId = currentSessionId(snapshot);
+export function sessionScope(mountedSessionId) {
+  const sessionId = currentSessionId(mountedSessionId);
   return sessionId ? { sessionId } : {};
 }
 
@@ -715,11 +710,15 @@ export function toolResultText(block) {
  * RunningToolCall has no `kind`; ToolResultNode has `kind: 'tool-result'` and
  * carries serialized MCP output in `content`.
  */
-export function toolCardModel(toolName, block) {
-  const settled = isToolResultBlock(block);
+export function toolCardModel(toolName, owner) {
+  const block = owner?.block;
+  const hasResultPhase = owner?.phase === 'result';
+  const settled = hasResultPhase && isToolResultBlock(block);
   const text = settled ? toolResultText(block) : '';
-  const state = !settled
+  const state = !hasResultPhase
     ? 'running'
+    : !settled
+      ? 'error'
     : block.error?.code === 'interrupted'
       ? 'stopped'
       : block.isError === true
@@ -728,7 +727,7 @@ export function toolCardModel(toolName, block) {
   return {
     kind: toolCardKind(toolName),
     state,
-    callId: String(block?.callId ?? ''),
+    callId: String(owner?.callId ?? block?.callId ?? ''),
     payload: settled && text !== '' ? parseToolPayload(text) : {},
     text,
   };

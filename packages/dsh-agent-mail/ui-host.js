@@ -9,6 +9,7 @@ import {
   publicToolName,
   validateSendPayload,
 } from './view.js';
+import { randomUUID } from 'node:crypto';
 
 export const name = '@dff652/dsh-agent-mail';
 export { API_METHODS, HUMAN_ONLY_TOOLS };
@@ -146,7 +147,7 @@ export async function invokeMailTool(ctx, rawName, args) {
   }
   const tools = ctx.get('tools');
   const definition = tools?.get?.(publicToolName(rawName));
-  if (definition?.execute == null) {
+  if (definition?.execute == null || typeof tools?.execute !== 'function') {
     throw apiError('mcp-unavailable', `${publicToolName(rawName)} is not registered`, 503);
   }
   const controller = new AbortController();
@@ -158,24 +159,20 @@ export async function invokeMailTool(ctx, rawName, args) {
     }, TOOL_TIMEOUT_MS);
   });
   try {
-    const value = await Promise.race([timeout, definition.execute(args, {
+    const result = await Promise.race([timeout, tools.execute({
+      callId: randomUUID(),
+      name: publicToolName(rawName),
+      arguments: args,
       signal: controller.signal,
-      deferContext() {},
-      concludeTurn() {},
     })]);
-    if (value?.isError === true) {
-      const parsed = parseToolPayload(value);
-      const detail = parsed?.error;
-      const message = typeof detail === 'string'
-        ? detail
-        : detail?.message ?? parsed?.message ?? parsed?.text ?? 'tool returned an error';
+    if (result?.isError === true) {
       throw apiError(
         'mcp-tool-error',
-        `${publicToolName(rawName)} failed: ${message}`,
+        `${publicToolName(rawName)} failed: ${result.error?.message ?? 'tool returned an error'}`,
         502,
       );
     }
-    return parseToolPayload(value);
+    return parseToolPayload(result?.value);
   } finally {
     clearTimeout(timer);
   }

@@ -67,9 +67,9 @@ the all-mail view do not count as unread.
 
 | Item | Pin |
 |---|---|
-| DeepSeek Harness MCP client peer | `0.1.1-rc.2` |
+| DeepSeek Harness MCP client peer | `0.2.0-rc.2` |
 | Companion MCP bundle | `@dff652/dsh-agent-mail` |
-| UI candidate | `0.1.9` (unreleased) |
+| UI candidate | `0.2.0` (unreleased) |
 | Auto-wake | not provided |
 
 The UI package activates even when the MCP namespace is missing. The panel
@@ -107,7 +107,7 @@ Install an exact tarball into a disposable profile. A source checkout is not
 release acceptance. Do not install into a live profile from this repository.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.9.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.2.0.tgz
 dsh --profile <profile> --dump-config
 ```
 

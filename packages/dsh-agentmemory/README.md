@@ -9,8 +9,8 @@ store credentials, ship a provider binary, or capture sessions.
 
 | Item | Pin |
 |---|---|
-| DeepSeek Harness | `0.1.1-rc.2` |
-| `@deepseek-ai/dsh-mcp-client` | `0.1.1-rc.2` |
+| DeepSeek Harness | `0.2.0-rc.2` |
+| `@deepseek-ai/dsh-mcp-client` | `0.2.0-rc.2` |
 | Reviewed AgentMemory server | `0.9.28` |
 | Stdio adapter | Deployment-owned; not shipped here |
 
@@ -26,6 +26,11 @@ path to a reviewed stdio executable. A missing, blank or relative value is
 rejected during activation; the bundle never asks the operating system to
 resolve a provider through `PATH`.
 
+DSH `0.2.0-rc.2` reports a failed optional plugin as an activation warning
+and can keep other plugins running. Rejection means this entry exposes no
+AgentMemory tools; it does not require the whole Web host to exit. The
+activation check inspects the settled Loader entry and tool registry.
+
 A conforming adapter must require an explicit stable `project` on
 `memory_save`. It must not invent a project from the DSH service working
 directory. `memory_recall` should accept the same explicit project when the
@@ -36,7 +41,7 @@ Install an exact package version or reviewed tarball into a disposable DSH
 profile first. A source checkout is not release acceptance.
 
 ```bash
-dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.1.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.2.tgz
 dsh --profile <profile> --dump-config
 ```
 
@@ -71,6 +76,16 @@ Disposable-profile install and removal:
 ```bash
 node tests/dsh-agentmemory-clean-profile.acceptance.mjs
 ```
+
+Packed-artifact tool execution and project isolation, using a synthetic
+provider store in a disposable profile:
+
+```bash
+node tests/dsh-agentmemory-runtime.acceptance.mjs
+```
+
+This gate exercises the installed host's MCP and tool execution pipeline;
+deployment acceptance must also check its actual reviewed provider.
 
 ## Expected model-visible names
 

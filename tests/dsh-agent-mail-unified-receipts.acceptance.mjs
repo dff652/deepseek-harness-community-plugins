@@ -13,19 +13,35 @@ const stranger = 'receipt-stranger@local';
 const sessions = new Set();
 let hub;
 function context(session) {
-  return { get(name) {
-    if (name !== 'tools') return undefined;
-    return { get(publicName) {
+  const tools = {
+    get(publicName) {
       const name = publicName.replace(/^mcp__agent-mail__/, '');
       if (!session.tools.includes(name)) return undefined;
-      return { async execute(args) {
-        const result = await session.client.request('tools/call', { name, arguments: args });
-        const parsed = parseTool(result);
-        if (parsed.isError) throw new Error(JSON.stringify(parsed.body));
-        return result;
-      } };
-    } };
-  } };
+      return { async execute() {} };
+    },
+    async execute({ callId, name: publicName, arguments: args, signal }) {
+      assert.match(callId, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+        'dispatch includes a UUID call id');
+      assert.ok(signal instanceof AbortSignal, 'dispatch includes cancellation');
+      const name = publicName.replace(/^mcp__agent-mail__/, '');
+      assert.ok(session.tools.includes(name), 'dispatches a registered tool');
+      const result = await session.client.request('tools/call', { name, arguments: args });
+      const parsed = parseTool(result);
+      if (parsed.isError) {
+        return {
+          isError: true,
+          error: { message: publicName + ' failed' },
+          content: [],
+        };
+      }
+      return {
+        isError: false,
+        value: result,
+        content: result.content ?? [],
+      };
+    },
+  };
+  return { get(name) { return name === 'tools' ? tools : undefined; } };
 }
 try {
   const tarball = process.env.DSH_AGENT_MAIL_UNIFIED_TARBALL;

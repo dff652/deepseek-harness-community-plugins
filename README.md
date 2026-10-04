@@ -7,7 +7,11 @@
 > and the mailbox UI. C01–C08 fixes and isolated acceptance include 118 tests;
 > source/tag CI and anonymous-download installation/migration checks passed.
 > Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
-> Catalog merge remains separate. Production cutover of 0.2.0 is recorded in
+> Catalog targets 0.2.1. The local, unreleased DSH 0.2 adaptation passed its
+> authorized deployment, restart and public login/core UI checks. An upstream
+> manifest authentication issue has a guarded local HTML fix; public post-fix
+> verification passed with manifest HTTP 200 and zero console errors. See
+> [the adaptation record](docs/dsh-0.2.0-rc.2-adaptation.md). Historical cutover of 0.2.0 is recorded in
 > [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
 <p align="center">
@@ -15,7 +19,7 @@
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.2.1"><img alt="Agent Mail release 0.2.1" src="https://img.shields.io/badge/Agent%20Mail-release%200.2.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4"><img alt="Agent Mail UI release 0.1.4" src="https://img.shields.io/badge/Agent%20Mail%20UI-release%200.1.4-5fa04e"></a>
-  <img alt="AgentMemory candidate 0.1.1" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.1-38bdf8">
+  <img alt="AgentMemory candidate 0.1.2" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.2-38bdf8">
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-8b9bb4"></a>
   <img alt="Node.js 22.19 or 24 and newer" src="https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-5fa04e">
 </p>
@@ -33,7 +37,7 @@ package is a small configuration bundle with its own version and allowlist.
 > `@dff652/agentmemory-mcp-adapter@0.1.0` local source candidate now passes its
 > security, exact-pack, AgentMemory 0.9.28 and disposable DSH gates. It is not
 > yet a public repository or Release, so `@dff652/dsh-agentmemory@0.1.0`
-> is superseded by the current `@dff652/dsh-agentmemory@0.1.1` source
+> is superseded by the current `@dff652/dsh-agentmemory@0.1.2` source
 > candidate below. The AIAH marketplace entry from
 > [awesome-dsh-plugin#2957](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/2957)
 > is merged and visible in the public catalog. No package is published to npm
@@ -43,7 +47,8 @@ package is a small configuration bundle with its own version and allowlist.
 > observations are tracked separately below.
 
 Released Agent Mail is `@dff652/dsh-agent-mail@0.2.1` plus the separately
-installed provider `1.0.0-alpha.7`. Compatibility UI `0.1.9` remains unreleased.
+installed provider `1.0.0-alpha.7`. Local DSH `0.2.0-rc.2` candidates are Mail `0.2.2`, compatibility UI `0.2.0`,
+AIAH `0.1.3`, and AgentMemory `0.1.2`; these are not new public Releases.
 The GitHub Release is separate from a production upgrade. Host A production cutover of 0.2.0 is in
 [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
@@ -83,20 +88,20 @@ UI examples below; installing both in one profile is rejected as a duplicate UI.
 
 ```bash
 npm pack --workspace @dff652/dsh-ai-asset-hub --ignore-scripts
-sha256sum dff652-dsh-ai-asset-hub-0.1.2.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.2.tgz
+sha256sum dff652-dsh-ai-asset-hub-0.1.3.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-ai-asset-hub-0.1.3.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail --ignore-scripts
-sha256sum dff652-dsh-agent-mail-0.2.1.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.1.tgz
+sha256sum dff652-dsh-agent-mail-0.2.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-0.2.2.tgz
 
 npm pack --workspace @dff652/dsh-agent-mail-ui --ignore-scripts
-sha256sum dff652-dsh-agent-mail-ui-0.1.9.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.1.9.tgz
+sha256sum dff652-dsh-agent-mail-ui-0.2.0.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agent-mail-ui-0.2.0.tgz
 
 npm pack --workspace @dff652/dsh-agentmemory --ignore-scripts
-sha256sum dff652-dsh-agentmemory-0.1.1.tgz
-dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.1.tgz
+sha256sum dff652-dsh-agentmemory-0.1.2.tgz
+dsh plugin --profile <profile> add -w ./dff652-dsh-agentmemory-0.1.2.tgz
 
 dsh --profile <profile> --dump-config
 ```
@@ -286,17 +291,17 @@ model-visible L5 use, or a live-profile change.
 | Component | Reviewed value |
 | --- | --- |
 | Published AIAH artifact | `@dff652/dsh-ai-asset-hub@0.1.1` GitHub Release; historical rc.6 evidence |
-| HEAD AIAH candidate | `@dff652/dsh-ai-asset-hub@0.1.2`; rc.2 compatibility evidence |
-| Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.1.0` GitHub Release; historical rc.6 evidence |
-| HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.1.1`; rc.2 compatibility evidence |
+| HEAD AIAH candidate | `@dff652/dsh-ai-asset-hub@0.1.3`; DSH `0.2.0-rc.2` adaptation |
+| Published Agent Mail artifact | `@dff652/dsh-agent-mail@0.2.1` GitHub Release; DSH `0.1.1-rc.2` evidence |
+| HEAD Agent Mail candidate | `@dff652/dsh-agent-mail@0.2.2`; DSH `0.2.0-rc.2` adaptation |
 | Published Agent Mail UI artifact | [`@dff652/dsh-agent-mail-ui@0.1.4`](https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4); rc.2 acceptance evidence |
-| HEAD Agent Mail UI candidate | `@dff652/dsh-agent-mail-ui@0.1.6`; P0 acceptance and isolated preview upgrade, not released |
-| HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.1`; rc.2 compatibility evidence |
-| DeepSeek Harness | `0.1.1-rc.2` for HEAD candidates |
-| MCP client | `@deepseek-ai/dsh-mcp-client@0.1.1-rc.2` for HEAD candidates |
+| HEAD Agent Mail UI candidate | `@dff652/dsh-agent-mail-ui@0.2.0`; separate compatibility package, not released |
+| HEAD AgentMemory candidate | `@dff652/dsh-agentmemory@0.1.2`; DSH `0.2.0-rc.2` adaptation |
+| DeepSeek Harness | `0.2.0-rc.2` for HEAD candidates |
+| MCP client | `@deepseek-ai/dsh-mcp-client@0.2.0-rc.2` for HEAD candidates |
 | Node.js | `^22.19.0 \|\| >=24.0.0` |
 | AI Asset Hub executable | Official Release `v0.1.11` |
-| Agent Mail provider | `1.0.0-alpha.4` at commit `ca6601c` |
+| Agent Mail provider | `1.0.0-alpha.7` for durable receipts and recipient details |
 | AgentMemory adapter | `@dff652/agentmemory-mcp-adapter@0.1.0` reviewed local commit `c0656eb`; not yet pushed, public or released |
 | AgentMemory server | Exact `0.9.28`, attested after adapter startup preflight |
 
