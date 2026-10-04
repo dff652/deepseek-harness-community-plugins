@@ -3,20 +3,21 @@
   <img src="./assets/readme/hero.svg" width="100%" alt="DeepSeek Harness Plugins connects DSH to reviewed configuration-only MCP bundles">
 </p>
 
-> Released: [Agent Mail 0.2.1](docs/agent-mail-0.2.1-release.md) combines MCP
-> and the mailbox UI. C01–C08 fixes and isolated acceptance include 118 tests;
-> source/tag CI and anonymous-download installation/migration checks passed.
-> Durable sent receipts require the separately installed provider `1.0.0-alpha.7`.
-> Catalog targets 0.2.1. The unreleased DSH 0.2 adaptation passed its
-> authorized deployment, restart and public login/core UI checks. An upstream
-> manifest authentication issue has a guarded local HTML fix; public post-fix
-> verification passed with manifest HTTP 200 and zero console errors. See
-> [the adaptation record](docs/dsh-0.2.0-rc.2-adaptation.md). Historical cutover of 0.2.0 is recorded in
-> [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
+> [Agent Mail 0.2.2 prerelease](docs/agent-mail-0.2.2-release.md) targets exact
+> DSH `0.2.0-rc.2` and combines MCP with the mailbox UI. Independent review,
+> 118 contracts on both Node versions, source/tag CI and anonymous-download
+> installation/migration/provider checks passed. Durable receipts require the
+> separately installed provider `1.0.0-alpha.7`. Stable [0.2.1](docs/agent-mail-0.2.1-release.md)
+> remains available for its old DSH runtime. [Catalog PR #6577](docs/agent-mail-0.2.2-catalog-handoff.md)
+> updates the existing 0.2.1 entry; upstream merge and catalog refresh are tracked separately.
+> Other DSH 0.2 bundle candidates and the completed deployment/host HTML checks
+> are documented in [the adaptation record](docs/dsh-0.2.0-rc.2-adaptation.md).
+> Historical 0.2.0 cutover is in [production acceptance](docs/agent-mail-0.2.0-production-acceptance.md).
 
 <p align="center">
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/dff652/deepseek-harness-community-plugins/actions/workflows/ci.yml/badge.svg?branch=main"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-ai-asset-hub-v0.1.1"><img alt="AIAH release 0.1.1" src="https://img.shields.io/badge/AIAH-release%200.1.1-5fa04e"></a>
+  <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.2.2"><img alt="Agent Mail prerelease 0.2.2" src="https://img.shields.io/badge/Agent%20Mail-prerelease%200.2.2-e4a840"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-v0.2.1"><img alt="Agent Mail release 0.2.1" src="https://img.shields.io/badge/Agent%20Mail-release%200.2.1-5fa04e"></a>
   <a href="https://github.com/dff652/deepseek-harness-community-plugins/releases/tag/dsh-agent-mail-ui-v0.1.4"><img alt="Agent Mail UI release 0.1.4" src="https://img.shields.io/badge/Agent%20Mail%20UI-release%200.1.4-5fa04e"></a>
   <img alt="AgentMemory candidate 0.1.2" src="https://img.shields.io/badge/AgentMemory-candidate%200.1.2-38bdf8">

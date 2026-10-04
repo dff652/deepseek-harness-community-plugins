@@ -1,5 +1,9 @@
 # Public release readiness
 
+Current package/channel state is in [Project status](project-status.md).
+The [Agent Mail 0.2.2 prerelease and public-download gates](agent-mail-0.2.2-release.md)
+are complete; the earlier release milestones below retain their historical scope.
+
 Agent Mail UI 0.1.4 closes the three P2 findings and passes local acceptance.
 The approved [live runtime migration](agent-mail-ui-release-plan.md) is
 complete; source push, CI and the reviewed GitHub Release are also complete.

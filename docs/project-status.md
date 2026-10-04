@@ -1,11 +1,12 @@
 # Project status
 
-Status date: 2026-10-04.
+Status date: 2026-10-05 (Asia/Shanghai).
 
 ## DSH 0.2 adaptation
 
-Unreleased candidates target DSH and MCP client `0.2.0-rc.2`: Agent Mail `0.2.2`,
-compatibility UI `0.2.0`, AI Asset Hub `0.1.3`, and AgentMemory `0.1.2`.
+[Agent Mail `0.2.2`](agent-mail-0.2.2-release.md) is published as a GitHub
+prerelease for exact DSH/MCP client `0.2.0-rc.2`. Compatibility UI `0.2.0`,
+AI Asset Hub `0.1.3`, and AgentMemory `0.1.2` remain unreleased candidates.
 Portable contracts pass on Node 22.19.0 and 24.19.0, and exact packed
 artifacts have passed isolated installation and runtime checks. See the
 [adaptation record](dsh-0.2.0-rc.2-adaptation.md) for per-gate evidence. The
@@ -18,14 +19,18 @@ verification passed with manifest HTTP 200, zero console/runtime errors and
 all 20 original session IDs retained. Public bundle bytes are unchanged
 by this override. Source commit `0e1f29e` is pushed to public `main`; its
 [source CI](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/37206627888)
-passed on Node 22.19.0 and 24.19.0. These package candidates remain unreleased.
+passed on Node 22.19.0 and 24.19.0. Mail 0.2.2 later passed material/tag CI
+and anonymous-download installation, migration and real provider gates.
 
 Catalog PR [#4837](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4837)
-merged on September 15 and still targets the published Agent Mail `0.2.1`,
-whose exact MCP peer is `0.1.1-rc.2`. The current adaptation does not update
-that catalog entry or publish new Release/npm artifacts.
-
-Mail 0.2.2 release execution is authorized; [release materials](agent-mail-0.2.2-release-preparation.md) bind the accepted archive to the reviewed source. Public download and catalog updates are checked after publication.
+merged on September 15; upstream main still targets Agent Mail `0.2.1`, whose
+exact peer is `0.1.1-rc.2`. The new [PR #6577](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6577)
+updates that entry to the verified 0.2.2 archive and states its rc.2 requirement.
+Local native catalog checks and the full 4,412-entry bilingual site build pass;
+the exact PR head's remote check and Submission gate both pass. The PR is
+open and mergeable; [catalog handoff](agent-mail-0.2.2-catalog-handoff.md) records
+the maintainer merge and subsequent catalog-refresh boundary.
+Stable Latest remains 0.2.1. npm and a new production source switch remain separate.
 
 ## September release evidence
 

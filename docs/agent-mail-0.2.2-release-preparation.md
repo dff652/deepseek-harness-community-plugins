@@ -15,6 +15,8 @@
 | Provider | 独立安装 Agent Mail `1.0.0-alpha.7` |
 | 源码 CI | [Node 22/24 检查通过](https://github.com/dff652/deepseek-harness-community-plugins/actions/runs/37207039810) |
 
+发行材料与迁移门已提交为 `b202f16`；tag、预发布和公开下载安装验收已完成，见 [发布记录](agent-mail-0.2.2-release.md)。新目录 PR 与后续状态见 [目录交接](agent-mail-0.2.2-catalog-handoff.md)。下方保留准备时的计划和检查边界。
+
 ## 归档绑定与执行门
 
 沿用最终已验收归档，禁止重新打包替换上传字节。仅包含 LICENSE、NOTICE、README.md、client.js、cordis.patch.yml、index.js、package.json、ui-host.js、view.js 九个普通文件。生成一致性、118 项合同、公开边界、dry pack、隔离真实 provider 与浏览器证据见 [适配记录](dsh-0.2.0-rc.2-adaptation.md)。归档中准备阶段的 candidate 文案保留；渠道状态以 Release 和发布验收记录为准。

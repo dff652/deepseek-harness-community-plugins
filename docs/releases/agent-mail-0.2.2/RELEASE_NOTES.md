@@ -19,7 +19,7 @@
 
 ## 验证与限制
 
-118 项合同在两个 Node 版本通过；仓库公开边界、生成客户端和打包 allowlist 通过。相同摘要归档已完成隔离安装、激活、重连、重复命名空间拒绝、卸载、真实 alpha.7 合成消息生命周期以及 Chrome/Firefox 检查。详细边界见 [DSH 0.2 适配记录](https://github.com/dff652/deepseek-harness-community-plugins/blob/main/docs/dsh-0.2.0-rc.2-adaptation.md)。发布后公开下载与下载字节的洁净 profile 检查另行记录。
+118 项合同在两个 Node 版本通过；仓库公开边界、生成客户端和打包 allowlist 通过。相同摘要归档已完成隔离安装、激活、重连、重复命名空间拒绝、卸载、真实 alpha.7 合成消息生命周期以及 Chrome/Firefox 检查。详细边界见 [DSH 0.2 适配记录](https://github.com/dff652/deepseek-harness-community-plugins/blob/main/docs/dsh-0.2.0-rc.2-adaptation.md)。公开下载摘要、九文件绑定、下载字节的洁净 profile 安装/移除与跨版本迁移、真实隔离 provider 生命周期均已通过，详见 [发布验收记录](https://github.com/dff652/deepseek-harness-community-plugins/blob/main/docs/agent-mail-0.2.2-release.md)。
 
 不自动唤醒模型，不提供持续在线状态或人类已读证明。超时不能证明发送未执行。详情缺少任务 ID 时不会从无法关联的事件推断任务完成。
 DSH 上游 PWA manifest 的认证问题需要宿主侧修复，插件归档不包含该 HTML override。
